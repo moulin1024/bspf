@@ -1,0 +1,33 @@
+[build-system]
+requires = [
+  "setuptools>=65",
+  "wheel"
+]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bspf"
+version = "0.1.0"
+description = "B-spline finite methods: differentiation, integration, antiderivatives"
+license = { file = "LICENSE" }
+authors = [ { name = "Mou Lin" } ]
+readme = { text = "Numerical utilities for 1D B-spline based finite methods and related spectral/Padé helpers.", content-type = "text/plain" }
+requires-python = ">=3.9"
+dependencies = [
+  "numpy",
+  "scipy",
+  "findiff",
+  "sympy"
+]
+
+[project.urls]
+Homepage = "https://example.com/"
+Repository = "https://example.com/repo"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["bspf*"]
+exclude = []

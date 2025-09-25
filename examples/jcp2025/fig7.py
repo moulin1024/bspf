@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -5,25 +7,23 @@ import matplotlib.pyplot as plt
 # Load data
 # =========================
 data_bfpsm = np.load("data/tsunami_bfpsm_dctdst_201.npz")
-data_fd_201 = np.load("data/tsunami_fd_201.npz")
-data_fd_401 = np.load("data/tsunami_fd_401.npz")
-data_fd_801 = np.load("data/tsunami_fd_801.npz")
-data_fd_1601 = np.load("data/tsunami_fd_1601.npz")
 
 eta1, M1, N1 = data_bfpsm['eta'], data_bfpsm['M'], data_bfpsm['N']
-x1 = np.linspace(0, 100, 201)
+x1 = np.linspace(0, 100, eta1.shape[1])
 
-eta2, M2, N2 = data_fd_1601['eta'], data_fd_1601['M'], data_fd_1601['N']
-x2 = np.linspace(0, 100, 1601)
+slice_path = Path('data/eta_row100_slices.npz')
+slice_path.parent.mkdir(exist_ok=True)
 
-eta3, M3, N3 = data_fd_201['eta'], data_fd_201['M'], data_fd_201['N']
-x3 = np.linspace(0, 100, 201)
+with np.load(slice_path) as slice_data:
+    eta2_slice = slice_data['eta2_slice']
+    eta3_slice = slice_data['eta3_slice']
+    eta4_slice = slice_data['eta4_slice']
+    eta5_slice = slice_data['eta5_slice']
 
-eta4, M4, N4 = data_fd_401['eta'], data_fd_401['M'], data_fd_401['N']
-x4 = np.linspace(0, 100, 401)
-
-eta5, M5, N5 = data_fd_801['eta'], data_fd_801['M'], data_fd_801['N']
-x5 = np.linspace(0, 100, 801)
+x2 = np.linspace(0, 100, eta2_slice.size)
+x3 = np.linspace(0, 100, eta3_slice.size)
+x4 = np.linspace(0, 100, eta4_slice.size)
+x5 = np.linspace(0, 100, eta5_slice.size)
 
 # For top row plots
 x_big = np.linspace(0, 100, 1601)
@@ -93,10 +93,10 @@ cbar.ax.xaxis.set_label_position('top')
 # ----- (d) Line comparisons (same as your (b)) -----
 ax = axes[1,1]
 ax.plot(x1, eta1[100, :], 'o', label='BSPF (N = 201)')
-ax.plot(x3, eta3[100, :], '-', label='FinDiff-2 (N = 201)')
-ax.plot(x4, eta4[200, :], '-', label='FinDiff-2 (N = 401)')
-ax.plot(x5, eta5[400, :], '-', label='FinDiff-2 (N = 801)')
-ax.plot(x2, eta2[800, :], '-', label='FinDiff-2 (N = 1601)')
+ax.plot(x3, eta3_slice, '-', label='FinDiff-2 (N = 201)')
+ax.plot(x4, eta4_slice, '-', label='FinDiff-2 (N = 401)')
+ax.plot(x5, eta5_slice, '-', label='FinDiff-2 (N = 801)')
+ax.plot(x2, eta2_slice, '-', label='FinDiff-2 (N = 1601)')
 ax.set_xlim(72, 92)
 ax.set_ylim(-0.6, 1.0)
 ax.set_title('(d)', loc='left',x = -0.15,y=1.05,fontsize=30,fontweight='bold')
