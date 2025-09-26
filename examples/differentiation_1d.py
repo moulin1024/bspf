@@ -20,11 +20,12 @@ from padefd import padefd
 
 # ---------------- Parameters ----------------
 DEGREE = 11
-NUM_BOUNDARY_POINTS = DEGREE + 5
+NUM_BOUNDARY_POINTS = DEGREE
 N_BASIS = 4 * DEGREE
 REG_PARAM = 1e-3
-domain = (0.0, 2.0 * np.pi)
-NUM_POINTS = 1000
+domain = (0.0, 1.0)
+NUM_POINTS = 4000
+alpha = 500
 
 # Grid parameters
 clustering_factor = 2.0
@@ -49,7 +50,7 @@ model = bspf1d.from_grid(
 
 # ---------------- Test function (symbolic -> numeric) ----------------
 t = sp.Symbol('t')
-f_sym = sp.sin(t / (1.05 + sp.cos(t)))
+f_sym = sp.tanh(alpha*(t-0.5))#sp.sin(t / (1.05 + sp.cos(t)))
 df_sym = sp.diff(f_sym, t)
 f = sp.lambdify(t, f_sym, 'numpy')
 df = sp.lambdify(t, df_sym, 'numpy')
@@ -71,7 +72,6 @@ y_deriv_cheb_exact = df(x_cheb)
 op = padefd(NUM_POINTS, dx, order=10)
 y_deriv_fd = op(y)
 
-
 # ---------------- Errors (Linf) ----------------
 error_bspf = float(np.max(np.abs(y_deriv_bspf - y_deriv_exact)))
 error_cheb = float(np.max(np.abs(y_deriv_cheb - y_deriv_cheb_exact)))
@@ -83,7 +83,7 @@ print("Chebyshev:", error_cheb)
 print("Padé-10:", error_fd)
 
 # ---------------- Convergence study ----------------
-grid_sizes = np.unique(np.geomspace(100, 1000, 10).astype(int))
+grid_sizes = np.unique(np.geomspace(1000, 4000, 20).astype(int))
 errors_bspf, errors_cheb, errors_fd = [], [], []
 for N in grid_sizes:
     xN = np.linspace(domain[0], domain[1], N, endpoint=True)
@@ -189,5 +189,4 @@ plt.title('(d)', loc='left', x=-0.15, fontsize=24, fontweight='bold')
 plt.grid(True)
 plt.legend(ncol=1)
 plt.tight_layout()
-plt.savefig('test_diff_1d.png', dpi=300, bbox_inches='tight')
-print('Saved figure to test_diff_1d.png')
+plt.show()
