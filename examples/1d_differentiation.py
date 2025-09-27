@@ -19,12 +19,12 @@ from padefd import padefd
 
 
 # ---------------- Parameters ----------------
-DEGREE = 11
+DEGREE = 9
 NUM_BOUNDARY_POINTS = DEGREE
-N_BASIS = 4 * DEGREE
+N_BASIS = 3 * DEGREE
 REG_PARAM = 1e-3
-domain = (0.0, 1.0)
-NUM_POINTS = 4000
+domain = (0.0, 2.0*np.pi)
+NUM_POINTS = 3000
 alpha = 500
 
 # Grid parameters
@@ -50,7 +50,7 @@ model = bspf1d.from_grid(
 
 # ---------------- Test function (symbolic -> numeric) ----------------
 t = sp.Symbol('t')
-f_sym = sp.tanh(alpha*(t-0.5))#sp.sin(t / (1.05 + sp.cos(t)))
+f_sym = sp.sin(t / (1.02 + sp.cos(t)))
 df_sym = sp.diff(f_sym, t)
 f = sp.lambdify(t, f_sym, 'numpy')
 df = sp.lambdify(t, df_sym, 'numpy')
@@ -60,7 +60,7 @@ y_deriv_exact = df(x)
 
 # ---------------- Methods ----------------
 # BSPF (with spline approximation)
-y_deriv_bspf, y_spline, df_spline = model.differentiate_with_spline(y, k=1, lam=REG_PARAM)
+y_deriv_bspf, y_spline = model.differentiate(y, k=1, lam=REG_PARAM)
 
 # Chebyshev derivative on Chebyshev nodes (unpack x,t)
 x_cheb, _t = construct_chebyshev_nodes(NUM_POINTS, domain)
@@ -83,7 +83,7 @@ print("Chebyshev:", error_cheb)
 print("Padé-10:", error_fd)
 
 # ---------------- Convergence study ----------------
-grid_sizes = np.unique(np.geomspace(1000, 4000, 20).astype(int))
+grid_sizes = np.unique(np.geomspace(1000, 3000, 20).astype(int))
 errors_bspf, errors_cheb, errors_fd = [], [], []
 for N in grid_sizes:
     xN = np.linspace(domain[0], domain[1], N, endpoint=True)
@@ -101,7 +101,7 @@ for N in grid_sizes:
         use_clustering=clustering_flag,
         clustering_factor=clustering_factor,
     )
-    d_bspf_N = mN.differentiate(fN, k=1, lam=REG_PARAM)
+    d_bspf_N, _ = mN.differentiate(fN, k=1, lam=REG_PARAM)
     errors_bspf.append(float(np.max(np.abs(d_bspf_N - dN))))
 
     xC, _tC = construct_chebyshev_nodes(N, domain)

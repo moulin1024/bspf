@@ -26,7 +26,7 @@ n_basis = 4 * degree
 use_clustering = True
 clustering_factor = 3.0
 
-# Kolmogorov-like random signal configuration
+# Random signal configuration
 k_min = 1.0
 k_max = 100.0
 n_components = 1000
@@ -66,7 +66,7 @@ model = bspf1d.from_grid(
     use_clustering=use_clustering,
     clustering_factor=clustering_factor,
 )
-F_bspf, integrand_spline, _ = model.antiderivative(
+F_bspf, integrand_spline = model.antiderivative(
     integrand,
     order=1,
     left_value=left_value,
@@ -82,7 +82,7 @@ linf_bspf = float(np.max(np.abs(F_bspf - target)))
 linf_simpson = float(np.max(np.abs(F_simpson - target)))
 
 # Convergence grids
-grid_sizes = np.geomspace(1001, 2001, 10).astype(int)
+grid_sizes = np.geomspace(1001, 2001, 20).astype(int)
 grid_sizes = grid_sizes + ((grid_sizes + 1) % 2)  # ensure odd counts for Simpson
 grid_sizes = np.unique(np.append(grid_sizes, num_points))
 
@@ -113,7 +113,7 @@ for n in grid_sizes:
         use_clustering=use_clustering,
         clustering_factor=clustering_factor,
     )
-    F_bspf_n, _, _ = model_n.antiderivative(
+    F_bspf_n, _ = model_n.antiderivative(
         integrand_n,
         order=1,
         left_value=float(target_n[0]),

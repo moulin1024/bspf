@@ -1,123 +1,100 @@
-import unittest
 import numpy as np
+import numpy.testing as npt
+import pytest
 
-from bspf.knots import KnotGenerator
-from bspf.grid import Grid1D
+from bspf.bspf1d import _Knot, Grid1D  # replace with your actual module path
 
 
-class TestKnotGenerator(unittest.TestCase):
-    def test_generate_basic_properties(self):
-        degree = 3
-        a, b = 2.0, 5.0
-        n_basis = 10  # must be > degree
-        k = KnotGenerator.generate(
-            degree=degree, domain=(a, b), n_basis=n_basis,
-            use_clustering=False, clustering_factor=2.0
+def test_knot_all():
+    # ---------- setup ----------
+    degree = 3
+    a, b = -2.0, 4.0
+    x = np.linspace(a, b, 41)
+    grid = Grid1D(x)
+
+    # ---------- _generate: raises when n_basis <= degree ----------
+    with pytest.raises(ValueError, match="exceed"):
+        _Knot._generate(degree=degree, domain=(a, b), n_basis=degree, use_clustering=False, clustering_factor=2.0)
+
+    # ---------- _generate: no interior knots case (n_interior == 0) ----------
+    # minimal valid n_basis gives only the repeated end-knots
+    n_basis_min = degree + 1
+    k0 = _Knot._generate(
+        degree=degree, domain=(a, b), n_basis=n_basis_min, use_clustering=False, clustering_factor=2.0
+    )
+    # length = n_basis + degree + 1
+    assert k0.size == n_basis_min + degree + 1
+    # endpoints repeated degree+1 times
+    npt.assert_allclose(k0[: degree + 1], a)
+    npt.assert_allclose(k0[-(degree + 1):], b)
+
+    # ---------- _generate: with interior knots, no clustering (uniform in domain) ----------
+    n_basis = 8  # > degree+1 -> has interior knots
+    k_uni = _Knot._generate(
+        degree=degree, domain=(a, b), n_basis=n_basis, use_clustering=False, clustering_factor=2.0
+    )
+    assert k_uni.size == n_basis + degree + 1
+    npt.assert_allclose(k_uni[: degree + 1], a)
+    npt.assert_allclose(k_uni[-(degree + 1):], b)
+
+    # interior knots should be linearly spaced in [a, b]
+    interior = k_uni[degree + 1 : -(degree + 1)]
+    # There should be n_interior = (n_basis + degree + 1) - 2*(degree+1) interior knots
+    n_interior = (n_basis + degree + 1) - 2 * (degree + 1)
+    assert interior.size == n_interior
+    # Check equal spacing
+    diffs = np.diff(interior)
+    npt.assert_allclose(diffs, diffs[0])
+
+    # ---------- _generate: with interior knots, clustering ----------
+    k_clu = _Knot._generate(
+        degree=degree, domain=(a, b), n_basis=n_basis, use_clustering=True, clustering_factor=3.0
+    )
+    # Same endpoints
+    npt.assert_allclose(k_clu[: degree + 1], a)
+    npt.assert_allclose(k_clu[-(degree + 1):], b)
+    interior_c = k_clu[degree + 1 : -(degree + 1)]
+    # Monotone increasing
+    assert np.all(np.diff(interior_c) > 0)
+    # Heavier density near ends than middle (edge gaps smaller than middle gap)
+    edge_gap = min(interior_c[0] - a, b - interior_c[-1])
+    mid_gap = np.max(np.diff(interior_c))
+    assert edge_gap < mid_gap
+
+    # ---------- resolve: return provided knots verbatim (and 1D check) ----------
+    custom_knots = np.array([a, a, a, a, -1.0, 0.0, 2.0, b, b, b, b], dtype=np.float64)
+    out = _Knot.resolve(
+        degree=degree, grid=grid, knots=custom_knots, n_basis=None, domain=None,
+        use_clustering=False, clustering_factor=2.0
+    )
+    npt.assert_array_equal(out, custom_knots)
+
+    # Non-1D knots should raise
+    with pytest.raises(ValueError, match="1D"):
+        _Knot.resolve(
+            degree=degree, grid=grid, knots=np.array([[a, b]]),
+            n_basis=None, domain=None, use_clustering=False, clustering_factor=2.0
         )
 
-        n_knots = n_basis + degree + 1
-        self.assertEqual(k.shape, (n_knots,))
-        # clamped ends repeated degree+1 times
-        self.assertTrue(np.allclose(k[: degree + 1], a))
-        self.assertTrue(np.allclose(k[-(degree + 1):], b))
-        # non-decreasing
-        self.assertTrue(np.all(np.diff(k) >= 0))
+    # ---------- resolve: when knots=None uses defaults for n_basis and domain ----------
+    # Default n_basis = 2*(degree+1)*2 = 4*(degree+1)
+    expected_n_basis = 4 * (degree + 1)
+    out2 = _Knot.resolve(
+        degree=degree, grid=grid, knots=None, n_basis=None, domain=None,
+        use_clustering=False, clustering_factor=2.0
+    )
+    assert out2.size == expected_n_basis + degree + 1
+    # domain taken from grid
+    npt.assert_allclose(out2[: degree + 1], grid.a)
+    npt.assert_allclose(out2[-(degree + 1):], grid.b)
 
-        # correct number of interior knots
-        n_interior = n_knots - 2 * (degree + 1)
-        interior = k[degree + 1 : n_knots - (degree + 1)]
-        self.assertEqual(interior.size, n_interior)
-        # interior are strictly within (a, b)
-        self.assertTrue(np.all(interior > a))
-        self.assertTrue(np.all(interior < b))
-
-    def test_generate_no_interior_knots(self):
-        degree = 2
-        a, b = -1.0, 3.0
-        n_basis = degree + 1  # yields zero interior knots
-        k = KnotGenerator.generate(
-            degree=degree, domain=(a, b), n_basis=n_basis,
-            use_clustering=False, clustering_factor=1.0
-        )
-        # Expect exactly degree+1 copies of a, then degree+1 copies of b
-        expected = np.concatenate([np.full(degree + 1, a), np.full(degree + 1, b)])
-        np.testing.assert_allclose(k, expected)
-
-    def test_clustering_brings_knots_toward_ends(self):
-        degree = 3
-        a, b = 0.0, 1.0
-        n_basis = 12
-
-        k_uniform = KnotGenerator.generate(
-            degree=degree, domain=(a, b), n_basis=n_basis,
-            use_clustering=False, clustering_factor=2.0
-        )
-        k_cluster = KnotGenerator.generate(
-            degree=degree, domain=(a, b), n_basis=n_basis,
-            use_clustering=True, clustering_factor=3.0
-        )
-
-        # First interior and last interior indices
-        first_int = degree + 1
-        last_int = k_uniform.size - degree - 2
-
-        # Distance of first/last interior knots from the ends
-        dL_uniform = k_uniform[first_int] - a
-        dR_uniform = b - k_uniform[last_int]
-        dL_cluster = k_cluster[first_int] - a
-        dR_cluster = b - k_cluster[last_int]
-
-        # Clustering should pull interior knots closer to the boundaries
-        self.assertLess(dL_cluster, dL_uniform + 1e-15)
-        self.assertLess(dR_cluster, dR_uniform + 1e-15)
-
-    def test_resolve_explicit_knots_precedence_and_validation(self):
-        degree = 3
-        grid = Grid1D(np.linspace(0.0, 1.0, 9))
-        explicit = np.array([0.0, 0.0, 0.0, 0.0,
-                             0.3, 0.6,
-                             1.0, 1.0, 1.0, 1.0], dtype=np.float64)
-        out = KnotGenerator.resolve(
-            degree=degree, grid=grid,
-            knots=explicit, n_basis=None, domain=None,
-            use_clustering=False, clustering_factor=2.0
-        )
-        np.testing.assert_array_equal(out, explicit)
-
-        # Non-1D knots should raise
-        with self.assertRaises(ValueError):
-            KnotGenerator.resolve(
-                degree=degree, grid=grid,
-                knots=np.zeros((2, 5), dtype=np.float64),  # not 1D
-                n_basis=None, domain=None,
-                use_clustering=False, clustering_factor=2.0
-            )
-
-    def test_resolve_defaults_for_n_basis_and_domain(self):
-        degree = 2
-        x = np.linspace(-2.0, 3.0, 17)
-        grid = Grid1D(x)
-
-        # n_basis defaults to 2*(degree+1)*2 = 4*(degree+1)
-        expected_n_basis = 4 * (degree + 1)
-        k = KnotGenerator.resolve(
-            degree=degree, grid=grid,
-            knots=None, n_basis=None, domain=None,
-            use_clustering=False, clustering_factor=1.0
-        )
-        self.assertEqual(k.size, expected_n_basis + degree + 1)
-        # Ends should match grid domain by default
-        self.assertAlmostEqual(k[0], grid.a)
-        self.assertAlmostEqual(k[-1], grid.b)
-
-    def test_generate_rejects_too_few_basis(self):
-        degree = 3
-        with self.assertRaises(ValueError):
-            KnotGenerator.generate(
-                degree=degree, domain=(0.0, 1.0), n_basis=degree,  # n_basis <= degree
-                use_clustering=False, clustering_factor=1.0
-            )
-
-
-if __name__ == "__main__":
-    unittest.main()
+    # ---------- resolve: explicit n_basis and domain override ----------
+    nb = 6
+    dom = (1.5, 3.0)
+    out3 = _Knot.resolve(
+        degree=degree, grid=grid, knots=None, n_basis=nb, domain=dom,
+        use_clustering=False, clustering_factor=2.0
+    )
+    assert out3.size == nb + degree + 1
+    npt.assert_allclose(out3[: degree + 1], dom[0])
+    npt.assert_allclose(out3[-(degree + 1):], dom[1])
