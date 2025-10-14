@@ -32,10 +32,15 @@ def burgers_rhs_ivp(t, u, bspf_op, nu, u_bc_func):
     """
     u_ext = u.copy()
     bc = u_bc_func(t)
-    u_ext[0]  = bc[0]
-    u_ext[-1] = bc[-1]
-    du_dx, d2u_dx2, _ = bspf_op.differentiate_1_2(u_ext)
+    u_ext[0]  = 0.0#bc[0]
+    u_ext[-1] = 0.0#bc[-1]
+    du_dx, d2u_dx2, spline = bspf_op.differentiate_1_2(u_ext)
     rhs = nu * d2u_dx2 - u_ext * du_dx
+
+    inner_product = np.dot(u_ext, u_ext)
+    # Write inner product to file
+    with open("inner_product.txt", "a") as f:
+        f.write(f"{t:.16e} {inner_product:.16e}\n")
 
     rhs[0] = 0.0
     rhs[-1] = 0.0
@@ -72,7 +77,7 @@ def solve_burgers_equation(nu=0.01, nx=101, nt=1001, degree=5, L=1.0, T=1.0,meth
     for i, ti in enumerate(t):
         u_exact[i, :] = smooth_step_solution(x, ti, nu)
 
-    u0 = u_exact[0, :].copy()
+    u0 = np.sin(x) #u_exact[0, :].copy()
     u_bc_func = lambda ti: smooth_step_solution(x, ti, nu)
 
     # integrate
@@ -152,7 +157,7 @@ if __name__ == "__main__":
     nx = 500     # spatial points
     nt = 500     # output time samples
     L = 2.0 * np.pi
-    T = 2.0
+    T = 1.0
 
     # Solve
     x, t, U, u_exact, time_integration_time = solve_burgers_equation(
