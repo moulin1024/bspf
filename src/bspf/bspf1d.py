@@ -1,5 +1,15 @@
 from __future__ import annotations
 
+import os
+
+# Set CUDA_PATH for NVHPC SDK before importing CuPy
+# This ensures CuPy can find CUDA headers during JIT compilation
+if 'CUDA_PATH' not in os.environ:
+    nvhpc_cuda_path = '/opt/nvidia/hpc_sdk/Linux_x86_64/24.9/cuda/12.6'
+    if os.path.exists(nvhpc_cuda_path):
+        os.environ['CUDA_PATH'] = nvhpc_cuda_path
+        os.environ['CUDA_HOME'] = nvhpc_cuda_path
+
 import math
 from typing import Dict, Optional, Tuple, Callable
 
@@ -8,7 +18,53 @@ import numpy.typing as npt
 from scipy import linalg as sla
 from scipy.interpolate import BSpline
 
+# Optional GPU backend
+_HAS_CUPY = False
+try:
+    import cupy as cp
+    import cupyx.scipy.linalg as cpla
+    _HAS_CUPY = True
+except Exception:
+    cp = None
+    cpla = None
+
 Array = npt.NDArray[np.float64]
+
+
+# ============================== backend ==============================
+class _Backend:
+    """Switch between NumPy/SciPy and CuPy/CuPyX cleanly."""
+    __slots__ = ("xp", "la", "fft", "is_gpu")
+
+    def __init__(self, use_gpu: bool):
+        if use_gpu:
+            if not _HAS_CUPY:
+                raise RuntimeError(
+                    "use_gpu=True but CuPy is not available. "
+                    "Install cupy (e.g. `pip install cupy-cuda12x`) or set use_gpu=False."
+                )
+            self.xp = cp
+            self.la = cpla
+            self.fft = cp.fft
+            self.is_gpu = True
+        else:
+            self.xp = np
+            self.la = sla
+            self.fft = np.fft
+            self.is_gpu = False
+
+    def to_device(self, a):
+        return self.xp.asarray(a)
+
+    def to_host(self, a):
+        if self.is_gpu:
+            return cp.asnumpy(a)
+        return a
+
+    def ensure_like_input(self, out, input_was_numpy: bool):
+        if self.is_gpu and input_was_numpy:
+            return self.to_host(out)
+        return out
 
 
 # =============================================================================
@@ -211,15 +267,12 @@ class ResidualCorrection:
                 x0 = float(xx[0]); x1 = float(xx[-1])
 
             if order == 1:
-                # Restore dropped DC in derivative: add mean(residual)*(x-x0),
-                # then anchor the left value.
                 mean_r = float(np.mean(residual))
                 out = out + mean_r * (xx - x0)
                 out -= out[0]
                 return out
 
             if order == 2:
-                # Restore DC (constant curvature) as quadratic with zero endpoints
                 mean_r = float(np.mean(residual))
                 q = 0.5 * mean_r * (xx - x0) * (xx - x1)  # q'' = mean_r, q(x0)=q(x1)=0
                 return out + q
@@ -243,6 +296,7 @@ class bspf1d:
         order: Optional[int] = None,
         num_boundary_points: Optional[int] = None,
         correction: str = "spectral",
+        use_gpu: bool = False,      # <--- NEW
     ):
         self.grid = grid
         self.degree = int(degree)
@@ -264,7 +318,10 @@ class bspf1d:
             self._correct = ResidualCorrection.none
 
         self._kkt_cache: Dict[float, Tuple[Array, Array]] = {}
-        self._cached_arrays: Dict[str, Array] = {}
+
+        # backend
+        self.use_gpu = bool(use_gpu)
+        self._bk = _Backend(self.use_gpu)
 
     @classmethod
     def from_grid(
@@ -280,6 +337,7 @@ class bspf1d:
         order: Optional[int] = None,
         num_boundary_points: Optional[int] = None,
         correction: str = "spectral",
+        use_gpu: bool = False,   # <--- NEW
     ) -> "bspf1d":
         grid = Grid1D(x)
         k = _Knot.resolve(
@@ -288,11 +346,13 @@ class bspf1d:
         )
         return cls(
             grid=grid, degree=degree, knots=k,
-            order=order, num_boundary_points=num_boundary_points, correction=correction
+            order=order, num_boundary_points=num_boundary_points, correction=correction,
+            use_gpu=use_gpu,
         )
 
     # ---------- private solvers ----------
     def _kkt_lu(self, lam: float) -> Tuple[Array, Array]:
+        """CPU LU factorization cached by lambda (used for both CPU/GPU)."""
         lam = float(lam)
         if lam in self._kkt_cache:
             return self._kkt_cache[lam]
@@ -306,114 +366,138 @@ class bspf1d:
         self._kkt_cache[lam] = (lu, piv)
         return lu, piv
 
-    def _get_or_compute_array(self, key: str, compute_func: Callable[[], Array]) -> Array:
-        if key not in self._cached_arrays:
-            self._cached_arrays[key] = compute_func()
-        return self._cached_arrays[key]
-
     # ---------- public operations ----------
-    def differentiate(self, f: Array, k: int = 1, lam: float = 0.0, *, 
+    def differentiate(self, f: Array, k: int = 1, lam: float = 0.0, *,
         neumann_bc: Optional[Tuple[Optional[float], Optional[float]]] = None) -> Tuple[Array, Array]:
+        """
+        GPU-aware derivative: if use_gpu=True, multiplies/FFTs/solves on device.
+        """
         if k not in (1, 2, 3):
             raise ValueError("Only 1st/2nd/3rd derivatives are supported.")
         f = np.asarray(f, dtype=np.float64)
         if f.shape[0] != self.grid.n:
             raise ValueError("Length of f must match grid size.")
 
-        rhs_2bw = self._get_or_compute_array('2bw', lambda: 2.0 * (self.BW @ f))
-        dY = self.end.BND @ f
-        # ---------- NEW: enforce Neumann BC (first-derivative / flux) ----------
+        bk = self._bk
+        xp, la, fft = bk.xp, bk.la, bk.fft
+        input_was_numpy = isinstance(f, np.ndarray)
+
+        # Move inputs/mats to backend
+        f_x = xp.asarray(f)
+        BW  = xp.asarray(self.BW)
+        BND = xp.asarray(self.end.BND)
+        BT0 = xp.asarray(self.basis.BT0)
+        BkT = xp.asarray(self.basis.BkT(k))
+        om  = xp.asarray(self.grid.omega)
+
+        # Build RHS
+        rhs_2bw = 2.0 * (BW @ f_x)
+        dY = BND @ f_x
+
+        # Neumann BC: overwrite first-derivative rows
         if neumann_bc is not None:
             if self.order < 1:
                 raise ValueError("Neumann BC requires self.order ≥ 1.")
-            left_flux, right_flux = neumann_bc   # (None means “don’t care”)
+            left_flux, right_flux = neumann_bc
+            # rows: 1 (left d/dx), order+1 (right d/dx)
             if left_flux is not None:
-                dY[1] = float(left_flux)               # left boundary ∂f/∂x
+                dY[1] = float(left_flux)
             if right_flux is not None:
-                dY[self.order + 1] = float(right_flux) # right boundary ∂f/∂x
-        
-        rhs = np.concatenate((rhs_2bw, dY))
+                dY[self.order + 1] = float(right_flux)
 
-        lu, piv = self._kkt_lu(lam)
-        sol = sla.lu_solve((lu, piv), rhs, overwrite_b=False)
-        P = sol[: self.basis.B0.shape[0]]
+        rhs = xp.concatenate((rhs_2bw, dY), axis=0)
 
-        f_spline = self.basis.BT0 @ P
-        df = self.basis.BkT(k) @ P
+        # Solve KKT with cached CPU LU (copied to device if needed)
+        lu_cpu, piv_cpu = self._kkt_lu(lam)
+        if bk.is_gpu:
+            SOL = la.lu_solve((xp.asarray(lu_cpu), xp.asarray(piv_cpu)), rhs)
+        else:
+            SOL = la.lu_solve((lu_cpu, piv_cpu), bk.to_host(rhs))
+            SOL = xp.asarray(SOL)
 
-        residual = f - f_spline
-        corr = self._correct(residual, self.grid.omega, kind="diff", order=k, n=self.grid.n)
-        return (df + corr).astype(np.float64), f_spline.astype(np.float64)
+        n_b = self.basis.B0.shape[0]
+        P = SOL[:n_b]
 
-    def differentiate_1_2(self, f: Array, lam: float = 0.0,*, 
-                          neumann_bc: Optional[Tuple[Optional[float], Optional[float]]] = None) -> Tuple[Array, Array, Array]:        
+        f_spline = BT0 @ P
+        df = BkT @ P
+
+        residual = f_x - f_spline
+        R = fft.rfft(residual)
+        corr = fft.irfft(R * (1j * om) ** k, n=self.grid.n)
+
+        df_final = (df + corr)
+        f_spline_out = f_spline
+
+        return (bk.ensure_like_input(df_final, input_was_numpy).astype(np.float64),
+                bk.ensure_like_input(f_spline_out, input_was_numpy).astype(np.float64))
+
+    def differentiate_1_2(self, f: Array, lam: float = 0.0, *,
+                          neumann_bc: Optional[Tuple[Optional[float], Optional[float]]] = None
+                          ) -> Tuple[Array, Array, Array]:
         """
-        Compute both first and second derivatives together efficiently.
-        This reduces FFT operations by computing both derivatives from the same spline fit.
-
-        Parameters
-        ----------
-        f : Array
-            Input function values
-        lam : float, default 0.0
-            Tikhonov regularization parameter
-
-        Returns
-        -------
-        df1 : Array
-            First derivative
-        df2 : Array
-            Second derivative
-        f_spline : Array
-            Spline approximation of input function
+        Compute first & second derivatives together (GPU-aware).
         """
         f = np.asarray(f, dtype=np.float64)
         if f.shape[0] != self.grid.n:
             raise ValueError("Length of f must match grid size.")
 
-        # Compute spline coefficients (reused for both derivatives)
-        rhs_2bw = self._get_or_compute_array('2bw', lambda: 2.0 * (self.BW @ f))
-        dY = self.end.BND @ f
+        bk = self._bk
+        xp, la, fft = bk.xp, bk.la, bk.fft
+        input_was_numpy = isinstance(f, np.ndarray)
 
-        # ---------- NEW: enforce Neumann BC (first-derivative / flux) ----------
+        f_x = xp.asarray(f)
+        BW  = xp.asarray(self.BW)
+        BND = xp.asarray(self.end.BND)
+        BT0 = xp.asarray(self.basis.BT0)
+        B1T = xp.asarray(self.basis.BkT(1))
+        B2T = xp.asarray(self.basis.BkT(2))
+        om  = xp.asarray(self.grid.omega)
+
+        rhs_2bw = 2.0 * (BW @ f_x)
+        dY = BND @ f_x
+
         if neumann_bc is not None:
             if self.order < 1:
                 raise ValueError("Neumann BC requires self.order ≥ 1.")
-            left_flux, right_flux = neumann_bc   # (None means “don’t care”)
+            left_flux, right_flux = neumann_bc
             if left_flux is not None:
-                dY[1] = float(left_flux)               # left boundary ∂f/∂x
+                dY[1] = float(left_flux)
             if right_flux is not None:
-                dY[self.order + 1] = float(right_flux) # right boundary ∂f/∂x
-        # ----------------------------------------------------------------------
-        rhs = np.concatenate((rhs_2bw, dY))
+                dY[self.order + 1] = float(right_flux)
 
-        lu, piv = self._kkt_lu(lam)
-        sol = sla.lu_solve((lu, piv), rhs, overwrite_b=False)
-        P = sol[: self.basis.B0.shape[0]]
+        rhs = xp.concatenate((rhs_2bw, dY), axis=0)
 
-        # Compute spline approximation (used for residual)
-        f_spline = self.basis.BT0 @ P
+        lu_cpu, piv_cpu = self._kkt_lu(lam)
+        if bk.is_gpu:
+            SOL = la.lu_solve((xp.asarray(lu_cpu), xp.asarray(piv_cpu)), rhs)
+        else:
+            SOL = la.lu_solve((lu_cpu, piv_cpu), bk.to_host(rhs))
+            SOL = xp.asarray(SOL)
 
-        # Compute spline derivatives
-        df1_spline = self.basis.BkT(1) @ P
-        df2_spline = self.basis.BkT(2) @ P
+        n_b = self.basis.B0.shape[0]
+        P = SOL[:n_b]
 
-        # Compute residual once
-        residual = f - f_spline
-        R = np.fft.rfft(residual)  # Single FFT for residual
-        omega = self.grid.omega
+        f_spline = BT0 @ P
+        df1_spline = B1T @ P
+        df2_spline = B2T @ P
 
-        # Compute spectral corrections for both derivatives
-        corr1 = np.fft.irfft(R * (1j * omega), n=self.grid.n)
-        corr2 = np.fft.irfft(R * (1j * omega) ** 2, n=self.grid.n)
+        residual = f_x - f_spline
+        R = fft.rfft(residual)
+        corr1 = fft.irfft(R * (1j * om), n=self.grid.n)
+        corr2 = fft.irfft(R * (1j * om) ** 2, n=self.grid.n)
 
-        # Combine spline and correction terms
-        df1 = (df1_spline + corr1).astype(np.float64)
-        df2 = (df2_spline + corr2).astype(np.float64)
+        df1 = df1_spline + corr1
+        df2 = df2_spline + corr2
 
-        return df1, df2, f_spline.astype(np.float64)
+        return (bk.ensure_like_input(df1, input_was_numpy).astype(np.float64),
+                bk.ensure_like_input(df2, input_was_numpy).astype(np.float64),
+                bk.ensure_like_input(f_spline, input_was_numpy).astype(np.float64))
 
     def definite_integral(self, f: Array, a: Optional[float] = None, b: Optional[float] = None, lam: float = 0.0) -> float:
+        """
+        Integral remains CPU-based (splines & trapezoid on host); this is fine since
+        it's typically not the performance bottleneck.
+        """
         f = np.asarray(f, dtype=np.float64)
         if f.shape[0] != self.grid.n:
             raise ValueError("Length of f must match grid size.")
@@ -435,7 +519,6 @@ class bspf1d:
         residual_integral = np.sum(residual * self.grid.trap)
         return float(spline_integral + residual_integral)
 
-    # ---------- Antiderivative (order 1 or 2) ----------
     def antiderivative(
         self,
         f: Array,
@@ -445,6 +528,10 @@ class bspf1d:
         match_right: Optional[float] = None,
         lam: float = 0.0,
     ) -> Array:
+        """
+        GPU-aware spectral correction; spline antiderivative is evaluated on CPU (BSpline API),
+        then combined on the selected backend.
+        """
         if order not in (1, 2):
             raise ValueError("order must be 1 or 2.")
 
@@ -452,6 +539,7 @@ class bspf1d:
         if f.shape[0] != self.grid.n:
             raise ValueError("Length of f must match grid size.")
 
+        # CPU spline solve (same as before)
         rhs_2bw = 2.0 * (self.BW @ f)
         dY = self.end.BND @ f
         rhs = np.concatenate((rhs_2bw, dY))
@@ -462,28 +550,59 @@ class bspf1d:
         x = self.grid.x
         f_spline = self.basis.BT0 @ P
 
-        # Antiderivative of the spline part
-        F_spline = np.zeros_like(x)
+        # Antiderivative of the spline part (CPU)
+        F_spline_host = np.zeros_like(x)
         for i, s in enumerate(self.basis._splines):
             s_int = s.antiderivative(order)
-            F_spline += P[i] * s_int(x)
+            F_spline_host += P[i] * s_int(x)
 
-        # Residual correction via spectral integration (with DC handling)
-        residual = f - f_spline
-        F_corr = self._correct(residual, self.grid.omega, kind="int", order=order, n=self.grid.n)
+        # Residual correction via spectral integration (GPU-aware)
+        bk = self._bk
+        xp, fft = bk.xp, bk.fft
+        input_was_numpy = True  # this method returns NumPy anyway
 
-        # Combine and enforce boundary constraints using correct nullspace
-        F = F_spline + F_corr
-        x0, x1 = float(x[0]), float(x[-1])
+        residual = xp.asarray(f - f_spline)
+        om = xp.asarray(self.grid.omega)
 
-        # Left value
+        R = fft.rfft(residual)
+        if order == 1:
+            # Avoid divide-by-zero warning by handling DC component separately
+            # Use mask to avoid division when om == 0
+            mask = om != 0.0
+            denom = 1j * om
+            out_hat = xp.zeros_like(R, dtype=xp.complex128)
+            out_hat[mask] = R[mask] / denom[mask]
+            # DC component (om == 0) is already zero from initialization
+            F_corr = fft.irfft(out_hat, n=self.grid.n)
+            xx = xp.asarray(x)
+            mean_r = float(xp.mean(residual))
+            F_corr = F_corr + mean_r * (xx - float(xx[0]))
+            F_corr = F_corr - F_corr[0]
+        else:
+            # Avoid divide-by-zero warning by handling DC component separately
+            # Use mask to avoid division when om == 0
+            mask = om != 0.0
+            denom = (1j * om) ** 2
+            out_hat = xp.zeros_like(R, dtype=xp.complex128)
+            out_hat[mask] = R[mask] / denom[mask]
+            # DC component (om == 0) is already zero from initialization
+            F_corr = fft.irfft(out_hat, n=self.grid.n)
+            xx = xp.asarray(x)
+            x0 = float(xx[0]); x1 = float(xx[-1])
+            mean_r = float(xp.mean(residual))
+            F_corr = F_corr + 0.5 * mean_r * (xx - x0) * (xx - x1)
+
+        F = xp.asarray(F_spline_host) + F_corr
+
+        # Enforce boundary constraints using correct nullspace
+        xx = xp.asarray(x)
+        x0 = float(xx[0]); x1 = float(xx[-1])
         F = F - (F[0] - float(left_value))
-
-        # Optional right value using the correct nullspace
         if match_right is not None:
             if order == 1:
                 F = F + (float(match_right) - F[-1])  # constant shift
             else:
-                F = F + (float(match_right) - F[-1]) * (x - x0) / (x1 - x0)  # linear term
+                F = F + (float(match_right) - F[-1]) * (xx - x0) / (x1 - x0)
 
-        return F, f_spline
+        return (bk.ensure_like_input(F, input_was_numpy).astype(np.float64),
+                f_spline.astype(np.float64))
