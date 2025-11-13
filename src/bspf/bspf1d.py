@@ -23,10 +23,12 @@ _HAS_CUPY = False
 try:
     import cupy as cp
     import cupyx.scipy.linalg as cpla
+    import cupyx.scipy.interpolate as cp_interp
     _HAS_CUPY = True
 except Exception:
     cp = None
     cpla = None
+    cp_interp = None
 
 Array = npt.NDArray[np.float64]
 
@@ -146,35 +148,75 @@ class _Knot:
 
 class BSplineBasis1D:
     """B-spline basis on a uniform grid with lazy derivative matrices."""
-    def __init__(self, degree: int, knots: Array, grid: Grid1D):
+    def __init__(self, degree: int, knots: Array, grid: Grid1D, use_gpu: bool = False):
         self.degree = int(degree)
-        self.knots: Array = np.asarray(knots, dtype=np.float64)
+        self.use_gpu = bool(use_gpu)
+        
+        # Store knots on appropriate device
+        if use_gpu and _HAS_CUPY:
+            if isinstance(knots, cp.ndarray):
+                self.knots: Array = cp.asarray(knots, dtype=cp.float64)
+            else:
+                self.knots: Array = cp.asarray(knots, dtype=cp.float64)
+        else:
+            self.knots: Array = np.asarray(knots, dtype=np.float64)
+        
         self.grid = grid
 
         self._splines = self._mk_splines()
         n_basis = len(self._splines)
-        B0 = np.empty((n_basis, grid.n), dtype=np.float64)
+        
+        # Create B0 matrix on appropriate device
+        if use_gpu and _HAS_CUPY:
+            xp = cp
+            B0 = xp.empty((n_basis, grid.n), dtype=xp.float64)
+            x_eval = cp.asarray(grid.x) if isinstance(grid.x, np.ndarray) else grid.x
+        else:
+            xp = np
+            B0 = xp.empty((n_basis, grid.n), dtype=xp.float64)
+            x_eval = grid.x
+        
         for i, s in enumerate(self._splines):
-            B0[i, :] = s(grid.x)
+            B0[i, :] = s(x_eval)
+        
         self._B0: Array = B0
         self._BT0: Array = B0.T.copy()
 
         self._BkT: Dict[int, Array] = {}
         self._eval_cache: Dict[Tuple[float, int], Array] = {}
 
-    def _mk_splines(self) -> list[BSpline]:
+    def _mk_splines(self):
+        """Create BSpline objects (scipy or cupyx depending on use_gpu)."""
         n_basis = len(self.knots) - self.degree - 1
-        coeffs = np.eye(n_basis, dtype=np.float64)
-        return [BSpline(self.knots, c, self.degree) for c in coeffs]
+        
+        if self.use_gpu and _HAS_CUPY:
+            # Use cupyx.scipy.interpolate.BSpline for GPU
+            xp = cp
+            coeffs = xp.eye(n_basis, dtype=xp.float64)
+            return [cp_interp.BSpline(self.knots, coeffs[i], self.degree) for i in range(n_basis)]
+        else:
+            # Use scipy.interpolate.BSpline for CPU
+            knots_np = cp.asnumpy(self.knots) if _HAS_CUPY and isinstance(self.knots, cp.ndarray) else self.knots
+            coeffs = np.eye(n_basis, dtype=np.float64)
+            return [BSpline(knots_np, coeffs[i], self.degree) for i in range(n_basis)]
 
     def _evaluate_splines_vectorized(self, x: Array, deriv_order: int = 0) -> Array:
         cache_key = (float(x[0]), deriv_order)  # uniform-grid key
         if cache_key in self._eval_cache:
             return self._eval_cache[cache_key]
         n_basis = len(self._splines)
-        result = np.empty((n_basis, len(x)), dtype=np.float64)
+        
+        if self.use_gpu and _HAS_CUPY:
+            xp = cp
+            result = xp.empty((n_basis, len(x)), dtype=xp.float64)
+            x_eval = cp.asarray(x) if isinstance(x, np.ndarray) else x
+        else:
+            xp = np
+            result = xp.empty((n_basis, len(x)), dtype=xp.float64)
+            x_eval = cp.asnumpy(x) if _HAS_CUPY and isinstance(x, cp.ndarray) else x
+        
         for i, s in enumerate(self._splines):
-            result[i, :] = (s.derivative(deriv_order) if deriv_order else s)(x)
+            result[i, :] = (s.derivative(deriv_order) if deriv_order else s)(x_eval)
         self._eval_cache[cache_key] = result
         return result
 
@@ -201,6 +243,17 @@ class EndpointOps1D:
         self.order = int(order)
         self.num_bd = int(num_bd)
         self.grid = basis.grid
+        self.use_gpu = basis.use_gpu
+        
+        # Detect backend from basis.B0
+        if self.use_gpu and _HAS_CUPY and isinstance(basis.B0, cp.ndarray):
+            xp = cp
+            # Use cupy.linalg.solve for GPU (cupyx.scipy.linalg doesn't have solve)
+            la_solve = cp.linalg.solve
+        else:
+            xp = np
+            la_solve = sla.solve
+        
         B0 = basis.B0
         Bk = {0: B0}
         for k in range(1, order + 1):
@@ -208,32 +261,40 @@ class EndpointOps1D:
 
         n_basis, n_points = B0.shape
 
-        C = np.zeros((2 * order, n_basis), dtype=np.float64)
+        C = xp.zeros((2 * order, n_basis), dtype=xp.float64)
         for p in range(order):
             C[p, :] = Bk[p][:, 0]
             C[order + p, :] = Bk[p][:, -1]
 
-        i, j = np.meshgrid(np.arange(num_bd), np.arange(num_bd), indexing="ij")
-        fact = np.array([math.factorial(k) for k in range(num_bd)], dtype=np.float64)
+        # meshgrid: CuPy uses np.meshgrid, NumPy uses np.meshgrid
+        # For GPU, we need to use np.meshgrid and convert, or use cupy's equivalent
+        if self.use_gpu and _HAS_CUPY:
+            # CuPy doesn't have meshgrid, use NumPy and convert
+            i_np, j_np = np.meshgrid(np.arange(num_bd), np.arange(num_bd), indexing="ij")
+            i = cp.asarray(i_np)
+            j = cp.asarray(j_np)
+        else:
+            i, j = np.meshgrid(np.arange(num_bd), np.arange(num_bd), indexing="ij")
+        fact = xp.array([math.factorial(k) for k in range(num_bd)], dtype=xp.float64)
         A_left = (j**i) / fact[:, None]
-        A_right = np.flip(A_left * ((-1.0) ** i), axis=(0, 1))
+        A_right = xp.flip(A_left * ((-1.0) ** i), axis=(0, 1))
 
-        E_left = np.eye(num_bd, dtype=np.float64)[:order, :].T
-        idx = np.arange(num_bd - 1, num_bd - order - 1, -1)
-        E_right = np.eye(num_bd, dtype=np.float64)[idx, :].T
+        E_left = xp.eye(num_bd, dtype=xp.float64)[:order, :].T
+        idx = xp.arange(num_bd - 1, num_bd - order - 1, -1)
+        E_right = xp.eye(num_bd, dtype=xp.float64)[idx, :].T
 
-        X_left = sla.solve(A_left, E_left).T
-        X_right = sla.solve(A_right, E_right).T
+        X_left = la_solve(A_left, E_left).T
+        X_right = la_solve(A_right, E_right).T
 
-        dx_pows = self.grid.dx ** np.arange(order, dtype=np.float64)
-        BND = np.zeros((2 * order, n_points), dtype=np.float64)
+        dx_pows = xp.array([self.grid.dx ** k for k in range(order)], dtype=xp.float64)
+        BND = xp.zeros((2 * order, n_points), dtype=xp.float64)
         BND[:order, :num_bd] = X_left / dx_pows[:, None]
         BND[order:, n_points - num_bd:] = X_right / dx_pows[:, None]
 
-        self.C: Array = C.astype(np.float64)
-        self.BND: Array = BND.astype(np.float64)
-        self.X_left: Array = X_left.astype(np.float64)
-        self.X_right: Array = X_right.astype(np.float64)
+        self.C: Array = C.astype(xp.float64)
+        self.BND: Array = BND.astype(xp.float64)
+        self.X_left: Array = X_left.astype(xp.float64)
+        self.X_right: Array = X_right.astype(xp.float64)
 
 
 # =============================================================================
@@ -298,14 +359,29 @@ class bspf1d:
         correction: str = "spectral",
         use_gpu: bool = False,      # <--- NEW
     ):
+        # Set use_gpu FIRST (needed by basis creation)
+        self.use_gpu = bool(use_gpu)
+        self._bk = _Backend(self.use_gpu)
+        
         self.grid = grid
         self.degree = int(degree)
         self.order = self.degree - 1 if order is None else int(order)
         self.num_bd = self.degree if num_boundary_points is None else int(num_boundary_points)
-        self.knots = np.asarray(knots, dtype=np.float64)
+        # Detect backend (CuPy or NumPy) - knots should match grid's backend
+        if _HAS_CUPY and isinstance(knots, cp.ndarray):
+            self.knots = cp.asarray(knots, dtype=cp.float64)
+        else:
+            self.knots = np.asarray(knots, dtype=np.float64)
 
-        self.basis = BSplineBasis1D(self.degree, self.knots, self.grid)
-        self.BW = self.basis.B0 * self.grid.trap
+        self.basis = BSplineBasis1D(self.degree, self.knots, self.grid, use_gpu=self.use_gpu)
+        
+        # Convert grid.trap to GPU if needed
+        if self.use_gpu and _HAS_CUPY:
+            trap = cp.asarray(self.grid.trap)
+        else:
+            trap = self.grid.trap
+        
+        self.BW = self.basis.B0 * trap
         self.Q = self.BW @ self.basis.B0.T
 
         self.end = EndpointOps1D(self.basis, order=self.order, num_bd=self.num_bd)
@@ -318,10 +394,6 @@ class bspf1d:
             self._correct = ResidualCorrection.none
 
         self._kkt_cache: Dict[float, Tuple[Array, Array]] = {}
-
-        # backend
-        self.use_gpu = bool(use_gpu)
-        self._bk = _Backend(self.use_gpu)
 
     @classmethod
     def from_grid(
@@ -339,11 +411,22 @@ class bspf1d:
         correction: str = "spectral",
         use_gpu: bool = False,   # <--- NEW
     ) -> "bspf1d":
-        grid = Grid1D(x)
+        # Accept both NumPy and CuPy arrays for x
+        # Grid1D needs NumPy, but we'll convert knots to GPU if use_gpu=True
+        if _HAS_CUPY and isinstance(x, cp.ndarray):
+            x_np = cp.asnumpy(x).astype(np.float64)
+        else:
+            x_np = np.asarray(x, dtype=np.float64)
+        grid = Grid1D(x_np)
         k = _Knot.resolve(
             degree=degree, grid=grid, knots=knots, n_basis=n_basis, domain=domain,
             use_clustering=use_clustering, clustering_factor=clustering_factor
         )
+        
+        # Convert knots to GPU if use_gpu=True
+        if use_gpu and _HAS_CUPY:
+            k = cp.asarray(k, dtype=cp.float64)
+        
         return cls(
             grid=grid, degree=degree, knots=k,
             order=order, num_boundary_points=num_boundary_points, correction=correction,
@@ -352,17 +435,34 @@ class bspf1d:
 
     # ---------- private solvers ----------
     def _kkt_lu(self, lam: float) -> Tuple[Array, Array]:
-        """CPU LU factorization cached by lambda (used for both CPU/GPU)."""
+        """LU factorization cached by lambda (CPU/GPU aware)."""
         lam = float(lam)
         if lam in self._kkt_cache:
             return self._kkt_cache[lam]
+        
+        # Detect backend from self.Q
+        if self.use_gpu and _HAS_CUPY and isinstance(self.Q, cp.ndarray):
+            xp = cp
+            la_factor = cpla.lu_factor
+        else:
+            xp = np
+            la_factor = sla.lu_factor
+        
         n_b = self.basis.B0.shape[0]
         m = 2 * self.order
-        KKT = np.zeros((n_b + m, n_b + m), dtype=np.float64)
-        KKT[:n_b, :n_b] = 2.0 * (self.Q + lam * np.eye(n_b))
+        KKT = xp.zeros((n_b + m, n_b + m), dtype=xp.float64)
+        KKT[:n_b, :n_b] = 2.0 * (self.Q + lam * xp.eye(n_b, dtype=xp.float64))
         KKT[:n_b, n_b:] = -self.end.C.T
         KKT[n_b:, :n_b] = self.end.C
-        lu, piv = sla.lu_factor(KKT)
+        
+        # LU factorization
+        if self.use_gpu and _HAS_CUPY and isinstance(KKT, cp.ndarray):
+            lu, piv = cpla.lu_factor(KKT)
+        else:
+            # Convert to NumPy for CPU LU factorization
+            KKT_np = cp.asnumpy(KKT) if _HAS_CUPY and isinstance(KKT, cp.ndarray) else KKT
+            lu, piv = sla.lu_factor(KKT_np)
+        
         self._kkt_cache[lam] = (lu, piv)
         return lu, piv
 
@@ -375,25 +475,39 @@ class bspf1d:
         """
         if k not in (1, 2, 3):
             raise ValueError("Only 1st/2nd/3rd derivatives are supported.")
-        f = np.asarray(f)
-        if f.shape[0] != self.grid.n:
-            raise ValueError("Length of f must match grid size.")
         
-        # Detect if input is complex
-        is_complex = np.iscomplexobj(f)
-        if is_complex:
-            # Ensure complex128 for complex inputs
-            f = f.astype(np.complex128)
-        else:
-            # Ensure float64 for real inputs
-            f = f.astype(np.float64)
-
         bk = self._bk
         xp, la, fft = bk.xp, bk.la, bk.fft
-        input_was_numpy = isinstance(f, np.ndarray)
-
-        # Move inputs/mats to backend
-        f_x = xp.asarray(f)
+        
+        # Detect input type and convert to backend array (don't use np.asarray on CuPy arrays)
+        input_was_numpy = isinstance(f, np.ndarray) or (_HAS_CUPY and not isinstance(f, cp.ndarray))
+        if _HAS_CUPY and isinstance(f, cp.ndarray):
+            # Input is CuPy array - use CuPy operations
+            f_x = xp.asarray(f)
+        else:
+            # Input is NumPy array - convert to backend
+            f_x = xp.asarray(f)
+        
+        if f_x.shape[0] != self.grid.n:
+            raise ValueError("Length of f must match grid size.")
+        
+        # Detect if input is complex (use backend's iscomplexobj)
+        if _HAS_CUPY and isinstance(f_x, cp.ndarray):
+            is_complex = cp.iscomplexobj(f_x)
+            if is_complex:
+                # Ensure complex128 for complex inputs
+                f_x = f_x.astype(xp.complex128)
+            else:
+                # Ensure float64 for real inputs
+                f_x = f_x.astype(xp.float64)
+        else:
+            is_complex = np.iscomplexobj(f_x)
+            if is_complex:
+                # Ensure complex128 for complex inputs
+                f_x = f_x.astype(np.complex128)
+            else:
+                # Ensure float64 for real inputs
+                f_x = f_x.astype(np.float64)
         BW  = xp.asarray(self.BW)
         BND = xp.asarray(self.end.BND)
         BT0 = xp.asarray(self.basis.BT0)
@@ -401,7 +515,11 @@ class bspf1d:
         
         # Use full FFT frequencies for complex, rFFT frequencies for real
         if is_complex:
-            om = xp.asarray(2.0 * np.pi * np.fft.fftfreq(self.grid.n, d=self.grid.dx))
+            # Use backend's fftfreq (CuPy or NumPy)
+            if bk.is_gpu and _HAS_CUPY:
+                om = xp.asarray(2.0 * cp.pi * cp.fft.fftfreq(self.grid.n, d=self.grid.dx))
+            else:
+                om = xp.asarray(2.0 * np.pi * np.fft.fftfreq(self.grid.n, d=self.grid.dx))
         else:
             om = xp.asarray(self.grid.omega)
 
@@ -449,8 +567,11 @@ class bspf1d:
         df_final = (df + corr)
         f_spline_out = f_spline
 
-        # Return appropriate dtype
-        out_dtype = np.complex128 if is_complex else np.float64
+        # Return appropriate dtype (use backend's dtype)
+        if bk.is_gpu and _HAS_CUPY:
+            out_dtype = xp.complex128 if is_complex else xp.float64
+        else:
+            out_dtype = np.complex128 if is_complex else np.float64
         return (bk.ensure_like_input(df_final, input_was_numpy).astype(out_dtype),
                 bk.ensure_like_input(f_spline_out, input_was_numpy).astype(out_dtype))
 
@@ -461,24 +582,39 @@ class bspf1d:
         Compute first & second derivatives together (GPU-aware).
         Supports both real (float64) and complex (complex128) input arrays.
         """
-        f = np.asarray(f)
-        if f.shape[0] != self.grid.n:
-            raise ValueError("Length of f must match grid size.")
-        
-        # Detect if input is complex
-        is_complex = np.iscomplexobj(f)
-        if is_complex:
-            # Ensure complex128 for complex inputs
-            f = f.astype(np.complex128)
-        else:
-            # Ensure float64 for real inputs
-            f = f.astype(np.float64)
-
         bk = self._bk
         xp, la, fft = bk.xp, bk.la, bk.fft
-        input_was_numpy = isinstance(f, np.ndarray)
+        
+        # Detect input type and convert to backend array (don't use np.asarray on CuPy arrays)
+        input_was_numpy = isinstance(f, np.ndarray) or (_HAS_CUPY and not isinstance(f, cp.ndarray))
+        if _HAS_CUPY and isinstance(f, cp.ndarray):
+            # Input is CuPy array - use CuPy operations
+            f_x = xp.asarray(f)
+        else:
+            # Input is NumPy array - convert to backend
+            f_x = xp.asarray(f)
+        
+        if f_x.shape[0] != self.grid.n:
+            raise ValueError("Length of f must match grid size.")
+        
+        # Detect if input is complex (use backend's iscomplexobj)
+        if _HAS_CUPY and isinstance(f_x, cp.ndarray):
+            is_complex = cp.iscomplexobj(f_x)
+            if is_complex:
+                # Ensure complex128 for complex inputs
+                f_x = f_x.astype(xp.complex128)
+            else:
+                # Ensure float64 for real inputs
+                f_x = f_x.astype(xp.float64)
+        else:
+            is_complex = np.iscomplexobj(f_x)
+            if is_complex:
+                # Ensure complex128 for complex inputs
+                f_x = f_x.astype(np.complex128)
+            else:
+                # Ensure float64 for real inputs
+                f_x = f_x.astype(np.float64)
 
-        f_x = xp.asarray(f)
         BW  = xp.asarray(self.BW)
         BND = xp.asarray(self.end.BND)
         BT0 = xp.asarray(self.basis.BT0)
@@ -487,7 +623,11 @@ class bspf1d:
         
         # Use full FFT frequencies for complex, rFFT frequencies for real
         if is_complex:
-            om = xp.asarray(2.0 * np.pi * np.fft.fftfreq(self.grid.n, d=self.grid.dx))
+            # Use backend's fftfreq (CuPy or NumPy)
+            if bk.is_gpu and _HAS_CUPY:
+                om = xp.asarray(2.0 * cp.pi * cp.fft.fftfreq(self.grid.n, d=self.grid.dx))
+            else:
+                om = xp.asarray(2.0 * np.pi * np.fft.fftfreq(self.grid.n, d=self.grid.dx))
         else:
             om = xp.asarray(self.grid.omega)
 
@@ -534,8 +674,11 @@ class bspf1d:
         df1 = df1_spline + corr1
         df2 = df2_spline + corr2
 
-        # Return appropriate dtype
-        out_dtype = np.complex128 if is_complex else np.float64
+        # Return appropriate dtype (use backend's dtype)
+        if bk.is_gpu and _HAS_CUPY:
+            out_dtype = xp.complex128 if is_complex else xp.float64
+        else:
+            out_dtype = np.complex128 if is_complex else np.float64
         return (bk.ensure_like_input(df1, input_was_numpy).astype(out_dtype),
                 bk.ensure_like_input(df2, input_was_numpy).astype(out_dtype),
                 bk.ensure_like_input(f_spline, input_was_numpy).astype(out_dtype))

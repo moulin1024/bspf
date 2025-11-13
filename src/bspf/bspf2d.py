@@ -279,23 +279,36 @@ class bspf2d:
         correction: str = "spectral",
         use_gpu: bool = False,
     ) -> "bspf2d":
-        x = np.asarray(x, dtype=np.float64)
-        y = np.asarray(y, dtype=np.float64)
+        # Accept both NumPy and CuPy arrays - bspf1d.from_grid() will handle conversion internally
+        # Convert to NumPy only if needed (bspf1d.from_grid() expects NumPy for Grid1D setup)
+        if _HAS_CUPY and isinstance(x, cp.ndarray):
+            x_np = cp.asnumpy(x).astype(np.float64)
+        else:
+            x_np = np.asarray(x, dtype=np.float64)
+        
+        if _HAS_CUPY and isinstance(y, cp.ndarray):
+            y_np = cp.asnumpy(y).astype(np.float64)
+        else:
+            y_np = np.asarray(y, dtype=np.float64)
+        
         if degree_y is None:
             degree_y = degree_x
+        
         xm = bspf1d.from_grid(
-            degree=degree_x, x=x, knots=knots_x, n_basis=n_basis_x, domain=domain_x,
+            degree=degree_x, x=x_np, knots=knots_x, n_basis=n_basis_x, domain=domain_x,
             use_clustering=use_clustering_x, order=order_x, num_boundary_points=num_boundary_points_x,
             correction=correction, 
             use_gpu=use_gpu,
         )
         ym = bspf1d.from_grid(
-            degree=degree_y, x=y, knots=knots_y, n_basis=n_basis_y, domain=domain_y,
+            degree=degree_y, x=y_np, knots=knots_y, n_basis=n_basis_y, domain=domain_y,
             use_clustering=use_clustering_y, order=order_y, num_boundary_points=num_boundary_points_y,
             correction=correction,
             use_gpu=use_gpu,
         )
-        return cls(x=x, y=y, x_model=xm, y_model=ym, use_gpu=use_gpu)
+        
+        # Store original arrays (NumPy) for return
+        return cls(x=x_np, y=y_np, x_model=xm, y_model=ym, use_gpu=use_gpu)
 
     # ---------- init cache ----------
     def __post_init__(self):
