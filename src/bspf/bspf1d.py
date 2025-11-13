@@ -371,12 +371,22 @@ class bspf1d:
         neumann_bc: Optional[Tuple[Optional[float], Optional[float]]] = None) -> Tuple[Array, Array]:
         """
         GPU-aware derivative: if use_gpu=True, multiplies/FFTs/solves on device.
+        Supports both real (float64) and complex (complex128) input arrays.
         """
         if k not in (1, 2, 3):
             raise ValueError("Only 1st/2nd/3rd derivatives are supported.")
-        f = np.asarray(f, dtype=np.float64)
+        f = np.asarray(f)
         if f.shape[0] != self.grid.n:
             raise ValueError("Length of f must match grid size.")
+        
+        # Detect if input is complex
+        is_complex = np.iscomplexobj(f)
+        if is_complex:
+            # Ensure complex128 for complex inputs
+            f = f.astype(np.complex128)
+        else:
+            # Ensure float64 for real inputs
+            f = f.astype(np.float64)
 
         bk = self._bk
         xp, la, fft = bk.xp, bk.la, bk.fft
@@ -388,7 +398,12 @@ class bspf1d:
         BND = xp.asarray(self.end.BND)
         BT0 = xp.asarray(self.basis.BT0)
         BkT = xp.asarray(self.basis.BkT(k))
-        om  = xp.asarray(self.grid.omega)
+        
+        # Use full FFT frequencies for complex, rFFT frequencies for real
+        if is_complex:
+            om = xp.asarray(2.0 * np.pi * np.fft.fftfreq(self.grid.n, d=self.grid.dx))
+        else:
+            om = xp.asarray(self.grid.omega)
 
         # Build RHS
         rhs_2bw = 2.0 * (BW @ f_x)
@@ -401,9 +416,9 @@ class bspf1d:
             left_flux, right_flux = neumann_bc
             # rows: 1 (left d/dx), order+1 (right d/dx)
             if left_flux is not None:
-                dY[1] = float(left_flux)
+                dY[1] = complex(left_flux) if is_complex else float(left_flux)
             if right_flux is not None:
-                dY[self.order + 1] = float(right_flux)
+                dY[self.order + 1] = complex(right_flux) if is_complex else float(right_flux)
 
         rhs = xp.concatenate((rhs_2bw, dY), axis=0)
 
@@ -422,24 +437,42 @@ class bspf1d:
         df = BkT @ P
 
         residual = f_x - f_spline
-        R = fft.rfft(residual)
-        corr = fft.irfft(R * (1j * om) ** k, n=self.grid.n)
+        
+        # Use appropriate FFT based on input type
+        if is_complex:
+            R = fft.fft(residual)
+            corr = fft.ifft(R * (1j * om) ** k)
+        else:
+            R = fft.rfft(residual)
+            corr = fft.irfft(R * (1j * om) ** k, n=self.grid.n)
 
         df_final = (df + corr)
         f_spline_out = f_spline
 
-        return (bk.ensure_like_input(df_final, input_was_numpy).astype(np.float64),
-                bk.ensure_like_input(f_spline_out, input_was_numpy).astype(np.float64))
+        # Return appropriate dtype
+        out_dtype = np.complex128 if is_complex else np.float64
+        return (bk.ensure_like_input(df_final, input_was_numpy).astype(out_dtype),
+                bk.ensure_like_input(f_spline_out, input_was_numpy).astype(out_dtype))
 
     def differentiate_1_2(self, f: Array, lam: float = 0.0, *,
                           neumann_bc: Optional[Tuple[Optional[float], Optional[float]]] = None
                           ) -> Tuple[Array, Array, Array]:
         """
         Compute first & second derivatives together (GPU-aware).
+        Supports both real (float64) and complex (complex128) input arrays.
         """
-        f = np.asarray(f, dtype=np.float64)
+        f = np.asarray(f)
         if f.shape[0] != self.grid.n:
             raise ValueError("Length of f must match grid size.")
+        
+        # Detect if input is complex
+        is_complex = np.iscomplexobj(f)
+        if is_complex:
+            # Ensure complex128 for complex inputs
+            f = f.astype(np.complex128)
+        else:
+            # Ensure float64 for real inputs
+            f = f.astype(np.float64)
 
         bk = self._bk
         xp, la, fft = bk.xp, bk.la, bk.fft
@@ -451,7 +484,12 @@ class bspf1d:
         BT0 = xp.asarray(self.basis.BT0)
         B1T = xp.asarray(self.basis.BkT(1))
         B2T = xp.asarray(self.basis.BkT(2))
-        om  = xp.asarray(self.grid.omega)
+        
+        # Use full FFT frequencies for complex, rFFT frequencies for real
+        if is_complex:
+            om = xp.asarray(2.0 * np.pi * np.fft.fftfreq(self.grid.n, d=self.grid.dx))
+        else:
+            om = xp.asarray(self.grid.omega)
 
         rhs_2bw = 2.0 * (BW @ f_x)
         dY = BND @ f_x
@@ -461,9 +499,9 @@ class bspf1d:
                 raise ValueError("Neumann BC requires self.order ≥ 1.")
             left_flux, right_flux = neumann_bc
             if left_flux is not None:
-                dY[1] = float(left_flux)
+                dY[1] = complex(left_flux) if is_complex else float(left_flux)
             if right_flux is not None:
-                dY[self.order + 1] = float(right_flux)
+                dY[self.order + 1] = complex(right_flux) if is_complex else float(right_flux)
 
         rhs = xp.concatenate((rhs_2bw, dY), axis=0)
 
@@ -482,16 +520,25 @@ class bspf1d:
         df2_spline = B2T @ P
 
         residual = f_x - f_spline
-        R = fft.rfft(residual)
-        corr1 = fft.irfft(R * (1j * om), n=self.grid.n)
-        corr2 = fft.irfft(R * (1j * om) ** 2, n=self.grid.n)
+        
+        # Use appropriate FFT based on input type
+        if is_complex:
+            R = fft.fft(residual)
+            corr1 = fft.ifft(R * (1j * om))
+            corr2 = fft.ifft(R * (1j * om) ** 2)
+        else:
+            R = fft.rfft(residual)
+            corr1 = fft.irfft(R * (1j * om), n=self.grid.n)
+            corr2 = fft.irfft(R * (1j * om) ** 2, n=self.grid.n)
 
         df1 = df1_spline + corr1
         df2 = df2_spline + corr2
 
-        return (bk.ensure_like_input(df1, input_was_numpy).astype(np.float64),
-                bk.ensure_like_input(df2, input_was_numpy).astype(np.float64),
-                bk.ensure_like_input(f_spline, input_was_numpy).astype(np.float64))
+        # Return appropriate dtype
+        out_dtype = np.complex128 if is_complex else np.float64
+        return (bk.ensure_like_input(df1, input_was_numpy).astype(out_dtype),
+                bk.ensure_like_input(df2, input_was_numpy).astype(out_dtype),
+                bk.ensure_like_input(f_spline, input_was_numpy).astype(out_dtype))
 
     def definite_integral(self, f: Array, a: Optional[float] = None, b: Optional[float] = None, lam: float = 0.0) -> float:
         """
