@@ -58,15 +58,15 @@ def build_laplacian_matrix_bspf(bspf_op, n, neumann_bc=(0.0, 0.0), use_gpu=False
     else:
         xp = np
     
-    # Create identity matrix
-    I = xp.eye(n, dtype=np.float64)
+    # Create identity matrix (use backend's dtype)
+    I = xp.eye(n, dtype=xp.float64)
     
     # Apply differentiate to each column of identity matrix
     L_columns = [bspf_op.differentiate(I[:, k], k=2, neumann_bc=neumann_bc)[0] 
                  for k in range(n)]
     
-    # Convert list of columns to array and transpose
-    L = xp.array(L_columns, dtype=np.complex128).T
+    # Convert list of columns to array and transpose (use backend's dtype)
+    L = xp.array(L_columns, dtype=xp.complex128).T
     
     return L
 
@@ -90,15 +90,18 @@ def create_test_rhs(bspf_op, g=0.0, neumann_bc=(0.0, 0.0)):
         RHS function
     """
     def rhs_func(psi):
+        # Detect backend from psi array
+        if _HAS_CUPY and isinstance(psi, cp.ndarray):
+            xp = cp
+        else:
+            xp = np
+        
         # Compute second derivative
         lap, _ = bspf_op.differentiate(psi, k=2, neumann_bc=neumann_bc)
         
         # Nonlinear term
         if g != 0.0:
-            if _HAS_CUPY and isinstance(psi, cp.ndarray):
-                nl = g * cp.abs(psi)**2 * psi
-            else:
-                nl = g * np.abs(psi)**2 * psi
+            nl = g * xp.abs(psi)**2 * psi
             return 1j * (lap + nl)
         else:
             return 1j * lap
@@ -113,7 +116,7 @@ def create_test_jacobian(L_complex, g=0.0):
     Parameters:
     -----------
     L_complex : array
-        Precomputed Laplacian matrix
+        Precomputed Laplacian matrix (can be NumPy or CuPy)
     g : float
         Nonlinear coupling constant
         
@@ -123,14 +126,24 @@ def create_test_jacobian(L_complex, g=0.0):
         Jacobian function
     """
     def jacobian_func(psi):
-        # Detect backend
+        # Detect backend from psi array
         if _HAS_CUPY and isinstance(psi, cp.ndarray):
             xp = cp
+            # Ensure L_complex is on GPU if psi is on GPU
+            if isinstance(L_complex, np.ndarray):
+                L = cp.asarray(L_complex)
+            else:
+                L = L_complex
         else:
             xp = np
+            # Ensure L_complex is on CPU if psi is on CPU
+            if _HAS_CUPY and isinstance(L_complex, cp.ndarray):
+                L = cp.asnumpy(L_complex)
+            else:
+                L = L_complex
         
         # Linear part: i·L
-        J_linear = 1j * L_complex
+        J_linear = 1j * L
         
         # Nonlinear part: diagonal matrix with 2i·g·|ψ|²
         J_nonlinear = xp.diag(2j * g * xp.abs(psi)**2)
@@ -199,8 +212,8 @@ def run_bdf2_benchmark(
         use_gpu=use_gpu
     )
     
-    # Initial condition: modulational instability
-    psi_init = (1.0 + 0.1*xp.cos(4*x)).astype(np.complex128)
+    # Initial condition: modulational instability (use backend's dtype)
+    psi_init = (1.0 + 0.1*xp.cos(4*x)).astype(xp.complex128)
     
     # Precompute Laplacian matrix for Jacobian
     L_complex = build_laplacian_matrix_bspf(bspf_op, len(x), neumann_bc=(0.0, 0.0), use_gpu=use_gpu)
