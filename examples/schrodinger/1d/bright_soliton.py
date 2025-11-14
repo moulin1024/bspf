@@ -17,17 +17,17 @@ m = 1.0
 g = -1.0  # Focusing NLS (bright soliton)
 
 # Grid setup - include endpoints for Dirichlet BCs
-Nx = 512  # Number of grid points (including endpoints)
+Nx = 1024  # Number of grid points (including endpoints)
 xmin, xmax = -30, 30  # Larger domain to minimize boundary effects
 x = np.linspace(xmin, xmax, Nx)  # Include endpoints for Dirichlet BCs
 dx = x[1] - x[0]
 
-dt = 0.002  # Time step
-Nt = 20000
+dt = 0.001  # Time step
+Nt = 10000
 
 # Time stepping method: 'rk4', 'rk45', or 'bdf2'
 # Note: Split-step method requires FFT, so we use RK methods with bspf1d
-time_method = 'rk45'
+time_method = 'rk4'
 
 # Output parameters
 save_interval = 100  # Save plot every N steps
