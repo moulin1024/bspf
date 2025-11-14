@@ -1,11 +1,22 @@
 """
 Time stepping methods for NLSE solvers.
 Shared module for RK4, RK45, RK23, and BDF2 time integrators with uniform interface.
+Supports both CPU (NumPy) and GPU (CuPy) computing.
 """
 
 import numpy as np
 from numpy.linalg import solve, norm
 from typing import Callable, Optional, Dict, Any
+
+# Optional GPU backend
+_HAS_CUPY = False
+try:
+    import cupy as cp
+    import cupyx.scipy.linalg as cpla
+    _HAS_CUPY = True
+except Exception:
+    cp = None
+    cpla = None
 
 try:
     from scipy.sparse.linalg import LinearOperator, gmres
@@ -32,17 +43,45 @@ except ImportError:
 
 
 # ============================================================
+#  GPU/CPU detection and backend selection
+# ============================================================
+def _get_backend(psi):
+    """
+    Detect if array is CuPy or NumPy and return appropriate backend.
+    
+    Parameters:
+    -----------
+    psi : array
+        Array to check (can be NumPy or CuPy)
+    
+    Returns:
+    --------
+    xp : module
+        Array module (numpy or cupy)
+    la : module
+        Linear algebra module (scipy.linalg or cupyx.scipy.linalg)
+    is_gpu : bool
+        True if GPU array detected
+    """
+    if _HAS_CUPY and isinstance(psi, cp.ndarray):
+        return cp, cpla, True
+    else:
+        return np, None, False  # Use numpy.linalg for CPU
+
+
+# ============================================================
 #  RK45 time stepping (Dormand-Prince 4(5) embedded pair)
 # ============================================================
 def rk45_step(psi, dt, rhs_func, *args):
     """
     Fifth-order Runge-Kutta time stepping (Dormand-Prince method).
     This is an embedded 4(5) pair, but we use the 5th order solution for fixed-step.
+    GPU-aware: automatically detects and uses CuPy if input is a GPU array.
     
     Parameters:
     -----------
     psi : array
-        Current solution state
+        Current solution state (NumPy or CuPy array)
     dt : float
         Time step
     rhs_func : callable
@@ -54,6 +93,8 @@ def rk45_step(psi, dt, rhs_func, *args):
     --------
     array : Updated solution at next time step (5th order accurate)
     """
+    xp, _, _ = _get_backend(psi)
+    
     # Dormand-Prince 4(5) stage coefficients
     a21 = 1/5
     a31 = 3/40
@@ -99,12 +140,12 @@ def rk45_step(psi, dt, rhs_func, *args):
 def rk4_step(psi, dt, rhs_func, *args):
     """
     Fourth-order Runge-Kutta time stepping (explicit).
-    This is a wrapper that calls rk45_step for consistency.
+    GPU-aware: automatically detects and uses CuPy if input is a GPU array.
     
     Parameters:
     -----------
     psi : array
-        Current solution state
+        Current solution state (NumPy or CuPy array)
     dt : float
         Time step
     rhs_func : callable
@@ -116,10 +157,6 @@ def rk4_step(psi, dt, rhs_func, *args):
     --------
     array : Updated solution at next time step
     """
-    # For backward compatibility, we can either:
-    # 1. Keep the original RK4 implementation
-    # 2. Call RK45 (which is more accurate)
-    # We'll keep the original RK4 for exact backward compatibility
     k1 = rhs_func(psi, *args)
     k2 = rhs_func(psi + 0.5*dt*k1, *args)
     k3 = rhs_func(psi + 0.5*dt*k2, *args)
@@ -135,11 +172,12 @@ def rk23_step(psi, dt, rhs_func, *args):
     """
     Third-order Runge-Kutta time stepping (Bogacki-Shampine method).
     This is an embedded 2(3) pair, but we use the 3rd order solution for fixed-step.
+    GPU-aware: automatically detects and uses CuPy if input is a GPU array.
     
     Parameters:
     -----------
     psi : array
-        Current solution state
+        Current solution state (NumPy or CuPy array)
     dt : float
         Time step
     rhs_func : callable
@@ -170,13 +208,14 @@ def bdf2_step(psi_prev, psi_now, dt, rhs_func, jacobian_func=None, *args,
         (3 ψ^{n+1} - 4 ψ^n + ψ^{n-1}) / (2 dt) = F(ψ^{n+1})
 
     Solve nonlinear system for ψ^{n+1} using Newton iteration.
+    GPU-aware: automatically detects and uses CuPy if input is a GPU array.
     
     Parameters:
     -----------
     psi_prev : array
-        Solution at time step n-1
+        Solution at time step n-1 (NumPy or CuPy array)
     psi_now : array
-        Solution at time step n
+        Solution at time step n (NumPy or CuPy array)
     dt : float
         Time step
     rhs_func : callable
@@ -198,6 +237,9 @@ def bdf2_step(psi_prev, psi_now, dt, rhs_func, jacobian_func=None, *args,
     --------
     array : Updated solution at time step n+1
     """
+    # Detect backend from input arrays
+    xp, la, is_gpu = _get_backend(psi_now)
+    
     # Precompute coefficients (or use provided ones)
     if bdf2_coeffs is None:
         alpha = 3/(2*dt)
@@ -215,12 +257,18 @@ def bdf2_step(psi_prev, psi_now, dt, rhs_func, jacobian_func=None, *args,
     m = len(guess)
     
     # Detect dtype from input arrays (support both real and complex)
-    dtype = np.result_type(psi_prev, psi_now, guess)
+    dtype = xp.result_type(psi_prev, psi_now, guess)
     
     # Precompute identity matrix (needed for both analytical and finite-difference Jacobians)
     # Use detected dtype to support both real and complex arrays
-    eye_m = np.eye(m, dtype=dtype)
+    eye_m = xp.eye(m, dtype=dtype)
     eps = 1e-8  # For finite-difference (if needed)
+    
+    # Use appropriate norm function
+    if is_gpu:
+        norm_func = lambda x: float(xp.linalg.norm(x))
+    else:
+        norm_func = norm
 
     for it in range(max_iter):
         Fg = rhs_func(guess, *args)
@@ -228,7 +276,7 @@ def bdf2_step(psi_prev, psi_now, dt, rhs_func, jacobian_func=None, *args,
         # BDF2 residual (using precomputed coefficients)
         R = alpha*guess - Fg - coeff_now*psi_now + coeff_prev*psi_prev
 
-        if norm(R) < tol:
+        if norm_func(R) < tol:
             break
 
         # Compute Jacobian: analytical if provided, otherwise finite-difference
@@ -239,23 +287,24 @@ def bdf2_step(psi_prev, psi_now, dt, rhs_func, jacobian_func=None, *args,
             # Create all perturbations at once using broadcasting
             perturbations = eps * eye_m
             # Broadcast: guess is (m,), perturbations is (m, m)
-            perturbed_guesses = guess[:, np.newaxis] + perturbations
+            perturbed_guesses = guess[:, xp.newaxis] + perturbations
             
             # Evaluate RHS for all perturbations using vectorized operations
             # Build Jacobian column by column using list comprehension
             # Use detected dtype to support both real and complex arrays
-            J = np.array([rhs_func(perturbed_guesses[:, k], *args) for k in range(m)], 
+            J = xp.array([rhs_func(perturbed_guesses[:, k], *args) for k in range(m)], 
                         dtype=dtype).T
-            J = (J - Fg[:, np.newaxis]) / eps
+            J = (J - Fg[:, xp.newaxis]) / eps
 
         # Full Jacobian of BDF2 residual: Jfull = alpha*I - J
         # Check if J is a LinearOperator (matrix-free) or dense matrix
-        is_linear_operator = (HAS_SCIPY_SPARSE and 
+        # Note: LinearOperator/GMRES path doesn't work with CuPy arrays, so skip for GPU
+        is_linear_operator = (not is_gpu and HAS_SCIPY_SPARSE and 
                              LinearOperator is not None and 
                              isinstance(J, LinearOperator))
         
         if is_linear_operator:
-            # Matrix-free: use iterative solver (GMRES)
+            # Matrix-free: use iterative solver (GMRES) - CPU only
             # Jfull = alpha*I - J, so Jfull @ v = alpha*v - J @ v
             def Jfull_matvec(v):
                 return alpha * v - J.matvec(v)
@@ -263,22 +312,32 @@ def bdf2_step(psi_prev, psi_now, dt, rhs_func, jacobian_func=None, *args,
             Jfull = LinearOperator((m, m), matvec=Jfull_matvec, dtype=dtype)
             
             # Solve using GMRES (iterative solver)
+            # R should already be NumPy since is_linear_operator is only True when not is_gpu
             delta, info = gmres(Jfull, -R, tol=tol, maxiter=min(max_iter, 100))
+            
             if info != 0:
                 # If GMRES didn't converge, fall back to dense solve
                 # This shouldn't happen often, but provides a fallback
-                J_dense = np.array([J.matvec(eye_m[:, k]) for k in range(m)], 
+                J_dense = xp.array([J.matvec(eye_m[:, k]) for k in range(m)], 
                                   dtype=dtype).T
                 Jfull_dense = alpha*eye_m - J_dense
-                delta = solve(Jfull_dense, -R)
+                if is_gpu:
+                    # Use CuPy's linalg.solve (cupyx.scipy.linalg doesn't have solve)
+                    delta = xp.linalg.solve(Jfull_dense, -R)
+                else:
+                    delta = solve(Jfull_dense, -R)
         else:
             # Dense matrix: use direct solve
             Jfull = alpha*eye_m - J
-            delta = solve(Jfull, -R)
+            if is_gpu:
+                # Use CuPy's linalg.solve (cupyx.scipy.linalg doesn't have solve)
+                delta = xp.linalg.solve(Jfull, -R)
+            else:
+                delta = solve(Jfull, -R)
         
         guess += delta
 
-        if norm(delta) < tol:
+        if norm_func(delta) < tol:
             break
 
     return guess

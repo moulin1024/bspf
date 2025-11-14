@@ -8,11 +8,20 @@ In non-dimensional form (ℏ = m = 1):
     i*∂ψ/∂t = -(1/2)*∂²ψ/∂x² + V(x)*ψ + g*|ψ|²*ψ
 
 Supports both linear (g=0) and nonlinear (g≠0) cases.
+Supports both CPU (NumPy) and GPU (CuPy) computing.
 """
 
 import numpy as np
 from typing import Callable, Optional, Union
 from bspf import bspf1d, TimeStepperState, time_step
+
+# Optional GPU backend
+_HAS_CUPY = False
+try:
+    import cupy as cp
+    _HAS_CUPY = True
+except Exception:
+    cp = None
 
 
 def create_schrodinger_rhs(bspf_op: bspf1d, V: np.ndarray, g: float = 0.0,
@@ -29,7 +38,7 @@ def create_schrodinger_rhs(bspf_op: bspf1d, V: np.ndarray, g: float = 0.0,
     bspf_op : bspf1d
         BSPF operator for spatial differentiation
     V : array
-        Potential V(x) (dimensionless)
+        Potential V(x) (dimensionless, can be NumPy or CuPy array)
     g : float, optional
         Nonlinearity parameter. g=0 for linear case, g≠0 for nonlinear case.
         Default: 0.0 (linear Schrödinger equation)
@@ -48,14 +57,21 @@ def create_schrodinger_rhs(bspf_op: bspf1d, V: np.ndarray, g: float = 0.0,
     rhs_func : callable
         RHS function with signature: rhs_func(psi) -> dpsi_dt
     """
+    # Detect backend from V array (GPU-aware)
+    if _HAS_CUPY and isinstance(V, cp.ndarray):
+        xp = cp
+    else:
+        xp = np
+    
     def schrodinger_rhs(psi: np.ndarray) -> np.ndarray:
         """
         RHS for Schrödinger equation.
+        GPU-aware: automatically works with CuPy arrays if V is a GPU array.
         
         Parameters:
         -----------
         psi : complex array
-            Complex wavefunction (dimensionless)
+            Complex wavefunction (dimensionless, NumPy or CuPy array)
         
         Returns:
         --------
@@ -68,7 +84,7 @@ def create_schrodinger_rhs(bspf_op: bspf1d, V: np.ndarray, g: float = 0.0,
         else:
             psi_bc = psi.copy()
         
-        # Compute second derivative using bspf (handles complex arrays)
+        # Compute second derivative using bspf (handles complex arrays and GPU)
         # Pass neumann_bc to differentiate() to enforce Neumann BCs during differentiation
         if neumann_bc is not None:
             d2psi_dx2, _ = bspf_op.differentiate(psi_bc, k=2, neumann_bc=neumann_bc)
@@ -87,7 +103,8 @@ def create_schrodinger_rhs(bspf_op: bspf1d, V: np.ndarray, g: float = 0.0,
         # Nonlinear term: g*|ψ|²*ψ (only if g ≠ 0)
         if g != 0.0:
             # In non-dimensional units: ψ_t += -i*g*|ψ|²*ψ
-            nonlinear_term = -1j * g * np.abs(psi_bc)**2 * psi_bc
+            # Use xp.abs for GPU-aware absolute value
+            nonlinear_term = -1j * g * xp.abs(psi_bc)**2 * psi_bc
             dpsi_dt = linear_term + nonlinear_term
         else:
             dpsi_dt = linear_term
@@ -162,7 +179,8 @@ def solve_schrodinger(psi_init: np.ndarray, x: np.ndarray, V: np.ndarray,
                      bc_type: str = 'dirichlet',
                      bc_params: Optional[dict] = None,
                      save_callback: Optional[Callable] = None,
-                     save_interval: int = 1) -> tuple:
+                     save_interval: int = 1,
+                     use_gpu: bool = False) -> tuple:
     """
     Solve the Schrödinger equation.
     
@@ -194,17 +212,39 @@ def solve_schrodinger(psi_init: np.ndarray, x: np.ndarray, V: np.ndarray,
         Callback function called every save_interval steps: save_callback(n, t, psi)
     save_interval : int, optional
         Interval for calling save_callback. Default: 1
+    use_gpu : bool, optional
+        If True, use GPU acceleration with CuPy. Default: False
     
     Returns:
     --------
     psi_final : array
-        Final wavefunction
+        Final wavefunction (converted back to NumPy if GPU was used)
     times : array
         Time points at which solution was saved (if save_callback provided)
     psi_history : list, optional
         History of solutions (only if save_callback saves them)
     """
+    # Check GPU availability
+    if use_gpu and not _HAS_CUPY:
+        raise RuntimeError(
+            "use_gpu=True but CuPy is not available. "
+            "Install cupy (e.g., `pip install cupy-cuda12x`) or set use_gpu=False."
+        )
+    
     n_grid = len(x)
+    
+    # Convert arrays to GPU if needed
+    if use_gpu and _HAS_CUPY:
+        xp = cp
+        psi_init = cp.asarray(psi_init)
+        x = cp.asarray(x)
+        V = cp.asarray(V)
+    else:
+        xp = np
+        # Ensure arrays are NumPy arrays
+        psi_init = np.asarray(psi_init)
+        x = np.asarray(x)
+        V = np.asarray(V)
     
     # Create BSPF operator if not provided
     if bspf_op is None:
@@ -214,7 +254,8 @@ def solve_schrodinger(psi_init: np.ndarray, x: np.ndarray, V: np.ndarray,
             order=degree,
             use_clustering=True,
             clustering_factor=2.0,
-            correction='spectral'
+            correction='spectral',
+            use_gpu=use_gpu
         )
     
     # Set up boundary conditions
@@ -261,9 +302,19 @@ def solve_schrodinger(psi_init: np.ndarray, x: np.ndarray, V: np.ndarray,
             # Save callback
             if save_callback is not None and nn % save_interval == 0:
                 t_current = state.get_current_time()
-                save_callback(nn, t_current, psi)
+                # Convert to NumPy for callback if on GPU
+                psi_callback = cp.asnumpy(psi) if use_gpu and _HAS_CUPY else psi
+                save_callback(nn, t_current, psi_callback)
                 times.append(t_current)
-                psi_history.append(psi.copy())
+                # Store copy (convert to NumPy if on GPU)
+                if use_gpu and _HAS_CUPY:
+                    psi_history.append(cp.asnumpy(psi.copy()))
+                else:
+                    psi_history.append(psi.copy())
+    
+    # Convert final result back to NumPy if GPU was used
+    if use_gpu and _HAS_CUPY:
+        psi = cp.asnumpy(psi)
     
     return psi, np.array(times) if times else None, psi_history if psi_history else None
 
