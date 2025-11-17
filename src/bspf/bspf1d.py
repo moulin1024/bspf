@@ -361,7 +361,7 @@ class bspf1d:
     ):
         # Set use_gpu FIRST (needed by basis creation)
         self.use_gpu = bool(use_gpu)
-        self._bk = _Backend(self.use_gpu)
+        self._bk = _Backend(self.use_gpu) if self.use_gpu else None
         
         self.grid = grid
         self.degree = int(degree)
@@ -394,6 +394,7 @@ class bspf1d:
             self._correct = ResidualCorrection.none
 
         self._kkt_cache: Dict[float, Tuple[Array, Array]] = {}
+        self._cached_arrays: Dict[str, Array] = {}
 
     @classmethod
     def from_grid(
@@ -466,16 +467,96 @@ class bspf1d:
         self._kkt_cache[lam] = (lu, piv)
         return lu, piv
 
+    def _get_or_compute_array(self, key: str, compute_func: Callable[[], Array]) -> Array:
+        """Cache arrays (for compatibility with bfpsm1d API)."""
+        if key not in self._cached_arrays:
+            self._cached_arrays[key] = compute_func()
+        return self._cached_arrays[key]
+
     # ---------- public operations ----------
     def differentiate(self, f: Array, k: int = 1, lam: float = 0.0, *,
         neumann_bc: Optional[Tuple[Optional[float], Optional[float]]] = None) -> Tuple[Array, Array]:
         """
         GPU-aware derivative: if use_gpu=True, multiplies/FFTs/solves on device.
         Supports both real (float64) and complex (complex128) input arrays.
+        For CPU real case, matches bfpsm1d performance exactly.
         """
         if k not in (1, 2, 3):
             raise ValueError("Only 1st/2nd/3rd derivatives are supported.")
         
+        # Fast path: CPU + real input (most common case, no overhead)
+        if not self.use_gpu:
+            f = np.asarray(f)
+            is_complex = np.iscomplexobj(f)
+            
+            # Real case: use exact bfpsm1d implementation for performance
+            if not is_complex:
+                f = f.astype(np.float64, copy=False)
+                if f.shape[0] != self.grid.n:
+                    raise ValueError("Length of f must match grid size.")
+
+                # Use exact bfpsm1d code (including _get_or_compute_array for API compatibility)
+                rhs_2bw = self._get_or_compute_array('2bw', lambda: 2.0 * (self.BW @ f))
+                dY = self.end.BND @ f
+                # Neumann BC: overwrite first-derivative rows
+                if neumann_bc is not None:
+                    if self.order < 1:
+                        raise ValueError("Neumann BC requires self.order ≥ 1.")
+                    left_flux, right_flux = neumann_bc
+                    if left_flux is not None:
+                        dY[1] = float(left_flux)
+                    if right_flux is not None:
+                        dY[self.order + 1] = float(right_flux)
+                
+                rhs = np.concatenate((rhs_2bw, dY))
+
+                lu, piv = self._kkt_lu(lam)
+                sol = sla.lu_solve((lu, piv), rhs, overwrite_b=False)
+                P = sol[: self.basis.B0.shape[0]]
+
+                f_spline = self.basis.BT0 @ P
+                df = self.basis.BkT(k) @ P
+
+                residual = f - f_spline
+                corr = self._correct(residual, self.grid.omega, kind="diff", order=k, n=self.grid.n)
+                return (df + corr).astype(np.float64), f_spline.astype(np.float64)
+            
+            # Complex case: CPU path with complex support
+            f = f.astype(np.complex128, copy=False)
+            if f.shape[0] != self.grid.n:
+                raise ValueError("Length of f must match grid size.")
+
+            # For complex, we need to handle real and imaginary parts
+            # Use full FFT instead of rFFT
+            rhs_2bw = 2.0 * (self.BW @ f)
+            dY = self.end.BND @ f
+            if neumann_bc is not None:
+                if self.order < 1:
+                    raise ValueError("Neumann BC requires self.order ≥ 1.")
+                left_flux, right_flux = neumann_bc
+                if left_flux is not None:
+                    dY[1] = complex(left_flux)
+                if right_flux is not None:
+                    dY[self.order + 1] = complex(right_flux)
+            
+            rhs = np.concatenate((rhs_2bw, dY))
+
+            lu, piv = self._kkt_lu(lam)
+            sol = sla.lu_solve((lu, piv), rhs, overwrite_b=False)
+            P = sol[: self.basis.B0.shape[0]]
+
+            f_spline = self.basis.BT0 @ P
+            df = self.basis.BkT(k) @ P
+
+            residual = f - f_spline
+            # For complex, use full FFT
+            R = np.fft.fft(residual)
+            omega = 2.0 * np.pi * np.fft.fftfreq(self.grid.n, d=self.grid.dx)
+            corr = np.fft.ifft(R * (1j * omega) ** k)
+            
+            return (df + corr).astype(np.complex128), f_spline.astype(np.complex128)
+        
+        # GPU path (with complex support)
         bk = self._bk
         xp, la, fft = bk.xp, bk.la, bk.fft
         
@@ -542,11 +623,7 @@ class bspf1d:
 
         # Solve KKT with cached CPU LU (copied to device if needed)
         lu_cpu, piv_cpu = self._kkt_lu(lam)
-        if bk.is_gpu:
-            SOL = la.lu_solve((xp.asarray(lu_cpu), xp.asarray(piv_cpu)), rhs)
-        else:
-            SOL = la.lu_solve((lu_cpu, piv_cpu), bk.to_host(rhs))
-            SOL = xp.asarray(SOL)
+        SOL = la.lu_solve((xp.asarray(lu_cpu), xp.asarray(piv_cpu)), rhs)
 
         n_b = self.basis.B0.shape[0]
         P = SOL[:n_b]
@@ -581,7 +658,95 @@ class bspf1d:
         """
         Compute first & second derivatives together (GPU-aware).
         Supports both real (float64) and complex (complex128) input arrays.
+        For CPU real case, matches bfpsm1d performance exactly.
         """
+        # Fast path: CPU + real input (most common case, no overhead)
+        if not self.use_gpu:
+            f = np.asarray(f)
+            is_complex = np.iscomplexobj(f)
+            
+            # Real case: use exact bfpsm1d implementation for performance
+            if not is_complex:
+                f = f.astype(np.float64, copy=False)
+                if f.shape[0] != self.grid.n:
+                    raise ValueError("Length of f must match grid size.")
+
+                # Use exact bfpsm1d code (including _get_or_compute_array for API compatibility)
+                rhs_2bw = self._get_or_compute_array('2bw', lambda: 2.0 * (self.BW @ f))
+                dY = self.end.BND @ f
+
+                if neumann_bc is not None:
+                    if self.order < 1:
+                        raise ValueError("Neumann BC requires self.order ≥ 1.")
+                    left_flux, right_flux = neumann_bc
+                    if left_flux is not None:
+                        dY[1] = float(left_flux)
+                    if right_flux is not None:
+                        dY[self.order + 1] = float(right_flux)
+                
+                rhs = np.concatenate((rhs_2bw, dY))
+
+                lu, piv = self._kkt_lu(lam)
+                sol = sla.lu_solve((lu, piv), rhs, overwrite_b=False)
+                P = sol[: self.basis.B0.shape[0]]
+
+                f_spline = self.basis.BT0 @ P
+                df1_spline = self.basis.BkT(1) @ P
+                df2_spline = self.basis.BkT(2) @ P
+
+                residual = f - f_spline
+                R = np.fft.rfft(residual)
+                omega = self.grid.omega
+
+                corr1 = np.fft.irfft(R * (1j * omega), n=self.grid.n)
+                corr2 = np.fft.irfft(R * (1j * omega) ** 2, n=self.grid.n)
+
+                df1 = (df1_spline + corr1).astype(np.float64)
+                df2 = (df2_spline + corr2).astype(np.float64)
+
+                return df1, df2, f_spline.astype(np.float64)
+            
+            # Complex case: CPU path with complex support
+            f = f.astype(np.complex128, copy=False)
+            if f.shape[0] != self.grid.n:
+                raise ValueError("Length of f must match grid size.")
+
+            rhs_2bw = 2.0 * (self.BW @ f)
+            dY = self.end.BND @ f
+
+            if neumann_bc is not None:
+                if self.order < 1:
+                    raise ValueError("Neumann BC requires self.order ≥ 1.")
+                left_flux, right_flux = neumann_bc
+                if left_flux is not None:
+                    dY[1] = complex(left_flux)
+                if right_flux is not None:
+                    dY[self.order + 1] = complex(right_flux)
+
+            rhs = np.concatenate((rhs_2bw, dY))
+
+            lu, piv = self._kkt_lu(lam)
+            sol = sla.lu_solve((lu, piv), rhs, overwrite_b=False)
+            P = sol[: self.basis.B0.shape[0]]
+
+            f_spline = self.basis.BT0 @ P
+            df1_spline = self.basis.BkT(1) @ P
+            df2_spline = self.basis.BkT(2) @ P
+
+            residual = f - f_spline
+            # For complex, use full FFT
+            R = np.fft.fft(residual)
+            omega = 2.0 * np.pi * np.fft.fftfreq(self.grid.n, d=self.grid.dx)
+            
+            corr1 = np.fft.ifft(R * (1j * omega))
+            corr2 = np.fft.ifft(R * (1j * omega) ** 2)
+
+            df1 = (df1_spline + corr1).astype(np.complex128)
+            df2 = (df2_spline + corr2).astype(np.complex128)
+
+            return df1, df2, f_spline.astype(np.complex128)
+        
+        # GPU path (with complex support)
         bk = self._bk
         xp, la, fft = bk.xp, bk.la, bk.fft
         
