@@ -13,7 +13,8 @@ Supports both CPU (NumPy) and GPU (CuPy) computing.
 
 import numpy as np
 from typing import Callable, Optional, Union
-from bspf import bspf1d, TimeStepperState, time_step
+from ..bspf1d import bspf1d
+from ..utils.time_steppers import TimeStepperState, time_step
 
 # Optional GPU backend
 _HAS_CUPY = False
