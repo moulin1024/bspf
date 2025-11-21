@@ -13,17 +13,17 @@ from padefd import padefd
 # Parameter block
 # ------------------------------------------------------------------
 # N_MATCH = 10  # Enforce derivatives 0 … N_MATCH at both ends
-DEGREE = 11      # B-spline polynomial degree
+DEGREE = 5      # B-spline polynomial degree
 MATCH_ORDER = DEGREE
-NUM_BOUNDARY_POINTS = DEGREE + 5
+NUM_BOUNDARY_POINTS = DEGREE
 N_BASIS = 4 * (DEGREE)
 REG_PARAM = 1e-3      # Tikhonov regularisation strength (lam)
 domain = [0, 2*np.pi]
-NUM_POINTS = 2000   # Grid resolution
+NUM_POINTS = 5000   # Grid resolution
 
 
 # Grid parameters
-clustering_factor = 3.0  # Stronger clustering near endpoints
+clustering_factor = 2.0  # Stronger clustering near endpoints
 clustering_flag = True 
 
 # Generate grid on the requested domain
@@ -47,44 +47,44 @@ alpha = 10
 t = sp.Symbol('t')
 phi = sp.Symbol('phi')
 
-# Generate turbulent signal following Kolmogorov spectrum
-k_min = 1   # Start of inertial range
-k_max = 100 # End of inertial range
-n_components = 1000
-grid_sizes = np.geomspace(1000,3000,50).astype(int)#np.arange(600,10001,500)#[100,200,400,800,1600,3200,6400]#np.arange(1000,3001,100)
+# # Generate turbulent signal following Kolmogorov spectrum
+# k_min = 1   # Start of inertial range
+# k_max = 100 # End of inertial range
+# n_components = 1000
+grid_sizes = np.geomspace(1000,10000,50).astype(int)#np.arange(600,10001,500)#[100,200,400,800,1600,3200,6400]#np.arange(1000,3001,100)
 
-np.random.seed(42)
-# Logarithmically spaced wavenumbers to resolve all scales
-k = np.random.uniform(k_min, k_max, n_components)#np.exp(np.random.uniform(np.log(k_min), np.log(k_max), n_components))
-frequencies = k  # Convert to angular frequencies
+# np.random.seed(42)
+# # Logarithmically spaced wavenumbers to resolve all scales
+# k = np.random.uniform(k_min, k_max, n_components)#np.exp(np.random.uniform(np.log(k_min), np.log(k_max), n_components))
+# frequencies = k  # Convert to angular frequencies
 
-# Energy spectrum follows k^(-5/3)
-# E_k = k**(-5/3)  # Energy spectrum
-# Velocity amplitudes follow sqrt(E(k)) ~ k^(-5/6)
-magnitudes = np.random.uniform(0, 0.01, n_components)
-# Normalize to have maximum amplitude of 0.5
-# magnitudes = magnitudes / np.max(magnitudes) * 0.01
+# # Energy spectrum follows k^(-5/3)
+# # E_k = k**(-5/3)  # Energy spectrum
+# # Velocity amplitudes follow sqrt(E(k)) ~ k^(-5/6)
+# magnitudes = np.random.uniform(0, 0.01, n_components)
+# # Normalize to have maximum amplitude of 0.5
+# # magnitudes = magnitudes / np.max(magnitudes) * 0.01
 
-# Random phases for each mode
-phases = 2 * np.pi * np.random.rand(n_components)
+# # Random phases for each mode
+# phases = 2 * np.pi * np.random.rand(n_components)
 # phi = 
 phi = t #-2*t**3 + 3*t**1 + 0.1*(t**3 - 2*t**1 + t) + 0.1*(t**3 - t**1)
 dphi = sp.diff(phi, t)
 
 # Create synthetic signal
-f_sym = sp.sin(t/(1.02+sp.cos(t))) #sp.tanh(alpha*(phi-np.pi))#0 # sp.sin(alpha*phi)
-f_sym_original = sp.sin(t/(1.02+sp.cos(t)))#sp.tanh(alpha*(t-np.pi))#0 # sp.sin(alpha*t)
+f_sym = sp.sin(t/(1.01+sp.cos(t))) #sp.tanh(alpha*(phi-np.pi))#0 # sp.sin(alpha*phi)
+f_sym_original = sp.sin(t/(1.01+sp.cos(t)))#sp.tanh(alpha*(t-np.pi))#0 # sp.sin(alpha*t)
 
 # f_sym = 0
 # f_sym_original = 0
 # # Create synthetic signal
 # f_sym =  sp.tanh(200*(phi-np.pi))
-for i in range(n_components):
-    f_sym += magnitudes[i] * sp.cos(frequencies[i]*phi + phases[i])
+# for i in range(n_components):
+#     f_sym += magnitudes[i] * sp.cos(frequencies[i]*phi + phases[i])
 
-# # f_sym_original =  sp.tanh(200*(t-np.pi))
-for i in range(n_components):
-    f_sym_original += magnitudes[i] * sp.cos(frequencies[i]*t + phases[i])
+# # # f_sym_original =  sp.tanh(200*(t-np.pi))
+# for i in range(n_components):
+#     f_sym_original += magnitudes[i] * sp.cos(frequencies[i]*t + phases[i])
 
 # # Create synthetic signal
 # f_sym = 0.1*sp.sin(alpha*phi)
@@ -123,16 +123,18 @@ f_vals = test_func_original(x_cheb)
 y_deriv_cheb = chebyshev_derivative_from_values(f_vals, x_cheb, domain)
 
 # 3. 4th order finite difference
-# d_dx = Diff(0, dx, acc=4)  # 4th order accurate first derivative
-op = padefd(NUM_POINTS, dx, order=10)
-y_deriv_fd = op(y_original)  # 4th order accurate first derivative
+d_dx = Diff(0, dx, acc=4)  # 4th order accurate first derivative
+y_deriv_fd = d_dx(y_original)  # 4th order accurate first derivative
+
+# op = padefd(NUM_POINTS, dx, order=4)
+# y_deriv_fd = op(y_original)  # 4th order accurate first derivative
 
 
 # Compute errors for each method
-error_bfpsm = np.max(np.abs((y_deriv_bfpsm - y_deriv_exact_original)**1))  # L2 norm
+error_bfpsm = np.sqrt(np.mean((y_deriv_bfpsm - y_deriv_exact_original)**2))  # L2 norm
 y_deriv_cheb_exact = test_func_deriv_original(x_cheb)
-error_cheb = np.max(np.abs((y_deriv_cheb - y_deriv_cheb_exact)**1))
-error_fd = np.max(np.abs((y_deriv_fd - y_deriv_exact_original)**1))
+error_cheb = np.sqrt(np.mean((y_deriv_cheb - y_deriv_cheb_exact)**2))
+error_fd = np.sqrt(np.mean((y_deriv_fd - y_deriv_exact_original)**2))
 
 print("Errors (L^2 Norm):")
 print("BSPF:", error_bfpsm)
@@ -173,10 +175,10 @@ for n_points in grid_sizes:
     errors_cheb.append(np.max(np.abs((y_deriv_cheb_test - y_deriv_cheb_exact_test)**1)))
 
     # 4th order finite difference
-    # d_dx_test = Diff(0, dx_test, acc=4)
-    # y_deriv_fd_test = d_dx_test(y_test)
-    op_test = padefd(n_points, dx_test, order=10)
-    y_deriv_fd_test = op_test(y_test)  # 4th order accurate first derivative
+    d_dx_test = Diff(0, dx_test, acc=4)
+    y_deriv_fd_test = d_dx_test(y_test)
+    # op_test = padefd(n_points, dx_test, order=4)
+    # y_deriv_fd_test = op_test(y_test)  # 4th order accurate first derivative
     errors_fd.append(np.max(np.abs((y_deriv_fd_test - y_deriv_exact_test)**1)))
     print("N = ", n_points, "error pade10 = ", errors_fd[-1], "error bfpsm = ", errors_bfpsm[-1], "error cheb = ", errors_cheb[-1])
 
@@ -236,7 +238,7 @@ plt.semilogy(x_cheb, np.abs(y_deriv_cheb - y_deriv_cheb_exact), '-',label='Cheby
 plt.semilogy(x, np.abs(y_deriv_fd - y_deriv_exact_original), '-',label='Padé-10',color=default_colors[2],alpha=1)
 plt.xlabel('$x$',fontsize=20)
 plt.ylabel('$|Error|$',fontsize=20)
-plt.ylim(1e-15,0.9*1e4)
+plt.ylim(1e-15,0.9*1e6)
 plt.legend(ncol=3)
 plt.title('(c)', loc='left', x=-0.15,fontsize=24, fontweight='bold')
 
@@ -280,17 +282,17 @@ y_fit_line_fd = np.exp(intercept_fd) * x_fit_line_fd**slope_fd
 
 plt.loglog(grid_sizes, errors_bfpsm, '.-', linewidth=1, label='BSPF',color=default_colors[0],alpha=1)
 plt.loglog(grid_sizes, errors_cheb, '.-', linewidth=1, label='Chebyshev',color=default_colors[1],alpha=1)
-plt.loglog(grid_sizes, errors_fd, '.-', linewidth=1, label='Padé-10',color=default_colors[2],alpha=1)
-plt.plot([2000,2000], [1e-16,1e6], '--',color='gray')
-plt.text(2010, 2e-11, '$(a)-(c)$',color='gray',fontsize=18)
+plt.loglog(grid_sizes, errors_fd, '.-', linewidth=1, label='FinDiff (4)',color=default_colors[2],alpha=1)
+plt.plot([5000,5000], [1e-16,1e6], '--',color='gray')
+plt.text(5010, 2e-11, '$(a)-(c)$',color='gray',fontsize=18)
 # Add reference lines for different convergence rates
 ref_x = np.array([grid_sizes[0], grid_sizes[-1]])
-# plt.loglog(ref_x, 10*errors_fd[0]*(ref_x/ref_x[0])**(-4), '--', linewidth=1, label='$O(h^{-4})$',color=default_colors[2])
+plt.loglog(ref_x, 50*errors_fd[0]*(ref_x/ref_x[0])**(-4), '--', linewidth=1.5, label='$O(h^{-4})$',color=default_colors[2])
 # plt.loglog(ref_x,0.005*errors_fd[0]*(ref_x/ref_x[0])**(-DEGREE), '--', linewidth=1, label='$O(N^{-' + str(DEGREE) + '})$',color=default_colors[0])
-plt.loglog(x_fit_line, 0.2*y_fit_line, '--', linewidth=2, color=default_colors[0])
-plt.loglog(x_fit_line_fd, 5*y_fit_line_fd, '--', linewidth=2, color=default_colors[2])
-plt.text(2500, 1e-0, '$O(h^{' + str(f'{slope_fd:.1f}') + '})$',color=default_colors[2],fontsize=18)
-plt.text(1500, 2*1e-10, '$O(h^{' + str(f'{slope:.1f}') + '})$',color=default_colors[0],fontsize=18)
+# plt.loglog(x_fit_line, 0.2*y_fit_line, '--', linewidth=2, color=default_colors[0])
+# plt.loglog(x_fit_line_fd, 5*y_fit_line_fd, '--', linewidth=2, color=default_colors[2])
+# plt.text(2500, 1e-0, '$O(h^{' + str(f'{slope_fd:.1f}') + '})$',color=default_colors[2],fontsize=18)
+# plt.text(1500, 2*1e-10, '$O(h^{' + str(f'{slope:.1f}') + '})$',color=default_colors[0],fontsize=18)
 
 # # # Plot fitted line
 # plt.loglog(x_fit_line, 0.5*y_fit_line, '--', linewidth=2, color='r', 
@@ -300,7 +302,7 @@ plt.ylabel('$\|Error\|_\infty$',fontsize=20)
 plt.title('(d)', loc='left', x=-0.15,fontsize=24, fontweight='bold')
 plt.grid(True)
 plt.legend(ncol=1)
-plt.ylim(1e-11,0.9*1e6)
+plt.ylim(1e-11,0.9*1e5)
 plt.tight_layout()
 plt.savefig('figs/fig1.pdf', dpi=300, bbox_inches='tight')
 # plt.show()

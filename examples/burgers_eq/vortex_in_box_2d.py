@@ -2,24 +2,25 @@
 """
 2-D viscous Burgers on a periodic box  –  XY-indexing everywhere
 ----------------------------------------------------------------
-• spatial derivatives by FFT (pseudo-spectral, 2/3 dealiasing)
-• adaptive time integration with scipy.solve_ivp
+• spatial derivatives by BSPF
+• adaptive time integration with custom RK23 integrator
 • initial and final vector-field plots (pseudocolour + streamlines)
 """
 
 import numpy as np
-from numpy.fft import rfftn, irfftn, fftfreq, rfftfreq
-from scipy.integrate import solve_ivp
 import matplotlib.pyplot as plt
-from bspf import bspf2d
+from tqdm import tqdm
+from bspf import bspf2d, TimeStepperState, time_step
 
 # ------------------- domain & physical parameters ---------------------------
 L   = 2.0 * np.pi        # box length  (same in x and y)
 N   = 128                # grid points per direction  (even)
 nu  = 1e-2               # viscosity
 t_end = 2.0              # final simulation time
+dt = 0.01                # time step
+n_output = 101            # number of output time points
 
-dx = L / N               # grid spacing                  # avoid 0/0 in viscous term
+dx = L / N               # grid spacing
 
 # ------------------- helpers ------------------------------------------------
 
@@ -31,8 +32,12 @@ def unpack(q):                # flat vector → two (N,N) fields
     v = q[N*N:].reshape(N, N)
     return u, v
 
-# ------------------- RHS supplied to solve_ivp ------------------------------
-def rhs(t, q, m2d):
+# ------------------- RHS function for time stepper ------------------------------
+def rhs(q, m2d, nu):
+    """
+    RHS for 2D Burgers' equation.
+    Takes flat vector q and returns flat vector dq/dt.
+    """
     u, v = unpack(q)
 
     ux = m2d.partial_dx(u, order=1)
@@ -67,13 +72,57 @@ v0 =  np.cos(0.5*X) * np.sin(0.5*Y)
 speed0 = np.sqrt(u0**2 + v0**2)
 
 # ------------------- time integration ---------------------------------------
-sol = solve_ivp(rhs, (0.0, t_end), pack(u0, v0),args=(m2d,), 
-                method='RK45',
-                t_eval=np.linspace(0.0, t_end, 101),
-                rtol=1e-6, atol=1e-9,
-                max_step=0.01)
+print("="*60)
+print("Solving 2D Burgers' equation with BSPF + RK23")
+print("="*60)
+print(f"Parameters:")
+print(f"  nu = {nu}")
+print(f"  N = {N}, L = {L}")
+print(f"  dt = {dt:.6e}, t_end = {t_end}")
+print()
 
-u_final, v_final = unpack(sol.y[:, -1])
+# Initialize state vector
+q0 = pack(u0, v0)
+
+# Create RHS function with bound arguments
+def rhs_func(q):
+    """RHS function for time stepper (takes only q as argument)."""
+    return rhs(q, m2d, nu)
+
+# Initialize time stepper state
+state = TimeStepperState(q0.copy(), t_init=0.0, dt=dt, method='rk23')
+
+# Time points for output
+t_output = np.linspace(0.0, t_end, n_output)
+q_output = np.zeros((len(t_output), len(q0)), dtype=np.float64)
+q_output[0] = q0.copy()
+
+# Time integration loop
+current_output_idx = 1
+t_prev = 0.0
+
+with tqdm(total=t_end, desc="Time integration", unit="time", ncols=100) as pbar:
+    while state.get_current_time() < t_end:
+        # Take time step
+        q_next = time_step(state, dt, rhs_func, method='rk23')
+        t_current = state.get_current_time()
+        
+        # Store solution at output times
+        while (current_output_idx < len(t_output) and 
+               t_current >= t_output[current_output_idx]):
+            q_output[current_output_idx] = state.get_current()
+            current_output_idx += 1
+        
+        # Update progress bar based on time advanced
+        time_advanced = t_current - t_prev
+        pbar.update(time_advanced)
+        t_prev = t_current
+
+# Ensure final state is stored
+if current_output_idx < len(t_output):
+    q_output[-1] = state.get_current()
+
+u_final, v_final = unpack(q_output[-1])
 speed_final = np.sqrt(u_final**2 + v_final**2)
 
 # ------------------- plotting ------------------------------------------------

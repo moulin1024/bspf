@@ -48,7 +48,7 @@ def rk4_heat_step(U: np.ndarray,
 def main():
     # ------------------ grid & params ------------------
     Lx, Ly = 1.0, 1.0
-    nx, ny = 64, 64
+    nx, ny = 128, 128
     x = np.linspace(0.0, Lx, nx)
     y = np.linspace(0.0, Ly, ny)
     dx = x[1] - x[0]

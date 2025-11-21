@@ -2,32 +2,72 @@
 
 # Example usage and testing
 from chebyshev_integral import chebyshev_antiderivatives_fft
-from scipy.integrate import cumulative_simpson
 from bfpsm1d import bfpsm1d
 import matplotlib.pyplot as plt
 import numpy as np
 import sympy as sp
+
+# Handle cumulative_simpson import (available in scipy >= 1.12.0)
+try:
+    from scipy.integrate import cumulative_simpson
+except ImportError:
+    # Fallback implementation for older scipy versions
+    def cumulative_simpson(y, x=None, dx=None, axis=-1, initial=None):
+        """
+        Fallback implementation of cumulative_simpson for older scipy versions.
+        Computes cumulative integral using Simpson's rule.
+        """
+        if x is None and dx is None:
+            raise ValueError("Either x or dx must be provided")
+        
+        y = np.asarray(y)
+        if x is not None:
+            x = np.asarray(x)
+            if len(x) != len(y):
+                raise ValueError("x and y must have the same length")
+            dx = np.diff(x)
+        else:
+            dx = np.full(len(y) - 1, dx)
+        
+        n = len(y)
+        result = np.zeros_like(y, dtype=np.float64)
+        if initial is not None:
+            result[0] = float(initial)
+        else:
+            result[0] = 0.0
+        
+        # Use Simpson's rule for cumulative integration
+        for i in range(1, n):
+            if i == 1:
+                # Use trapezoidal rule for first interval
+                result[i] = result[i-1] + 0.5 * dx[i-1] * (y[i-1] + y[i])
+            else:
+                # Use Simpson's rule for subsequent intervals (requires 3 points)
+                h = dx[i-1]
+                result[i] = result[i-1] + (h / 6.0) * (y[i-2] + 4*y[i-1] + y[i])
+        
+        return result
 
 
 # ------------------------------------------------------------------
 # Parameter block
 # ------------------------------------------------------------------
 # N_MATCH = 10  # Enforce derivatives 0 … N_MATCH at both ends
-DEGREE = 11      # B-spline polynomial degree
+DEGREE = 5      # B-spline polynomial degree
 BOUNDARY_ORDER = DEGREE  # == number of constraints per side
 ALPHA = 2            # Factor for extra degrees of freedom (basis count)
 REG_PARAM = 1e-3      # Tikhonov regularisation strength (lam)
 domain = [0, 2*np.pi]
-NUM_POINTS = 2000   # Grid resolution
-NUM_BOUNDARY_POINTS = BOUNDARY_ORDER + 5
+NUM_POINTS = 5000   # Grid resolution
+NUM_BOUNDARY_POINTS = BOUNDARY_ORDER
 
 # Choose number of B-spline basis functions
 N_BASIS = 2 * (DEGREE) * ALPHA
 
 # Grid parameters
-clustering_factor = 3.0  # Stronger clustering near endpoints
+clustering_factor = 2.0  # Stronger clustering near endpoints
 clustering_flag = True
-grid_sizes = np.geomspace(1000,3000,50).astype(int) #np.arange(500,10001,500)#[100,200,400,800,1600,3200,6400]#np.arange(1000,3001,100)
+grid_sizes = np.geomspace(1000,10000,50).astype(int) #np.arange(500,10001,500)#[100,200,400,800,1600,3200,6400]#np.arange(1000,3001,100)
 
 # Generate grid on the requested domain
 x = np.linspace(domain[0], domain[1], NUM_POINTS, endpoint=True)
@@ -75,11 +115,11 @@ phi = t #-2*t**3 + 3*t**1 + 0.1*(t**3 - 2*t**1 + t) + 0.1*(t**3 - t**1)
 dphi = sp.diff(phi, t)
 
 # Create synthetic signal
-f_sym_original = sp.sin(t/(1.02+sp.cos(t)))#0 # sp.sin(alpha*t)
+f_sym_original = sp.sin(t/(1.01+sp.cos(t)))#0 # sp.sin(alpha*t)
 
 # f_sym_original =  sp.tanh(200*(t-np.pi))
-for i in range(n_components):
-    f_sym_original += magnitudes[i] * sp.cos(frequencies[i]*t + phases[i])
+# for i in range(n_components):
+#     f_sym_original += magnitudes[i] * sp.cos(frequencies[i]*t + phases[i])
 
 # # Create synthetic signal
 # f_sym = 0.1*sp.sin(alpha*phi)
@@ -142,11 +182,16 @@ for N_grid in grid_sizes:
     u_part_simpson_test = cumulative_simpson(y_deriv_exact_original_test, x=x_test, initial=0)
     u_part_simpson_test = u_part_simpson_test + y_original_test[0]
     
-    error_cheb.append(np.max(np.abs((u_part_cheb_test-test_func_original(x_nodes_test))**1)))
-    error_simpson.append(np.max(np.abs((u_part_simpson_test-y_original_test)**1)))
-    error_bfpsm.append(np.max(np.abs((u_part_test-y_original_test)**1)))
+    # Compute errors in L2 norm
 
-    print(f"N_grid: {N_grid}, Error cheb: {error_cheb[-1]}, Error bfpsm: {error_bfpsm[-1]}")
+    error_cheb.append((np.max(np.abs((u_part_cheb_test-test_func_original(x_nodes_test))**1))))
+    error_simpson.append((np.max(np.abs((u_part_simpson_test-y_original_test)**1))))
+    error_bfpsm.append((np.max(np.abs((u_part_test-y_original_test)**1))))
+    # error_cheb.append(np.sqrt(np.mean((u_part_cheb_test-test_func_original(x_nodes_test))**2)))
+    # error_simpson.append(np.sqrt(np.mean((u_part_simpson_test-y_original_test)**2)))
+    # error_bfpsm.append(np.sqrt(np.mean((u_part_test-y_original_test)**2)))
+
+    print(f"N_grid: {N_grid}, Error cheb: {error_cheb[-1]}, Error simpson: {error_simpson[-1]}, Error bfpsm: {error_bfpsm[-1]}")
 
 
 import matplotlib.pyplot as plt
@@ -170,8 +215,8 @@ plt.subplot(2,2,1)
 plt.plot(x,y_deriv_exact_original,linewidth=1,label='$f\'(x)$')
 plt.plot(x,f_spline,'-',linewidth=1.5,label='$f\'_s(x)$')
 # plt.plot(x,y_deriv_exact_original-f_spline,'-',linewidth=1,label='$r(x)$')
-plt.xlabel('$x$')
-plt.ylabel('$f\'(x)$')
+plt.xlabel('$x$',fontsize=20)
+plt.ylabel('$f\'(x)$',fontsize=20)
 plt.title('(a)', loc='left', x=-0.15,fontsize=24, fontweight='bold')
 plt.legend(loc='upper left')
 
@@ -181,20 +226,21 @@ plt.plot(x,u_part,'-',markersize=8,linewidth=1,label = "BSPF")
 # plt.plot(x,F_spline,'-',markersize=8,linewidth=1.5,label = "$f_s(x)$")
 # plt.plot(x_test,F_corr_test,'-',markersize=8,linewidth=1.5,label = "$f_c(x)$")
 
-plt.xlabel('$x$')
-plt.ylabel('$f(x)$')
+plt.xlabel('$x$',fontsize=20)
+plt.ylabel('$f(x)$',fontsize=20)
 plt.title('(b)', loc='left', x=-0.15,fontsize=24, fontweight='bold')
 plt.legend()
 # print(np.mean(np.sqrt((u_part_cheb-test_func_original(x_nodes))**1)))
 plt.subplot(2,2,3)
 plt.semilogy(x,np.abs(u_part-y_original),linewidth=1,label='BSPF')
 plt.semilogy(x_nodes,np.abs(u_part_cheb-test_func_original(x_nodes)),linewidth=1,label='Chebyshev')
-plt.semilogy(x,np.abs(u_part_simpson- y_original),linewidth=1,label='Simpson-4')
-plt.xlabel('$x$')
-plt.ylabel('$|Error|$')
+plt.semilogy(x,np.abs(u_part_simpson- y_original),linewidth=1,label='Simpson (4)')
+plt.xlabel('$x$',fontsize=20)
+plt.ylabel('$|Error|$',fontsize=20)
 plt.ylim(1e-16,0.91e4)
 plt.legend(loc='upper left')
 plt.title('(c)', loc='left', x=-0.15,fontsize=24, fontweight='bold')
+plt.grid(True)
 print(np.max(np.abs(u_part_simpson - y_original)))
 print(np.max(np.abs(u_part_cheb - test_func_original(x_nodes))))
 print(np.max(np.abs(u_part - y_original)))
@@ -202,16 +248,18 @@ print(np.max(np.abs(u_part - y_original)))
 plt.subplot(2,2,4)
 plt.loglog(grid_sizes,error_bfpsm,'.-',label="BSPF")
 plt.loglog(grid_sizes,error_cheb,'.-',label="Chebyshev")
-plt.loglog(grid_sizes,error_simpson,'.-',label="Simpson-4")
+plt.loglog(grid_sizes,error_simpson,'.-',label="Simpson (4)")
+ref_x = np.array([grid_sizes[0], grid_sizes[-1]])
+plt.loglog(ref_x, 50*error_simpson[0]*(ref_x/ref_x[0])**(-4), '--', linewidth=1.5, label='$O(h^{-4})$',color=default_colors[2])
 
-plt.plot([2000,2000], [1e-16,0.9*1e4], '--',color='gray')
-plt.text(2010, 2e-14, '$(a)-(c)$',color='gray',fontsize=18)
+plt.plot([5000,5000], [1e-16,0.9*1e4], '--',color='gray')
+plt.text(3210, 2e-12, '$(a)-(c)$',color='gray',fontsize=18)
 
-plt.xlabel('$N$')
-plt.ylabel('$\|Error\|_\infty$')
+plt.xlabel('$N$',fontsize=20)
+plt.ylabel('$\|Error\|_\infty$',fontsize=20)
 plt.title('(d)', loc='left', x=-0.15,fontsize=24, fontweight='bold')
 
 plt.legend()
-plt.ylim(1e-14,0.9*1e3)
+plt.ylim(1e-12,0.9*1e5)
 plt.tight_layout()
 plt.savefig('figs/fig4.pdf',dpi=300,bbox_inches='tight')

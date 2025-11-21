@@ -3,7 +3,19 @@ import matplotlib.pyplot as plt
 import time
 from scipy.integrate import solve_ivp
 from bfpsm1d import bfpsm1d
-# from chebyshev_burgers1d import mesh_convergence_study_chebyshev  # optional, used in the convergence section
+
+# Import Chebyshev utilities
+import sys
+import os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
+try:
+    from bspf.utils import chebyshev_derivative_from_values, _construct_chebyshev_nodes
+except ImportError:
+    # Fallback: try importing from local chebyshev module
+    try:
+        from chebyshev import chebyshev_derivative_from_values, _construct_chebyshev_nodes
+    except ImportError:
+        raise ImportError("Could not find chebyshev utilities. Please ensure they are available.")
 
 # ----------------------------
 # Exact / manufactured solution
@@ -35,8 +47,8 @@ def burgers_rhs_ivp(t, u, bfpsm_op, nu, u_bc_func):
     bc = u_bc_func(t)
     u_ext[0]  = bc[0]
     u_ext[-1] = bc[-1]
-    from filter import apply_filter_dct
-    u_ext = apply_filter_dct(u_ext)
+    # from filter import apply_filter_dct
+    # u_ext = apply_filter_dct(u_ext)
     du_dx, d2u_dx2, _ = bfpsm_op.differentiate_1_2(u_ext)
     rhs = nu * d2u_dx2 - u_ext * du_dx
 
@@ -149,6 +161,150 @@ def plot_results(x, t, U, u_exact, nu, plot_times=None):
     return fig
 
 # ----------------------------
+# Chebyshev Burgers solver
+# ----------------------------
+def burgers_rhs_chebyshev_ivp(t, u, x_cheb, domain, nu, u_bc_func):
+    """
+    RHS for solve_ivp using Chebyshev spectral differentiation.
+    
+    Steps:
+      1) Overwrite boundary values with exact BCs at time t.
+      2) Compute spatial derivatives using Chebyshev method.
+      3) Set du/dt = 0 at boundaries so they remain fixed.
+    """
+    u_ext = u.copy()
+    bc = u_bc_func(t)
+    u_ext[0] = bc[0]
+    u_ext[-1] = bc[-1]
+    
+    # Compute first and second derivatives using Chebyshev
+    du_dx = chebyshev_derivative_from_values(u_ext, x_cheb, domain=domain)
+    d2u_dx2 = chebyshev_derivative_from_values(du_dx, x_cheb, domain=domain)
+    
+    # Burgers' equation RHS: u_t = nu*u_xx - u*u_x
+    rhs = nu * d2u_dx2 - u_ext * du_dx
+    
+    # Set RHS to zero at boundaries
+    rhs[0] = 0.0
+    rhs[-1] = 0.0
+    return rhs
+
+
+def solve_burgers_chebyshev(nu=0.01, nx=101, nt=1001, L=1.0, T=1.0, method="RK45",
+                            rtol=1e-8, atol=1e-8):
+    """
+    Solve the 1D Burgers' equation using Chebyshev spectral methods.
+    """
+    # Chebyshev nodes (nx-1 is the polynomial degree)
+    domain = (0.0, L)
+    x_cheb, _ = _construct_chebyshev_nodes(nx - 1, domain=domain)
+    
+    # Time grid
+    t = np.linspace(0, T, nt)
+    
+    # Exact solution on the output time grid
+    u_exact = np.zeros((nt, nx))
+    for i, ti in enumerate(t):
+        u_exact[i, :] = smooth_step_solution(x_cheb, ti, nu)
+    
+    u0 = u_exact[0, :].copy()
+    u_bc_func = lambda ti: smooth_step_solution(x_cheb, ti, nu)
+    
+    # Integrate
+    start_time = time.time()
+    sol = solve_ivp(
+        fun=lambda ti, ui: burgers_rhs_chebyshev_ivp(ti, ui, x_cheb, domain, nu, u_bc_func),
+        t_span=(0.0, T),
+        y0=u0,
+        method=method,
+        rtol=rtol,
+        atol=atol,
+        t_eval=t
+    )
+    time_integration_time = time.time() - start_time
+    
+    if not sol.success:
+        raise RuntimeError(f"solve_ivp failed: {sol.message}")
+    
+    U = sol.y.T
+    return x_cheb, t, U, u_exact, time_integration_time
+
+
+def mesh_convergence_study_chebyshev(mesh_sizes, nu=0.01, t_span=(0, 2.0), nt=1001, 
+                                     method="BDF", metric="L2_space_time", L=None):
+    """
+    Run convergence study for Burgers' equation using Chebyshev spectral methods.
+    
+    Parameters:
+    -----------
+    mesh_sizes : array-like
+        Grid sizes (number of Chebyshev nodes = mesh_size + 1)
+    nu : float
+        Viscosity parameter
+    t_span : tuple
+        Time span (t0, t_final)
+    nt : int
+        Number of output time points
+    method : str
+        Time stepping method ("RK45", "BDF", etc.)
+    metric : str
+        Error metric ("L2_space_time" or "L2_final")
+    L : float, optional
+        Domain length (default: 2.0 * np.pi)
+        
+    Returns:
+    --------
+    l2_errors : ndarray
+        L2 errors for each mesh size
+    timings : ndarray
+        Wall-clock times for each mesh size
+    """
+    mesh_sizes = np.asarray(mesh_sizes)
+    l2_errors = np.zeros(len(mesh_sizes))
+    timings = np.zeros(len(mesh_sizes))
+    
+    T = t_span[1] - t_span[0]
+    if L is None:
+        L = 2.0 * np.pi  # Default domain length
+    
+    for i, nx in enumerate(mesh_sizes):
+        print(f"Chebyshev N={nx:4d}...", end=" ", flush=True)
+        
+        try:
+            x, t, U, u_exact, time_integration_time = solve_burgers_chebyshev(
+                nu=nu,
+                nx=nx + 1,  # nx+1 Chebyshev nodes for degree nx
+                nt=nt,
+                L=L,
+                T=T,
+                method=method,
+                rtol=1e-12 if method == "BDF" else 2e-11,
+                atol=1e-12 if method == "BDF" else 2e-11
+            )
+            
+            if metric == "L2_space_time":
+                # L2 error over space-time
+                error = np.abs(U - u_exact)
+                l2_errors[i] = np.sqrt(np.mean(error**2))
+            elif metric == "L2_final":
+                # L2 error at final time only
+                error = np.abs(U[-1, :] - u_exact[-1, :])
+                l2_errors[i] = np.sqrt(np.mean(error**2))
+            else:
+                raise ValueError(f"Unknown metric: {metric}")
+            
+            timings[i] = time_integration_time
+            print(f"L2 error = {l2_errors[i]:.3e}, time = {timings[i]:.2f} s")
+            
+        except Exception as e:
+            print(f"Failed: {e}")
+            l2_errors[i] = np.nan
+            timings[i] = np.nan
+    
+    return l2_errors, timings
+
+
+# ----------------------------
 # Convergence study (optional)
 # ----------------------------
 def compute_convergence_study(nu=0.01, mesh_sizes=None, Border=8, L=2.0*np.pi, T=2.0,method="BDF", rtol=1e-12, atol=1e-12):
@@ -208,8 +364,6 @@ if __name__ == "__main__":
     )
 
     print("Running Chebyshev+BDF...")
-    # If you have the Chebyshev reference:
-    from chebyshev_burgers1d import mesh_convergence_study_chebyshev
     l2_errors_chebyshev, timings_chebyshev = mesh_convergence_study_chebyshev(
         mesh_sizes, nu=nu, t_span=(0, 2.0), nt=1001, method="BDF", metric="L2_space_time"
     )
