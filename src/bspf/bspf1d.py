@@ -11,12 +11,12 @@ if 'CUDA_PATH' not in os.environ:
         os.environ['CUDA_HOME'] = nvhpc_cuda_path
 
 import math
-from typing import Dict, Optional, Tuple, Callable
+from typing import Dict, Optional, Tuple, Callable, List
 
 import numpy as np
 import numpy.typing as npt
 from scipy import linalg as sla
-from scipy.interpolate import BSpline
+from scipy.interpolate import BSpline, make_interp_spline
 
 # Optional GPU backend
 _HAS_CUPY = False
@@ -286,7 +286,11 @@ class EndpointOps1D:
         X_left = la_solve(A_left, E_left).T
         X_right = la_solve(A_right, E_right).T
 
-        dx_pows = xp.array([self.grid.dx ** k for k in range(order)], dtype=xp.float64)
+        # Vectorized computation of dx powers (matches bfpsm1d)
+        if self.use_gpu and _HAS_CUPY:
+            dx_pows = xp.asarray(self.grid.dx ** np.arange(order, dtype=np.float64))
+        else:
+            dx_pows = self.grid.dx ** np.arange(order, dtype=np.float64)
         BND = xp.zeros((2 * order, n_points), dtype=xp.float64)
         BND[:order, :num_bd] = X_left / dx_pows[:, None]
         BND[order:, n_points - num_bd:] = X_right / dx_pows[:, None]
@@ -381,8 +385,8 @@ class bspf1d:
         else:
             trap = self.grid.trap
         
-        self.BW = self.basis.B0 * trap
-        self.Q = self.BW @ self.basis.B0.T
+            self.BW = self.basis.B0 * trap
+            self.Q = self.BW @ self.basis.B0.T
 
         self.end = EndpointOps1D(self.basis, order=self.order, num_bd=self.num_bd)
 
@@ -467,8 +471,22 @@ class bspf1d:
         self._kkt_cache[lam] = (lu, piv)
         return lu, piv
 
-    def _get_or_compute_array(self, key: str, compute_func: Callable[[], Array]) -> Array:
-        """Cache arrays (for compatibility with bfpsm1d API)."""
+    def _get_or_compute_array(self, key: str, compute_func: Callable[[], Array], *, no_cache: bool = False) -> Array:
+        """
+        Cache arrays (for compatibility with bfpsm1d API).
+        
+        Parameters
+        ----------
+        key : str
+            Cache key
+        compute_func : callable
+            Function to compute the array if not cached
+        no_cache : bool, optional
+            If True, always recompute (don't cache). Use this for computations
+            that depend on changing inputs like `f`. Default: False
+        """
+        if no_cache:
+            return compute_func()
         if key not in self._cached_arrays:
             self._cached_arrays[key] = compute_func()
         return self._cached_arrays[key]
@@ -486,17 +504,20 @@ class bspf1d:
         
         # Fast path: CPU + real input (most common case, no overhead)
         if not self.use_gpu:
-            f = np.asarray(f)
+            # Check if complex first, then convert to appropriate dtype
             is_complex = np.iscomplexobj(f)
+            if is_complex:
+                f = np.asarray(f, dtype=np.complex128)
+            else:
+                f = np.asarray(f, dtype=np.float64)
             
             # Real case: use exact bfpsm1d implementation for performance
             if not is_complex:
-                f = f.astype(np.float64, copy=False)
                 if f.shape[0] != self.grid.n:
                     raise ValueError("Length of f must match grid size.")
 
-                # Use exact bfpsm1d code (including _get_or_compute_array for API compatibility)
-                rhs_2bw = self._get_or_compute_array('2bw', lambda: 2.0 * (self.BW @ f))
+                # Compute RHS directly (matches bfpsm1d performance)
+                rhs_2bw = 2.0 * (self.BW @ f)
                 dY = self.end.BND @ f
                 # Neumann BC: overwrite first-derivative rows
                 if neumann_bc is not None:
@@ -662,17 +683,20 @@ class bspf1d:
         """
         # Fast path: CPU + real input (most common case, no overhead)
         if not self.use_gpu:
-            f = np.asarray(f)
+            # Check if complex first, then convert to appropriate dtype
             is_complex = np.iscomplexobj(f)
+            if is_complex:
+                f = np.asarray(f, dtype=np.complex128)
+            else:
+                f = np.asarray(f, dtype=np.float64)
             
             # Real case: use exact bfpsm1d implementation for performance
             if not is_complex:
-                f = f.astype(np.float64, copy=False)
                 if f.shape[0] != self.grid.n:
                     raise ValueError("Length of f must match grid size.")
 
-                # Use exact bfpsm1d code (including _get_or_compute_array for API compatibility)
-                rhs_2bw = self._get_or_compute_array('2bw', lambda: 2.0 * (self.BW @ f))
+                # Compute RHS directly (matches bfpsm1d performance)
+                rhs_2bw = 2.0 * (self.BW @ f)
                 dY = self.end.BND @ f
 
                 if neumann_bc is not None:
@@ -961,3 +985,359 @@ class bspf1d:
 
         return (bk.ensure_like_input(F, input_was_numpy).astype(np.float64),
                 f_spline.astype(np.float64))
+
+    def enforced_zero_flux(self, f: Array) -> Tuple[float, float]:
+        """
+        Enforce zero-flux boundary conditions using ghost points and B-spline interpolation.
+        
+        This method adjusts the boundary values of the function to satisfy zero-flux
+        (Neumann) boundary conditions by:
+        1. Creating ghost points by mirroring internal points (excluding boundaries)
+        2. Fitting a B-spline to the extended points (excluding original boundary points)
+        3. Evaluating the B-spline at the boundaries to get corrected boundary values
+        
+        The number of ghost points is set to `degree - 1`.
+        
+        Parameters
+        ----------
+        f : Array
+            Function values on the grid (must match grid size)
+        
+        Returns
+        -------
+        f_left_corrected : float
+            Corrected left boundary value that satisfies zero flux
+        f_right_corrected : float
+            Corrected right boundary value that satisfies zero flux
+        """
+        f = np.asarray(f, dtype=np.float64)
+        if f.shape[0] != self.grid.n:
+            raise ValueError("Length of f must match grid size.")
+        
+        # Number of ghost points is degree - 1
+        n_ghost = self.degree - 1
+        if n_ghost < 1:
+            raise ValueError(f"degree must be at least 2 for enforced_zero_flux (got {self.degree})")
+        
+        x = self.grid.x
+        dx = self.grid.dx
+        
+        # Create ghost points by mirroring internal points
+        # Left ghost points: mirror from interior (excluding boundary point x[0])
+        # For zero-flux at x[0], we want symmetric reflection: f(x[0] - i*dx) = f(x[0] + i*dx)
+        x_left = x[0] - dx * np.arange(1, n_ghost + 1)
+        x_left = x_left[::-1]  # Reverse to make strictly increasing
+        f_left = f[1:1+n_ghost][::-1]  # Mirror values
+        
+        # Right ghost points: mirror from interior (excluding boundary point x[-1])
+        x_right = x[-1] + dx * np.arange(1, n_ghost + 1)
+        f_right = f[-1-n_ghost:-1][::-1]  # Mirror values
+        
+        # Combine to create extended arrays
+        x_extended = np.concatenate([x_left, x, x_right])
+        f_extended = np.concatenate([f_left, f, f_right])
+        
+        # Verify strictly increasing
+        if not np.all(np.diff(x_extended) > 0):
+            raise ValueError("Extended x array is not strictly increasing!")
+        
+        # Fit B-spline and evaluate at left boundary
+        # Left boundary is at x_extended[n_ghost] (which equals x[0])
+        boundary_idx_left = n_ghost
+        x_boundary_left = x_extended[boundary_idx_left]
+        
+        # Exclude left boundary point from fitting
+        mask_left = np.ones(len(x_extended), dtype=bool)
+        mask_left[boundary_idx_left] = False
+        x_fit_left = x_extended[mask_left]
+        f_fit_left = f_extended[mask_left]
+        
+        # Create B-spline interpolant
+        try:
+            spline_left = make_interp_spline(x_fit_left, f_fit_left, k=self.degree, bc_type='natural')
+        except:
+            spline_left = make_interp_spline(x_fit_left, f_fit_left, k=self.degree)
+        
+        # Evaluate at left boundary to get corrected value
+        f_left_corrected = float(spline_left(x_boundary_left))
+        
+        # Fit B-spline and evaluate at right boundary
+        # Right boundary is at x_extended[-(n_ghost+1)] (which equals x[-1])
+        boundary_idx_right = -(n_ghost + 1)
+        x_boundary_right = x_extended[boundary_idx_right]
+        
+        # Exclude right boundary point from fitting
+        mask_right = np.ones(len(x_extended), dtype=bool)
+        mask_right[boundary_idx_right] = False
+        x_fit_right = x_extended[mask_right]
+        f_fit_right = f_extended[mask_right]
+        
+        # Create B-spline interpolant
+        try:
+            spline_right = make_interp_spline(x_fit_right, f_fit_right, k=self.degree, bc_type='natural')
+        except:
+            spline_right = make_interp_spline(x_fit_right, f_fit_right, k=self.degree)
+        
+        # Evaluate at right boundary to get corrected value
+        f_right_corrected = float(spline_right(x_boundary_right))
+        
+        return f_left_corrected, f_right_corrected
+
+    def interpolate(self, f: Array, lam: float = 0.0) -> Tuple[Array, Array]:
+        """
+        High-order interpolation that doubles the resolution.
+        
+        Takes an input function f of size N and returns interpolated values
+        on a finer grid of size 2*N - 1 by inserting midpoints between
+        existing grid points.
+        
+        The interpolation uses the B-spline representation to achieve high-order
+        accuracy. The method:
+        1. Fits a B-spline to the input data
+        2. Creates a new grid with 2*N - 1 points (midpoints inserted)
+        3. Evaluates the spline at the new grid points
+        
+        Parameters
+        ----------
+        f : Array
+            Function values on the current grid (must match grid size N)
+        lam : float, default 0.0
+            Tikhonov regularization parameter for spline fitting
+        
+        Returns
+        -------
+        x_new : Array
+            New grid points of size 2*N - 1
+        f_new : Array
+            Interpolated function values on the new grid
+        
+        Example
+        -------
+        >>> x = np.linspace(0, 2*np.pi, 64)
+        >>> model = bspf1d.from_grid(degree=5, x=x)
+        >>> f = np.sin(x)
+        >>> x_new, f_new = model.interpolate(f)
+        >>> print(f"Original size: {len(f)}, New size: {len(f_new)}")
+        Original size: 64, New size: 127
+        """
+        # Convert input to appropriate backend
+        if self.use_gpu and _HAS_CUPY:
+            xp = cp
+            input_was_numpy = isinstance(f, np.ndarray) or not isinstance(f, cp.ndarray)
+            f_x = xp.asarray(f, dtype=xp.float64)
+        else:
+            xp = np
+            input_was_numpy = True
+            f_x = np.asarray(f, dtype=np.float64)
+        
+        if f_x.shape[0] != self.grid.n:
+            raise ValueError(f"Length of f ({f_x.shape[0]}) must match grid size ({self.grid.n})")
+        
+        # Fit B-spline to the input data
+        # Use the same approach as differentiate to get spline coefficients
+        if self.use_gpu and _HAS_CUPY:
+            BW = xp.asarray(self.BW)
+            BND = xp.asarray(self.end.BND)
+            BT0 = xp.asarray(self.basis.BT0)
+            la = cpla
+        else:
+            BW = self.BW
+            BND = self.end.BND
+            BT0 = self.basis.BT0
+            la = sla
+        
+        # Build RHS for spline fitting
+        rhs_2bw = 2.0 * (BW @ f_x)
+        dY = BND @ f_x
+        rhs = xp.concatenate((rhs_2bw, dY), axis=0)
+        
+        # Solve for spline coefficients
+        lu_cpu, piv_cpu = self._kkt_lu(lam)
+        if self.use_gpu and _HAS_CUPY:
+            SOL = la.lu_solve((xp.asarray(lu_cpu), xp.asarray(piv_cpu)), rhs)
+        else:
+            SOL = la.lu_solve((lu_cpu, piv_cpu), rhs)
+        
+        n_b = self.basis.B0.shape[0]
+        P = SOL[:n_b]
+        
+        # Create new grid with 2*N - 1 points
+        # Insert midpoints between existing grid points
+        x_old = self.grid.x  # Always numpy from Grid1D
+        N_old = len(x_old)
+        N_new = 2 * N_old - 1
+        
+        # Create new grid: original points + midpoints
+        # Always create as numpy first, then convert if needed
+        x_new = np.empty(N_new, dtype=np.float64)
+        
+        # Fill in original points at even indices
+        x_new[::2] = x_old
+        
+        # Fill in midpoints at odd indices
+        if N_old > 1:
+            midpoints = 0.5 * (x_old[:-1] + x_old[1:])
+            x_new[1::2] = midpoints
+        
+        # Evaluate spline at new grid points
+        # Use the basis functions to evaluate
+        # Note: basis._splines evaluation always uses numpy arrays internally
+        # (scipy BSpline or cupyx BSpline both accept numpy arrays)
+        B0_new = np.empty((n_b, N_new), dtype=np.float64)
+        
+        # Evaluate each basis function at the new grid points
+        for i, s in enumerate(self.basis._splines):
+            B0_new[i, :] = s(x_new)
+        
+        # Convert to backend if needed and compute interpolated values
+        if self.use_gpu and _HAS_CUPY:
+            B0_new_xp = xp.asarray(B0_new)
+            P_xp = xp.asarray(P)
+            f_new = (B0_new_xp.T @ P_xp).astype(xp.float64)
+            # Convert back to numpy if input was numpy
+            if input_was_numpy:
+                f_new = cp.asnumpy(f_new)
+        else:
+            f_new = (B0_new.T @ P).astype(np.float64)
+        
+        return x_new, f_new
+
+
+# =============================================================================
+# Piecewise BSPF for functions with discontinuities
+# =============================================================================
+class PiecewiseBSPF1D:
+    """
+    Piecewise BSPF operator for functions with known discontinuities.
+    
+    Segments the domain at breakpoints and applies bspf1d to each segment
+    independently. This improves accuracy for functions with jumps or
+    discontinuities.
+    
+    Breakpoints are interpreted as physical coordinates that can fall between
+    grid cells. Each breakpoint is interpreted as: discontinuity lies between
+    x[idx-1] and x[idx]. Left segment uses indices 0..idx-1, right segment
+    uses idx..N-1.
+    
+    Parameters
+    ----------
+    degree : int
+        B-spline degree for each segment
+    x : Array
+        Full grid points (must be uniformly spaced)
+    breakpoints : List[float], optional
+        List of x-coordinates where discontinuities occur. Default: []
+    min_points_per_seg : int, default 16
+        Minimum number of points required per segment. Segments with fewer
+        points are skipped.
+    **bspf_kwargs
+        Additional arguments passed to bspf1d.from_grid for each segment
+        (e.g., order, correction, use_gpu)
+    
+    Example
+    -------
+    >>> x = np.linspace(0, 2*np.pi, 512)
+    >>> pw = PiecewiseBSPF1D(degree=5, x=x, breakpoints=[np.pi/2, 3*np.pi/2])
+    >>> df1, df2, f_spline = pw.differentiate_1_2(f)
+    """
+    
+    def __init__(self, degree: int, x: Array, breakpoints: Optional[List[float]] = None,
+                 min_points_per_seg: int = 16, **bspf_kwargs):
+        self.degree = int(degree)
+        self.x = np.asarray(x, dtype=np.float64)
+        self.breakpoints = sorted(breakpoints or [])
+        self.min_points_per_seg = int(min_points_per_seg)
+        
+        N = self.x.size
+        
+        # 1. Convert physical coordinates to cell interface indices
+        cut_indices = []
+        for bp in self.breakpoints:
+            idx = int(np.searchsorted(self.x, bp))  # x[idx-1] < bp <= x[idx]
+            if 1 <= idx <= N - 1:
+                cut_indices.append(idx)
+        cut_indices = sorted(set(cut_indices))
+        
+        self.segments = []  # Each segment: {i0, i1, op}
+        
+        i_start = 0
+        for idx in cut_indices:
+            i_end = idx - 1  # Left segment goes to idx-1
+            if i_end - i_start + 1 >= self.min_points_per_seg:
+                x_seg = self.x[i_start:i_end + 1]
+                op = bspf1d.from_grid(degree=self.degree, x=x_seg, **bspf_kwargs)
+                self.segments.append(dict(i0=i_start, i1=i_end, op=op))
+            # Otherwise segment is too short, skip it
+            i_start = idx  # Right segment starts from idx
+        
+        # Last segment
+        if N - 1 - i_start + 1 >= self.min_points_per_seg:
+            x_seg = self.x[i_start:]
+            op = bspf1d.from_grid(degree=self.degree, x=x_seg, **bspf_kwargs)
+            self.segments.append(dict(i0=i_start, i1=N - 1, op=op))
+    
+    def differentiate_1_2(self, f: Array, lam: float = 0.0,
+                          neumann_bc_global: Optional[Tuple[Optional[float], Optional[float]]] = None
+                          ) -> Tuple[Array, Array, Array]:
+        """
+        Compute first and second derivatives using piecewise BSPF.
+        
+        Calls bspf1d.differentiate_1_2 on each segment, then concatenates results.
+        
+        Parameters
+        ----------
+        f : Array
+            Function values on the full grid
+        lam : float, default 0.0
+            Tikhonov regularization parameter
+        neumann_bc_global : tuple, optional
+            Neumann boundary conditions (left_flux, right_flux) for the global domain.
+            Interior interfaces do not apply Neumann BCs, determined by physics.
+        
+        Returns
+        -------
+        df1 : Array
+            First derivative on full grid
+        df2 : Array
+            Second derivative on full grid
+        f_spline : Array
+            Spline approximation on full grid
+        """
+        f = np.asarray(f, dtype=np.float64)
+        if f.shape[0] != self.x.size:
+            raise ValueError(f"f length {f.shape[0]} must match x length {self.x.size}")
+        
+        df1_full = np.zeros_like(f, dtype=np.float64)
+        df2_full = np.zeros_like(f, dtype=np.float64)
+        fs_full = np.zeros_like(f, dtype=np.float64)
+        
+        if neumann_bc_global is not None:
+            left_flux_global, right_flux_global = neumann_bc_global
+        else:
+            left_flux_global = right_flux_global = None
+        
+        n_seg = len(self.segments)
+        for k, seg in enumerate(self.segments):
+            i0, i1, op = seg["i0"], seg["i1"], seg["op"]
+            f_seg = f[i0:i1 + 1]
+            
+            # Only apply global Neumann BC at the two ends of the entire domain
+            if k == 0:
+                bc_left = left_flux_global
+            else:
+                bc_left = None
+            if k == n_seg - 1:
+                bc_right = right_flux_global
+            else:
+                bc_right = None
+            neumann_bc_seg = (bc_left, bc_right)
+            
+            d1_seg, d2_seg, fs_seg = op.differentiate_1_2(
+                f_seg, lam=lam, neumann_bc=neumann_bc_seg
+            )
+            
+            df1_full[i0:i1 + 1] = d1_seg
+            df2_full[i0:i1 + 1] = d2_seg
+            fs_full[i0:i1 + 1] = fs_seg
+        
+        return df1_full, df2_full, fs_full
