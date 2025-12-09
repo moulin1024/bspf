@@ -737,12 +737,13 @@ class bspf2d:
         uniform_bc_y: bool = False,
         bc_x: float | Array | None = None,
         bc_y: float | Array | None = None,
-        use_loop: bool = False,
     ) -> Tuple[Array, Array, Array, Array]:
         """
         Compute first and second derivatives in both x and y directions together.
         More efficient than calling partial_dx, partial_dy, partial_dxx, partial_dyy separately
         because it reuses intermediate computations.
+        
+        Uses batched operations for optimal performance on both CPU and GPU.
         
         Parameters
         ----------
@@ -760,10 +761,6 @@ class bspf2d:
             Boundary condition values for x-direction (currently unused)
         bc_y : float | Array | None, default None
             Boundary condition values for y-direction (currently unused)
-        use_loop : bool, default False
-            If True, use the original loop-based implementation (faster for CPU on smaller grids
-            due to better cache behavior). If False, use batched operations (better for GPU
-            or very large grids).
         
         Returns
         -------
@@ -778,72 +775,17 @@ class bspf2d:
         """
         self._check_shape(F)
         
-        if use_loop:
-            # Original loop-based implementation (better cache behavior for CPU)
-            # For CPU on moderate-sized grids (e.g., 512x512), the loop version is often
-            # faster because:
-            # 1. Each row/column fits in cache (cache-friendly)
-            # 2. BLAS operations on small vectors are highly optimized
-            # 3. Python loop overhead is negligible compared to computation
-            # 4. No transpose overhead (memory copies)
-            # The batched version is better for GPU or very large grids where:
-            # - Parallelization benefits outweigh cache misses
-            # - Memory bandwidth is the bottleneck (not CPU cache)
-            
-            # Validate device consistency - throw error instead of implicit conversion
-            if self.use_gpu:
-                if _HAS_CUPY and isinstance(F, np.ndarray):
-                    raise ValueError(
-                        "Cannot use NumPy array when use_gpu=True in differentiate_1_2 (use_loop=True). "
-                        "Either: (1) convert input to CuPy array before calling, or (2) use use_gpu=False, or (3) use use_loop=False."
-                    )
-                # Convert CuPy to NumPy for loop version (loop version uses CPU)
-                if _HAS_CUPY and isinstance(F, cp.ndarray):
-                    F_np = cp.asnumpy(F).astype(np.float64)
-                else:
-                    F_np = np.asarray(F, dtype=np.float64)
-            else:
-                if _HAS_CUPY and isinstance(F, cp.ndarray):
-                    raise ValueError(
-                        "Cannot use CuPy array when use_gpu=False in differentiate_1_2 (use_loop=True). "
-                        "Either: (1) convert input to NumPy array, or (2) use use_gpu=True."
-                    )
-                F_np = np.asarray(F, dtype=np.float64)
-            ny, nx = F_np.shape
-            
-            # For x-direction: differentiate along columns (axis=1)
-            dF_dx_list = []
-            d2F_dx2_list = []
-            for i in range(ny):
-                f_row = F_np[i, :]  # (nx,)
-                df1_x, df2_x, _ = self.x_model.differentiate_1_2(f_row, lam=lam_x)
-                dF_dx_list.append(df1_x)
-                d2F_dx2_list.append(df2_x)
-            dF_dx = np.stack(dF_dx_list, axis=0)  # (ny, nx)
-            d2F_dx2 = np.stack(d2F_dx2_list, axis=0)  # (ny, nx)
-            
-            # For y-direction: differentiate along rows (axis=0)
-            dF_dy_list = []
-            d2F_dy2_list = []
-            for j in range(nx):
-                f_col = F_np[:, j]  # (ny,)
-                df1_y, df2_y, _ = self.y_model.differentiate_1_2(f_col, lam=lam_y)
-                dF_dy_list.append(df1_y)
-                d2F_dy2_list.append(df2_y)
-            dF_dy = np.stack(dF_dy_list, axis=1)  # (ny, nx)
-            d2F_dy2 = np.stack(d2F_dy2_list, axis=1)  # (ny, nx)
-        else:
-            # Batched implementation (better for GPU or very large grids)
-            # For x-direction: differentiate along columns (axis=1)
-            # Transpose F to (nx, ny) so rows become columns, then use batched differentiate_1_2
-            F_T = F.T  # (nx, ny) - transpose so columns become rows
-            dF_dx_T, d2F_dx2_T, _ = self.x_model.differentiate_1_2_batched(F_T, lam=lam_x)
-            dF_dx = dF_dx_T.T  # (ny, nx) - transpose back
-            d2F_dx2 = d2F_dx2_T.T  # (ny, nx) - transpose back
-            
-            # For y-direction: differentiate along rows (axis=0)
-            # F is (ny, nx), use batched differentiate_1_2 along axis=0
-            dF_dy, d2F_dy2, _ = self.y_model.differentiate_1_2_batched(F, lam=lam_y)
+        # Batched implementation (optimal for both CPU and GPU)
+        # For x-direction: differentiate along columns (axis=1)
+        # Transpose F to (nx, ny) so rows become columns, then use batched differentiate_1_2
+        F_T = F.T  # (nx, ny) - transpose so columns become rows
+        dF_dx_T, d2F_dx2_T, _ = self.x_model.differentiate_1_2_batched(F_T, lam=lam_x)
+        dF_dx = dF_dx_T.T  # (ny, nx) - transpose back
+        d2F_dx2 = d2F_dx2_T.T  # (ny, nx) - transpose back
+        
+        # For y-direction: differentiate along rows (axis=0)
+        # F is (ny, nx), use batched differentiate_1_2 along axis=0
+        dF_dy, d2F_dy2, _ = self.y_model.differentiate_1_2_batched(F, lam=lam_y)
         
         return (
             dF_dx.astype(np.float64),
@@ -986,7 +928,7 @@ def run_profile_2d(
     a, b = 0.0, 2.0 * np.pi
     x = np.linspace(a, b, nx, endpoint=True)
     y = np.linspace(a, b, ny, endpoint=True)
-    X, Y = np.meshgrid(x, y, indexing="ij")
+    X, Y = np.meshgrid(x, y, indexing="xy")  # X varies along axis 1, Y along axis 0
 
     # 2D Taylor-Green vortex scalar field: f(x,y) = sin(x) * sin(y)
     # Exact derivatives:
