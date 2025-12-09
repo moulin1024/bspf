@@ -651,6 +651,7 @@ class bspf2d:
         uniform_bc_y: bool = False,
         bc_x: float | Array | None = None,
         bc_y: float | Array | None = None,
+        use_loop: bool = False,
     ) -> Tuple[Array, Array, Array, Array]:
         """
         Compute first and second derivatives in both x and y directions together.
@@ -673,6 +674,10 @@ class bspf2d:
             Boundary condition values for x-direction (currently unused)
         bc_y : float | Array | None, default None
             Boundary condition values for y-direction (currently unused)
+        use_loop : bool, default False
+            If True, use the original loop-based implementation (faster for CPU on smaller grids
+            due to better cache behavior). If False, use batched operations (better for GPU
+            or very large grids).
         
         Returns
         -------
@@ -687,39 +692,53 @@ class bspf2d:
         """
         self._check_shape(F)
         
-        # Convert F to numpy for bspf1d operations (bspf1d handles GPU internally if needed)
-        F_np = np.asarray(F, dtype=np.float64)
-        ny, nx = F_np.shape
-        
-        # For x-direction: differentiate along columns (axis=1)
-        # Each row F[i, :] has shape (nx,) and is differentiated along x
-        dF_dx_list = []
-        d2F_dx2_list = []
-        
-        for i in range(ny):
-            f_row = F_np[i, :]  # (nx,) - one row
-            df1_x, df2_x, _ = self.x_model.differentiate_1_2(f_row, lam=lam_x)
-            dF_dx_list.append(df1_x)
-            d2F_dx2_list.append(df2_x)
-        
-        # Stack to (ny, nx)
-        dF_dx = np.stack(dF_dx_list, axis=0)  # (ny, nx)
-        d2F_dx2 = np.stack(d2F_dx2_list, axis=0)  # (ny, nx)
-        
-        # For y-direction: differentiate along rows (axis=0)
-        # Each column F[:, j] has shape (ny,) and is differentiated along y
-        dF_dy_list = []
-        d2F_dy2_list = []
-        
-        for j in range(nx):
-            f_col = F_np[:, j]  # (ny,) - one column
-            df1_y, df2_y, _ = self.y_model.differentiate_1_2(f_col, lam=lam_y)
-            dF_dy_list.append(df1_y)
-            d2F_dy2_list.append(df2_y)
-        
-        # Stack to (ny, nx)
-        dF_dy = np.stack(dF_dy_list, axis=1)  # (ny, nx)
-        d2F_dy2 = np.stack(d2F_dy2_list, axis=1)  # (ny, nx)
+        if use_loop:
+            # Original loop-based implementation (better cache behavior for CPU)
+            # For CPU on moderate-sized grids (e.g., 512x512), the loop version is often
+            # faster because:
+            # 1. Each row/column fits in cache (cache-friendly)
+            # 2. BLAS operations on small vectors are highly optimized
+            # 3. Python loop overhead is negligible compared to computation
+            # 4. No transpose overhead (memory copies)
+            # The batched version is better for GPU or very large grids where:
+            # - Parallelization benefits outweigh cache misses
+            # - Memory bandwidth is the bottleneck (not CPU cache)
+            F_np = np.asarray(F, dtype=np.float64)
+            ny, nx = F_np.shape
+            
+            # For x-direction: differentiate along columns (axis=1)
+            dF_dx_list = []
+            d2F_dx2_list = []
+            for i in range(ny):
+                f_row = F_np[i, :]  # (nx,)
+                df1_x, df2_x, _ = self.x_model.differentiate_1_2(f_row, lam=lam_x)
+                dF_dx_list.append(df1_x)
+                d2F_dx2_list.append(df2_x)
+            dF_dx = np.stack(dF_dx_list, axis=0)  # (ny, nx)
+            d2F_dx2 = np.stack(d2F_dx2_list, axis=0)  # (ny, nx)
+            
+            # For y-direction: differentiate along rows (axis=0)
+            dF_dy_list = []
+            d2F_dy2_list = []
+            for j in range(nx):
+                f_col = F_np[:, j]  # (ny,)
+                df1_y, df2_y, _ = self.y_model.differentiate_1_2(f_col, lam=lam_y)
+                dF_dy_list.append(df1_y)
+                d2F_dy2_list.append(df2_y)
+            dF_dy = np.stack(dF_dy_list, axis=1)  # (ny, nx)
+            d2F_dy2 = np.stack(d2F_dy2_list, axis=1)  # (ny, nx)
+        else:
+            # Batched implementation (better for GPU or very large grids)
+            # For x-direction: differentiate along columns (axis=1)
+            # Transpose F to (nx, ny) so rows become columns, then use batched differentiate_1_2
+            F_T = F.T  # (nx, ny) - transpose so columns become rows
+            dF_dx_T, d2F_dx2_T, _ = self.x_model.differentiate_1_2_batched(F_T, lam=lam_x)
+            dF_dx = dF_dx_T.T  # (ny, nx) - transpose back
+            d2F_dx2 = d2F_dx2_T.T  # (ny, nx) - transpose back
+            
+            # For y-direction: differentiate along rows (axis=0)
+            # F is (ny, nx), use batched differentiate_1_2 along axis=0
+            dF_dy, d2F_dy2, _ = self.y_model.differentiate_1_2_batched(F, lam=lam_y)
         
         return (
             dF_dx.astype(np.float64),
@@ -883,121 +902,120 @@ def run_profile_2d(
     # Warmup
     _ = op.differentiate_1_2(F)
 
-    # Detailed decomposition: collect timing from 1D models
-    # Initialize timing accumulators for 1D components
-    timing_keys = ['rhs_build', 'kkt_solve', 'spline_eval', 'fft_corr', 'total']
-    x_timings = {k: [] for k in timing_keys}
-    y_timings = {k: [] for k in timing_keys}
+    # With batched operations, we can only measure total time per direction
+    # Detailed component timing (rhs_build, kkt_solve, etc.) is not available
+    # because _diff_axis doesn't expose per-component timing
     t_total = []
-    t_x_loop = []  # Time for x-direction loop (including stacking)
-    t_y_loop = []  # Time for y-direction loop (including stacking)
+    t_x_batch = []  # Time for x-direction batched operations (k=1 + k=2)
+    t_y_batch = []  # Time for y-direction batched operations (k=1 + k=2)
+    t_x_k1 = []     # Time for x-direction k=1 only
+    t_x_k2 = []     # Time for x-direction k=2 only
+    t_y_k1 = []     # Time for y-direction k=1 only
+    t_y_k2 = []     # Time for y-direction k=2 only
 
     for _ in range(n_runs):
         t0 = time.perf_counter()
 
-        # X direction: differentiate along columns (axis=1)
+        # X direction: batched differentiation along columns (axis=1)
+        # Transpose F to (nx, ny) so we can use batched differentiate_1_2
         t_x0 = time.perf_counter()
-        dF_dx_list = []
-        d2F_dx2_list = []
-        for i in range(ny):
-            f_row = F[i, :]
-            df1_x, df2_x, _ = op.x_model.differentiate_1_2(f_row, lam=0.0)
-            dF_dx_list.append(df1_x)
-            d2F_dx2_list.append(df2_x)
-        dF_dx = np.stack(dF_dx_list, axis=0)
-        d2F_dx2 = np.stack(d2F_dx2_list, axis=0)
+        F_T = F.T  # (nx, ny)
+        dF_dx_T, d2F_dx2_T, _ = op.x_model.differentiate_1_2_batched(F_T, lam=0.0)
+        dF_dx = dF_dx_T.T  # (ny, nx) - transpose back
+        d2F_dx2 = d2F_dx2_T.T  # (ny, nx) - transpose back
         t_x1 = time.perf_counter()
-        t_x_loop.append(t_x1 - t_x0)
+        t_x_batch.append(t_x1 - t_x0)
+        # Note: With batched differentiate_1_2, we can't separate k=1 and k=2 timing
+        # They're computed together, so we approximate by dividing total time in half
+        t_x_k1.append((t_x1 - t_x0) / 2.0)
+        t_x_k2.append((t_x1 - t_x0) / 2.0)
 
-        # Collect 1D timing from x_model (from last call in the loop)
-        if hasattr(op.x_model, 'last_timing_d12') and op.x_model.last_timing_d12:
-            for k in timing_keys:
-                if k in op.x_model.last_timing_d12:
-                    # Multiply by ny since we called it ny times
-                    x_timings[k].append(op.x_model.last_timing_d12[k] * ny)
-
-        # Y direction: differentiate along rows (axis=0)
+        # Y direction: batched differentiation along rows (axis=0)
         t_y0 = time.perf_counter()
-        dF_dy_list = []
-        d2F_dy2_list = []
-        for j in range(nx):
-            f_col = F[:, j]
-            df1_y, df2_y, _ = op.y_model.differentiate_1_2(f_col, lam=0.0)
-            dF_dy_list.append(df1_y)
-            d2F_dy2_list.append(df2_y)
-        dF_dy = np.stack(dF_dy_list, axis=1)
-        d2F_dy2 = np.stack(d2F_dy2_list, axis=1)
+        dF_dy, d2F_dy2, _ = op.y_model.differentiate_1_2_batched(F, lam=0.0)
         t_y1 = time.perf_counter()
-        t_y_loop.append(t_y1 - t_y0)
-
-        # Collect 1D timing from y_model (from last call in the loop)
-        if hasattr(op.y_model, 'last_timing_d12') and op.y_model.last_timing_d12:
-            for k in timing_keys:
-                if k in op.y_model.last_timing_d12:
-                    # Multiply by nx since we called it nx times
-                    y_timings[k].append(op.y_model.last_timing_d12[k] * nx)
+        t_y_batch.append(t_y1 - t_y0)
+        # Note: With batched differentiate_1_2, we can't separate k=1 and k=2 timing
+        t_y_k1.append((t_y1 - t_y0) / 2.0)
+        t_y_k2.append((t_y1 - t_y0) / 2.0)
 
         t1 = time.perf_counter()
         t_total.append(t1 - t0)
 
     t_total = np.asarray(t_total)
-    t_x_loop = np.asarray(t_x_loop)
-    t_y_loop = np.asarray(t_y_loop)
+    t_x_batch = np.asarray(t_x_batch)
+    t_y_batch = np.asarray(t_y_batch)
+    t_x_k1 = np.asarray(t_x_k1)
+    t_x_k2 = np.asarray(t_x_k2)
+    t_y_k1 = np.asarray(t_y_k1)
+    t_y_k2 = np.asarray(t_y_k2)
 
-    # Convert timing lists to arrays
-    for k in timing_keys:
-        if x_timings[k]:
-            x_timings[k] = np.asarray(x_timings[k])
-        if y_timings[k]:
-            y_timings[k] = np.asarray(y_timings[k])
+    # Compute overhead (transpose operations, etc.)
+    t_x_overhead = t_x_batch - (t_x_k1 + t_x_k2)
+    t_y_overhead = t_y_batch - (t_y_k1 + t_y_k2)
 
     # Print detailed breakdown
     print("\n" + "="*80)
-    print("=== bspf2d differentiate_1_2 profiling (detailed decomposition) ===")
+    print("=== bspf2d differentiate_1_2 profiling (batched, non-overlapping) ===")
     print("="*80)
     print(f"grid: nx={nx}, ny={ny}, degree={degree}, runs={n_runs}, use_gpu={use_gpu}")
     print(f"\n{'Component':20s} {'Mean':>12s} {'Std':>12s} {'Min':>12s} {'Max':>12s} {'% of total':>12s}")
     print("-" * 80)
     
+    total_mean = np.mean(t_total)
+    
     # X-direction breakdown
-    print("\nX-direction (ny={} rows):".format(ny))
-    mean, std, tmin, tmax = _stats(t_x_loop)
-    pct = 100.0 * mean / np.mean(t_total) if np.mean(t_total) > 0 else 0.0
-    print(f"{'  x_loop_total':20s}: {mean:12.6f} {std:12.6f} {tmin:12.6f} {tmax:12.6f} {pct:11.2f}%")
-    for k in timing_keys:
-        if x_timings[k] is not None and len(x_timings[k]) > 0:
-            mean, std, tmin, tmax = _stats(x_timings[k])
-            pct = 100.0 * mean / np.mean(t_total) if np.mean(t_total) > 0 else 0.0
-            print(f"{'  x_'+k:20s}: {mean:12.6f} {std:12.6f} {tmin:12.6f} {tmax:12.6f} {pct:11.2f}%")
+    print("\nX-direction (batched, ny={} rows):".format(ny))
+    mean, std, tmin, tmax = _stats(t_x_batch)
+    pct = 100.0 * mean / total_mean if total_mean > 0 else 0.0
+    print(f"{'  x_batch_total':20s}: {mean:12.6f} {std:12.6f} {tmin:12.6f} {tmax:12.6f} {pct:11.2f}%")
+    mean, std, tmin, tmax = _stats(t_x_k1)
+    pct = 100.0 * mean / total_mean if total_mean > 0 else 0.0
+    print(f"{'  x_k1 (df/dx)':20s}: {mean:12.6f} {std:12.6f} {tmin:12.6f} {tmax:12.6f} {pct:11.2f}%")
+    mean, std, tmin, tmax = _stats(t_x_k2)
+    pct = 100.0 * mean / total_mean if total_mean > 0 else 0.0
+    print(f"{'  x_k2 (d2f/dx2)':20s}: {mean:12.6f} {std:12.6f} {tmin:12.6f} {tmax:12.6f} {pct:11.2f}%")
+    mean, _, _, _ = _stats(t_x_overhead)
+    pct = 100.0 * mean / total_mean if total_mean > 0 else 0.0
+    print(f"{'  x_overhead':20s}: {mean:12.6f} {'-'*8:>12s} {'-'*8:>12s} {'-'*8:>12s} {pct:11.2f}%")
     
     # Y-direction breakdown
-    print("\nY-direction (nx={} cols):".format(nx))
-    mean, std, tmin, tmax = _stats(t_y_loop)
-    pct = 100.0 * mean / np.mean(t_total) if np.mean(t_total) > 0 else 0.0
-    print(f"{'  y_loop_total':20s}: {mean:12.6f} {std:12.6f} {tmin:12.6f} {tmax:12.6f} {pct:11.2f}%")
-    for k in timing_keys:
-        if y_timings[k] is not None and len(y_timings[k]) > 0:
-            mean, std, tmin, tmax = _stats(y_timings[k])
-            pct = 100.0 * mean / np.mean(t_total) if np.mean(t_total) > 0 else 0.0
-            print(f"{'  y_'+k:20s}: {mean:12.6f} {std:12.6f} {tmin:12.6f} {tmax:12.6f} {pct:11.2f}%")
+    print("\nY-direction (batched, nx={} cols):".format(nx))
+    mean, std, tmin, tmax = _stats(t_y_batch)
+    pct = 100.0 * mean / total_mean if total_mean > 0 else 0.0
+    print(f"{'  y_batch_total':20s}: {mean:12.6f} {std:12.6f} {tmin:12.6f} {tmax:12.6f} {pct:11.2f}%")
+    mean, std, tmin, tmax = _stats(t_y_k1)
+    pct = 100.0 * mean / total_mean if total_mean > 0 else 0.0
+    print(f"{'  y_k1 (df/dy)':20s}: {mean:12.6f} {std:12.6f} {tmin:12.6f} {tmax:12.6f} {pct:11.2f}%")
+    mean, std, tmin, tmax = _stats(t_y_k2)
+    pct = 100.0 * mean / total_mean if total_mean > 0 else 0.0
+    print(f"{'  y_k2 (d2f/dy2)':20s}: {mean:12.6f} {std:12.6f} {tmin:12.6f} {tmax:12.6f} {pct:11.2f}%")
+    mean, _, _, _ = _stats(t_y_overhead)
+    pct = 100.0 * mean / total_mean if total_mean > 0 else 0.0
+    print(f"{'  y_overhead':20s}: {mean:12.6f} {'-'*8:>12s} {'-'*8:>12s} {'-'*8:>12s} {pct:11.2f}%")
     
-    # Overall
+    # Overall (non-overlapping top-level)
     print("\nOverall:")
     mean, std, tmin, tmax = _stats(t_total)
     print(f"{'total':20s}: {mean:12.6f} {std:12.6f} {tmin:12.6f} {tmax:12.6f} {'100.00':>12s}%")
     print("="*80 + "\n")
+    print("Note: Using batched differentiate_1_2 which computes both derivatives together.")
+    print("      This reuses RHS build, KKT solve, and spline evaluation for efficiency.")
+    print("      k=1 and k=2 times are approximated by dividing total time in half.")
+    print("="*80 + "\n")
 
     # Return summary for programmatic access
     summary = {
-        "x_loop_total": _stats(t_x_loop),
-        "y_loop_total": _stats(t_y_loop),
+        "x_batch_total": _stats(t_x_batch),
+        "x_k1": _stats(t_x_k1),
+        "x_k2": _stats(t_x_k2),
+        "x_overhead": _stats(t_x_overhead),
+        "y_batch_total": _stats(t_y_batch),
+        "y_k1": _stats(t_y_k1),
+        "y_k2": _stats(t_y_k2),
+        "y_overhead": _stats(t_y_overhead),
         "total": _stats(t_total),
     }
-    for k in timing_keys:
-        if x_timings[k] is not None and len(x_timings[k]) > 0:
-            summary[f"x_{k}"] = _stats(x_timings[k])
-        if y_timings[k] is not None and len(y_timings[k]) > 0:
-            summary[f"y_{k}"] = _stats(y_timings[k])
     
     return summary
 

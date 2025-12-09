@@ -960,6 +960,168 @@ class bspf1d:
                 bk.ensure_like_input(df2, input_was_numpy).astype(out_dtype),
                 bk.ensure_like_input(f_spline, input_was_numpy).astype(out_dtype))
 
+    def differentiate_1_2_batched(self, f: Array, lam: float = 0.0, *,
+                                  neumann_bc: Optional[Tuple[Optional[float], Optional[float]]] = None
+                                  ) -> Tuple[Array, Array, Array]:
+        """
+        Batched version of differentiate_1_2: compute first & second derivatives together
+        for multiple columns/rows at once.
+        
+        Parameters
+        ----------
+        f : Array
+            Input array of shape (n, batch) where n is the grid size and batch is the number
+            of columns/rows to process together
+        lam : float, default 0.0
+            Tikhonov regularization parameter
+        neumann_bc : tuple, optional
+            Neumann boundary conditions (left_flux, right_flux) for each batch.
+            If provided, should be (left_flux, right_flux) where each can be:
+            - scalar: same BC for all batches
+            - array of shape (batch,): different BC for each batch
+        
+        Returns
+        -------
+        df1 : Array
+            First derivative, shape (n, batch)
+        df2 : Array
+            Second derivative, shape (n, batch)
+        f_spline : Array
+            Spline approximation, shape (n, batch)
+        """
+        # Fast path: CPU + real input (most common case)
+        if not self.use_gpu:
+            f = np.asarray(f, dtype=np.float64)
+            if f.ndim != 2:
+                raise ValueError("f must be 2D with shape (n, batch)")
+            n, batch = f.shape
+            if n != self.grid.n:
+                raise ValueError(f"First dimension of f ({n}) must match grid size ({self.grid.n})")
+            
+            # Build RHS for all batches at once
+            # BW @ f: (n_b, n) @ (n, batch) = (n_b, batch)
+            rhs_top = 2.0 * (self._BW_f @ f)  # (n_b, batch)
+            # BND @ f: (m, n) @ (n, batch) = (m, batch)
+            dY = self._BND_f @ f  # (m, batch)
+            
+            n_b = self._BW_f.shape[0]
+            m = self._BND_f.shape[0]
+            
+            if neumann_bc is not None:
+                if self.order < 1:
+                    raise ValueError("Neumann BC requires self.order ≥ 1.")
+                left_flux, right_flux = neumann_bc
+                if left_flux is not None:
+                    if np.ndim(left_flux) == 0:
+                        dY[1, :] = float(left_flux)
+                    else:
+                        dY[1, :] = np.asarray(left_flux, dtype=np.float64)
+                if right_flux is not None:
+                    if np.ndim(right_flux) == 0:
+                        dY[self.order + 1, :] = float(right_flux)
+                    else:
+                        dY[self.order + 1, :] = np.asarray(right_flux, dtype=np.float64)
+            
+            # Stack RHS: (n_b + m, batch)
+            rhs = np.vstack([rhs_top, dY])
+            
+            # Solve KKT system for all batches
+            lu, piv = self._kkt_lu(lam)
+            # lu_solve can handle batched RHS: (n_b+m, batch)
+            sol = sla.lu_solve((lu, piv), rhs, overwrite_b=False)
+            P = sol[:n_b, :]  # (n_b, batch)
+            
+            # Evaluate splines for all batches
+            f_spline = self._BT0_f @ P  # (n, n_b) @ (n_b, batch) = (n, batch)
+            df1_spline = self._B1T_f @ P  # (n, n_b) @ (n_b, batch) = (n, batch)
+            df2_spline = self._B2T_f @ P  # (n, n_b) @ (n_b, batch) = (n, batch)
+            
+            # FFT correction for all batches
+            residual = f - f_spline  # (n, batch)
+            # rfft along axis=0: (n, batch) -> (n//2+1, batch)
+            R = np.fft.rfft(residual, axis=0)
+            # Broadcast omega: (n//2+1,) -> (n//2+1, 1) for broadcasting with (n//2+1, batch)
+            corr1 = np.fft.irfft(R * self._iomega[:, None], n=self.grid.n, axis=0)
+            corr2 = np.fft.irfft(R * self._iomega2[:, None], n=self.grid.n, axis=0)
+            
+            df1 = (df1_spline + corr1).astype(np.float64)
+            df2 = (df2_spline + corr2).astype(np.float64)
+            
+            return df1, df2, f_spline.astype(np.float64)
+        
+        # GPU path (similar structure but using GPU backend)
+        bk = self._bk
+        xp, la, fft = bk.xp, bk.la, bk.fft
+        
+        input_was_numpy = isinstance(f, np.ndarray) or (_HAS_CUPY and not isinstance(f, cp.ndarray))
+        f_x = xp.asarray(f, dtype=xp.float64)
+        
+        if f_x.ndim != 2:
+            raise ValueError("f must be 2D with shape (n, batch)")
+        n, batch = f_x.shape
+        if n != self.grid.n:
+            raise ValueError(f"First dimension of f ({n}) must match grid size ({self.grid.n})")
+        
+        BW = xp.asarray(self.BW)
+        BND = xp.asarray(self.end.BND)
+        BT0 = xp.asarray(self.basis.BT0)
+        B1T = xp.asarray(self.basis.BkT(1))
+        B2T = xp.asarray(self.basis.BkT(2))
+        om = xp.asarray(self.grid.omega)
+        
+        # Build RHS for all batches
+        rhs_top = 2.0 * (BW @ f_x)  # (n_b, batch)
+        dY = BND @ f_x  # (m, batch)
+        
+        if neumann_bc is not None:
+            if self.order < 1:
+                raise ValueError("Neumann BC requires self.order ≥ 1.")
+            left_flux, right_flux = neumann_bc
+            if left_flux is not None:
+                lf = xp.asarray(left_flux, dtype=xp.float64)
+                if lf.ndim == 0:
+                    dY[1, :] = float(lf)
+                else:
+                    dY[1, :] = lf
+            if right_flux is not None:
+                rf = xp.asarray(right_flux, dtype=xp.float64)
+                if rf.ndim == 0:
+                    dY[self.order + 1, :] = float(rf)
+                else:
+                    dY[self.order + 1, :] = rf
+        
+        rhs = xp.vstack([rhs_top, dY])
+        
+        # Solve KKT system
+        lu_cpu, piv_cpu = self._kkt_lu(lam)
+        if bk.is_gpu:
+            SOL = la.lu_solve((xp.asarray(lu_cpu), xp.asarray(piv_cpu)), rhs)
+        else:
+            SOL = la.lu_solve((lu_cpu, piv_cpu), bk.to_host(rhs))
+            SOL = xp.asarray(SOL)
+        
+        n_b = self.basis.B0.shape[0]
+        P = SOL[:n_b, :]
+        
+        # Evaluate splines
+        f_spline = BT0 @ P
+        df1_spline = B1T @ P
+        df2_spline = B2T @ P
+        
+        # FFT correction
+        residual = f_x - f_spline
+        R = fft.rfft(residual, axis=0)
+        corr1 = fft.irfft(R * (1j * om)[:, None], n=self.grid.n, axis=0)
+        corr2 = fft.irfft(R * (1j * om)[:, None]**2, n=self.grid.n, axis=0)
+        
+        df1 = df1_spline + corr1
+        df2 = df2_spline + corr2
+        
+        out_dtype = xp.float64
+        return (bk.ensure_like_input(df1, input_was_numpy).astype(out_dtype),
+                bk.ensure_like_input(df2, input_was_numpy).astype(out_dtype),
+                bk.ensure_like_input(f_spline, input_was_numpy).astype(out_dtype))
+
     def definite_integral(self, f: Array, a: Optional[float] = None, b: Optional[float] = None, lam: float = 0.0) -> float:
         """
         Integral remains CPU-based (splines & trapezoid on host); this is fine since
