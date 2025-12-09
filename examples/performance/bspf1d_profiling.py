@@ -57,17 +57,65 @@ class _Backend:
             self.is_gpu = False
 
     def to_device(self, a):
-        return self.xp.asarray(a)
+        """Explicit conversion to device (GPU). Use this for NumPy -> CuPy conversion."""
+        if self.is_gpu:
+            if _HAS_CUPY and isinstance(a, cp.ndarray):
+                return a  # Already on device
+            return cp.asarray(a, dtype=cp.float64)
+        else:
+            # CPU mode: return as-is (should be NumPy)
+            if _HAS_CUPY and isinstance(a, cp.ndarray):
+                raise ValueError(
+                    "Cannot use CuPy array in CPU mode. "
+                    "Use to_host() to convert CuPy array to NumPy, or set use_gpu=True."
+                )
+            return np.asarray(a, dtype=np.float64)
 
     def to_host(self, a):
+        """Explicit conversion to host (CPU). Use this for CuPy -> NumPy conversion."""
         if self.is_gpu:
-            return cp.asnumpy(a)
-        return a
+            if _HAS_CUPY and isinstance(a, cp.ndarray):
+                return cp.asnumpy(a)
+            # Already NumPy, but we're in GPU mode - this is an inconsistency
+            raise ValueError(
+                "Inconsistency detected: use_gpu=True but array is NumPy. "
+                "Arrays must match the use_gpu setting. Use to_device() for explicit conversion."
+            )
+        else:
+            # CPU mode: return as-is (should be NumPy)
+            if _HAS_CUPY and isinstance(a, cp.ndarray):
+                raise ValueError(
+                    "Inconsistency detected: use_gpu=False but array is CuPy. "
+                    "Arrays must match the use_gpu setting. Use to_host() for explicit conversion."
+                )
+            return a
 
     def ensure_like_input(self, out, input_was_numpy: bool):
         if self.is_gpu and input_was_numpy:
-            return self.to_host(out)
+            raise ValueError(
+                "Cannot convert GPU results back to NumPy. "
+                "When use_gpu=True, provide CuPy arrays as input to avoid GPU↔CPU conversions. "
+                "Either: (1) convert input to CuPy array before calling, or (2) use use_gpu=False."
+            )
         return out
+    
+    def validate_device(self, a, name: str = "array"):
+        """
+        Validate that array is on the correct device for this backend.
+        Throws error if there's a mismatch instead of implicitly converting.
+        """
+        if self.is_gpu:
+            if _HAS_CUPY and not isinstance(a, cp.ndarray):
+                raise ValueError(
+                    f"Inconsistency detected: use_gpu=True but {name} is not a CuPy array. "
+                    f"Arrays must match the use_gpu setting. Use to_device() for explicit conversion."
+                )
+        else:
+            if _HAS_CUPY and isinstance(a, cp.ndarray):
+                raise ValueError(
+                    f"Inconsistency detected: use_gpu=False but {name} is a CuPy array. "
+                    f"Arrays must match the use_gpu setting. Use to_host() for explicit conversion."
+                )
 
 
 # =============================================================================
@@ -75,28 +123,67 @@ class _Backend:
 # =============================================================================
 class Grid1D:
     """Uniform 1D grid with rFFT frequencies and trapezoid weights."""
-    def __init__(self, x: Array, *, atol: float = 1e-13):
-        x = np.asarray(x, dtype=np.float64)
+    def __init__(self, x: Array, *, atol: float = 1e-13, use_gpu: bool = False):
+        # Detect if input is CuPy array
+        is_gpu_array = _HAS_CUPY and isinstance(x, cp.ndarray)
+        
+        if is_gpu_array:
+            if not use_gpu:
+                raise ValueError(
+                    "Cannot use CuPy array in Grid1D when use_gpu=False. "
+                    "Either: (1) convert input to NumPy array, or (2) set use_gpu=True."
+                )
+            xp = cp
+            x = cp.asarray(x, dtype=cp.float64)
+        else:
+            if use_gpu:
+                raise ValueError(
+                    "Cannot use NumPy array in Grid1D when use_gpu=True. "
+                    "Either: (1) convert input to CuPy array, or (2) set use_gpu=False."
+                )
+            xp = np
+            x = np.asarray(x, dtype=np.float64)
+        
         if x.size < 2:
             raise ValueError("x must have at least 2 points.")
+        
+        # Compute dx (convert to Python float for compatibility)
         dx = float(x[1] - x[0])
-        if not np.allclose(np.diff(x), dx, rtol=0, atol=atol):
-            raise ValueError("x must be uniformly spaced.")
+        
+        # Check uniform spacing using appropriate backend
+        if is_gpu_array:
+            if not cp.allclose(cp.diff(x), dx, rtol=0, atol=atol):
+                raise ValueError("x must be uniformly spaced.")
+        else:
+            if not np.allclose(np.diff(x), dx, rtol=0, atol=atol):
+                raise ValueError("x must be uniformly spaced.")
+        
         self.x: Array = x
         self.dx: float = dx
-        self.omega: Array = 2.0 * np.pi * np.fft.rfftfreq(x.size, d=dx)
-        w = np.full(x.size, dx, dtype=np.float64)
-        w[0] = w[-1] = dx / 2.0
+        self.use_gpu: bool = use_gpu
+        
+        # Compute FFT frequencies using appropriate backend
+        if is_gpu_array:
+            self.omega: Array = 2.0 * cp.pi * cp.fft.rfftfreq(x.size, d=dx)
+            w = cp.full(x.size, dx, dtype=cp.float64)
+            w[0] = w[-1] = dx / 2.0
+        else:
+            self.omega: Array = 2.0 * np.pi * np.fft.rfftfreq(x.size, d=dx)
+            w = np.full(x.size, dx, dtype=np.float64)
+            w[0] = w[-1] = dx / 2.0
         self.trap: Array = w
 
     @property
-    def a(self) -> float: return float(self.x[0])
+    def a(self) -> float: 
+        return float(self.x[0])
 
     @property
-    def b(self) -> float: return float(self.x[-1])
+    def b(self) -> float: 
+        return float(self.x[-1])
 
     @property
-    def n(self) -> int: return self.x.size
+    def n(self) -> int: 
+        return self.x.size
 
 
 class _Knot:
@@ -168,10 +255,11 @@ class BSplineBasis1D:
         n_basis = len(self._splines)
         
         # Create B0 matrix on appropriate device
+        # grid.x is already on the correct device (NumPy or CuPy) from Grid1D
         if use_gpu and _HAS_CUPY:
             xp = cp
             B0 = xp.empty((n_basis, grid.n), dtype=xp.float64)
-            x_eval = cp.asarray(grid.x) if isinstance(grid.x, np.ndarray) else grid.x
+            x_eval = grid.x
         else:
             xp = np
             B0 = xp.empty((n_basis, grid.n), dtype=xp.float64)
@@ -197,7 +285,13 @@ class BSplineBasis1D:
             return [cp_interp.BSpline(self.knots, coeffs[i], self.degree) for i in range(n_basis)]
         else:
             # Use scipy.interpolate.BSpline for CPU
-            knots_np = cp.asnumpy(self.knots) if _HAS_CUPY and isinstance(self.knots, cp.ndarray) else self.knots
+            if _HAS_CUPY and isinstance(self.knots, cp.ndarray):
+                raise ValueError(
+                    "Cannot convert CuPy knots to NumPy in CPU mode. "
+                    "When use_gpu=False, provide NumPy arrays. "
+                    "Either: (1) convert knots to NumPy before creating operator, or (2) use use_gpu=True."
+                )
+            knots_np = self.knots
             coeffs = np.eye(n_basis, dtype=np.float64)
             return [BSpline(knots_np, coeffs[i], self.degree) for i in range(n_basis)]
 
@@ -214,7 +308,13 @@ class BSplineBasis1D:
         else:
             xp = np
             result = xp.empty((n_basis, len(x)), dtype=xp.float64)
-            x_eval = cp.asnumpy(x) if _HAS_CUPY and isinstance(x, cp.ndarray) else x
+            if _HAS_CUPY and isinstance(x, cp.ndarray):
+                raise ValueError(
+                    "Cannot convert CuPy array to NumPy in CPU mode. "
+                    "When use_gpu=False, provide NumPy arrays. "
+                    "Either: (1) convert input to NumPy before calling, or (2) use use_gpu=True."
+                )
+            x_eval = x
         
         for i, s in enumerate(self._splines):
             result[i, :] = (s.derivative(deriv_order) if deriv_order else s)(x_eval)
@@ -380,11 +480,8 @@ class bspf1d:
 
         self.basis = BSplineBasis1D(self.degree, self.knots, self.grid, use_gpu=self.use_gpu)
         
-        # Convert grid.trap to GPU if needed and initialize BW, Q
-        if self.use_gpu and _HAS_CUPY:
-            trap = cp.asarray(self.grid.trap)
-        else:
-            trap = self.grid.trap
+        # grid.trap is already on the correct device (NumPy or CuPy) from Grid1D
+        trap = self.grid.trap
         
         self.BW = self.basis.B0 * trap
         self.Q = self.BW @ self.basis.B0.T
@@ -406,7 +503,8 @@ class bspf1d:
             n_b = self.basis.B0.shape[0]
             self._rhs_buf = cp.empty(n_b + 2 * self.order, dtype=cp.float64)
             # Pre-compute FFT frequency multipliers on GPU
-            omega = cp.asarray(self.grid.omega)
+            # grid.omega is already a CuPy array from Grid1D
+            omega = self.grid.omega
             self._iomega = 1j * omega
             self._iomega2 = self._iomega ** 2
             # Pre-allocate buffer for residual computation on GPU
@@ -456,21 +554,37 @@ class bspf1d:
         correction: str = "spectral",
         use_gpu: bool = False,   # <--- NEW
     ) -> "bspf1d":
-        # Accept both NumPy and CuPy arrays for x
-        # Grid1D needs NumPy, but we'll convert knots to GPU if use_gpu=True
-        if _HAS_CUPY and isinstance(x, cp.ndarray):
-            x_np = cp.asnumpy(x).astype(np.float64)
+        # Grid1D now supports both NumPy and CuPy arrays directly
+        # Convert x to appropriate backend if needed
+        if use_gpu and _HAS_CUPY:
+            if not isinstance(x, cp.ndarray):
+                # Convert NumPy to CuPy if use_gpu=True
+                x = cp.asarray(x, dtype=cp.float64)
         else:
-            x_np = np.asarray(x, dtype=np.float64)
-        grid = Grid1D(x_np)
+            if _HAS_CUPY and isinstance(x, cp.ndarray):
+                raise ValueError(
+                    "Cannot use CuPy array when use_gpu=False. "
+                    "Either: (1) convert input to NumPy array, or (2) set use_gpu=True."
+                )
+            x = np.asarray(x, dtype=np.float64)
+        
+        grid = Grid1D(x, use_gpu=use_gpu)
         k = _Knot.resolve(
             degree=degree, grid=grid, knots=knots, n_basis=n_basis, domain=domain,
             use_clustering=use_clustering, clustering_factor=clustering_factor
         )
         
-        # Convert knots to GPU if use_gpu=True
+        # Convert knots to GPU if use_gpu=True (knots come from _Knot.resolve which returns NumPy)
         if use_gpu and _HAS_CUPY:
-            k = cp.asarray(k, dtype=cp.float64)
+            if not isinstance(k, cp.ndarray):
+                k = cp.asarray(k, dtype=cp.float64)
+        else:
+            if _HAS_CUPY and isinstance(k, cp.ndarray):
+                raise ValueError(
+                    "Cannot use CuPy knots when use_gpu=False. "
+                    "This indicates an internal inconsistency."
+                )
+            k = np.asarray(k, dtype=np.float64)
         
         return cls(
             grid=grid, degree=degree, knots=k,
@@ -504,8 +618,14 @@ class bspf1d:
         if self.use_gpu and _HAS_CUPY and isinstance(KKT, cp.ndarray):
             lu, piv = cpla.lu_factor(KKT)
         else:
-            # Convert to NumPy for CPU LU factorization
-            KKT_np = cp.asnumpy(KKT) if _HAS_CUPY and isinstance(KKT, cp.ndarray) else KKT
+            # CPU LU factorization - error if KKT is CuPy array
+            if _HAS_CUPY and isinstance(KKT, cp.ndarray):
+                raise ValueError(
+                    "Cannot convert CuPy array to NumPy in CPU mode. "
+                    "When use_gpu=False, internal arrays should be NumPy. "
+                    "This indicates an internal inconsistency in the operator setup."
+                )
+            KKT_np = KKT
             lu, piv = sla.lu_factor(KKT_np)
         
         self._kkt_cache[lam] = (lu, piv)
@@ -1415,13 +1535,18 @@ class bspf1d:
         
         # Create new grid with 2*N - 1 points
         # Insert midpoints between existing grid points
-        x_old = self.grid.x  # Always numpy from Grid1D
+        x_old = self.grid.x  # On correct device (NumPy or CuPy) from Grid1D
         N_old = len(x_old)
         N_new = 2 * N_old - 1
         
         # Create new grid: original points + midpoints
-        # Always create as numpy first, then convert if needed
-        x_new = np.empty(N_new, dtype=np.float64)
+        # Use same backend as x_old
+        if self.use_gpu and _HAS_CUPY and isinstance(x_old, cp.ndarray):
+            xp = cp
+            x_new = xp.empty(N_new, dtype=xp.float64)
+        else:
+            xp = np
+            x_new = xp.empty(N_new, dtype=xp.float64)
         
         # Fill in original points at even indices
         x_new[::2] = x_old
@@ -1435,8 +1560,15 @@ class bspf1d:
         # This forces the B-spline part to 0 and uses FFT for the entire interpolation
         # Useful for testing/debugging to verify FFT interpolation correctness
         if use_fft:
-            # Convert to numpy for FFT
-            f_np = np.asarray(f_x, dtype=np.float64)
+            # use_fft path requires NumPy (uses np.interp which doesn't have CuPy equivalent)
+            if self.use_gpu and _HAS_CUPY:
+                raise ValueError(
+                    "use_fft=True is not supported when use_gpu=True. "
+                    "The FFT interpolation path uses NumPy-specific functions (np.interp). "
+                    "Either: (1) set use_fft=False, or (2) use use_gpu=False."
+                )
+            f_fft = np.asarray(f_x, dtype=np.float64)
+            fft_module = np.fft
             
             # For machine precision FFT interpolation, we need true periodicity
             # The grid x_old is endpoint=True, but for FFT we need endpoint=False
@@ -1444,7 +1576,7 @@ class bspf1d:
             # and treat the grid as [0, L) with period L
             
             # Use N-1 points for FFT (exclude last point since f(L) = f(0) for periodic functions)
-            f_periodic = f_np[:-1].copy()
+            f_periodic = f_fft[:-1].copy()
             N_periodic = len(f_periodic)
             
             # Determine refine factor (approximately 2 for 2*N-1 grid)
@@ -1455,10 +1587,10 @@ class bspf1d:
             N_fft_fine = refine_factor_int * N_periodic
             
             # Forward real FFT on periodic grid (endpoint=False equivalent)
-            F = np.fft.rfft(f_periodic)
+            F = fft_module.rfft(f_periodic)
             
             # Zero-pad in frequency space to interpolate
-            f_fft_fine = np.fft.irfft(F, n=N_fft_fine) * (N_fft_fine / N_periodic)
+            f_fft_fine = fft_module.irfft(F, n=N_fft_fine) * (N_fft_fine / N_periodic)
             
             # Replace values at original coarse grid points with known values
             coarse_indices = np.arange(0, N_fft_fine, refine_factor_int)
@@ -1466,7 +1598,7 @@ class bspf1d:
                 f_fft_fine[coarse_indices] = f_periodic
             
             # Create FFT grid coordinates (periodic, endpoint=False)
-            domain = (x_old[0], x_old[-1])
+            domain = (float(x_old[0]), float(x_old[-1]))
             L = domain[1] - domain[0]  # Period length
             x_fft_fine = np.linspace(domain[0], domain[0] + L, N_fft_fine, endpoint=False)
             
@@ -1475,19 +1607,21 @@ class bspf1d:
             x_new_wrapped = ((x_new - domain[0]) % L) + domain[0]
             
             # Use np.interp for efficient linear interpolation
-            # For points exactly at the boundary, handle them specially
             f_new = np.interp(x_new_wrapped, x_fft_fine, f_fft_fine, 
                              left=f_fft_fine[-1], right=f_fft_fine[0])
             
-            # For points at the exact boundary (x = domain[0] + L), use f(domain[0])
-            # since they're equivalent in periodic sense
+            # For points at the exact boundary
             boundary_mask = np.abs(x_new_wrapped - (domain[0] + L)) < 1e-12
             if np.any(boundary_mask):
                 f_new[boundary_mask] = f_fft_fine[0]
             
-            # Convert back to appropriate backend if needed
-            if self.use_gpu and _HAS_CUPY and not input_was_numpy:
-                f_new = xp.asarray(f_new)
+            # Error if input was NumPy but operator uses GPU (avoid implicit conversions)
+            if self.use_gpu and _HAS_CUPY and input_was_numpy:
+                raise ValueError(
+                    "Cannot convert GPU results back to NumPy in interpolate. "
+                    "When use_gpu=True, provide CuPy arrays as input to avoid GPU↔CPU conversions. "
+                    "Either: (1) convert input to CuPy array before calling, or (2) use use_gpu=False."
+                )
             
             return x_new, f_new
         
@@ -1521,23 +1655,67 @@ class bspf1d:
         
         # Evaluate spline at new grid points
         # Use the basis functions to evaluate
-        # Note: basis._splines evaluation always uses numpy arrays internally
-        # (scipy BSpline or cupyx BSpline both accept numpy arrays)
-        B0_new = np.empty((n_b, N_new), dtype=np.float64)
+        # Note: scipy BSpline accepts NumPy arrays, cupyx BSpline accepts CuPy arrays
+        # Strict rule: no implicit conversions - arrays must match use_gpu setting
+        if self.use_gpu and _HAS_CUPY:
+            if not isinstance(x_new, cp.ndarray):
+                raise ValueError(
+                    "Inconsistency detected: use_gpu=True but x_new is not a CuPy array. "
+                    "This indicates an internal error. Arrays must match the use_gpu setting. "
+                    "Use to_device() or to_host() for explicit conversions."
+                )
+            # cupyx BSpline accepts CuPy arrays
+            x_eval = x_new
+            B0_new = cp.empty((n_b, N_new), dtype=cp.float64)
+        else:
+            if _HAS_CUPY and isinstance(x_new, cp.ndarray):
+                raise ValueError(
+                    "Inconsistency detected: use_gpu=False but x_new is a CuPy array. "
+                    "This indicates an internal error. Arrays must match the use_gpu setting. "
+                    "Use to_device() or to_host() for explicit conversions."
+                )
+            # scipy BSpline accepts NumPy arrays
+            x_eval = x_new
+            B0_new = np.empty((n_b, N_new), dtype=np.float64)
         
         # Evaluate each basis function at the new grid points
         for i, s in enumerate(self.basis._splines):
-            B0_new[i, :] = s(x_new)
+            B0_new[i, :] = s(x_eval)
         
         # Convert to backend if needed and compute interpolated values
+        # Strict rule: validate arrays are on correct device, no implicit conversions
         if self.use_gpu and _HAS_CUPY:
-            B0_new_xp = xp.asarray(B0_new)
-            P_xp = xp.asarray(P)
-            f_new = (B0_new_xp.T @ P_xp).astype(xp.float64)
-            # Convert back to numpy if input was numpy
+            # Validate B0_new and P are already on GPU (they should be from spline evaluation)
+            if _HAS_CUPY and not isinstance(B0_new, cp.ndarray):
+                raise ValueError(
+                    "Inconsistency detected: use_gpu=True but B0_new is not a CuPy array. "
+                    "This indicates an internal error. Arrays must match the use_gpu setting."
+                )
+            if _HAS_CUPY and not isinstance(P, cp.ndarray):
+                raise ValueError(
+                    "Inconsistency detected: use_gpu=True but P is not a CuPy array. "
+                    "This indicates an internal error. Arrays must match the use_gpu setting."
+                )
+            f_new = (B0_new.T @ P).astype(cp.float64)
+            # Error if input was NumPy but operator uses GPU (avoid implicit conversions)
             if input_was_numpy:
-                f_new = cp.asnumpy(f_new)
+                raise ValueError(
+                    "Cannot convert GPU results back to NumPy in interpolate. "
+                    "When use_gpu=True, provide CuPy arrays as input to avoid GPU↔CPU conversions. "
+                    "Either: (1) convert input to CuPy array before calling, or (2) use use_gpu=False."
+                )
         else:
+            # Validate B0_new and P are already on CPU
+            if _HAS_CUPY and isinstance(B0_new, cp.ndarray):
+                raise ValueError(
+                    "Inconsistency detected: use_gpu=False but B0_new is a CuPy array. "
+                    "This indicates an internal error. Arrays must match the use_gpu setting."
+                )
+            if _HAS_CUPY and isinstance(P, cp.ndarray):
+                raise ValueError(
+                    "Inconsistency detected: use_gpu=False but P is a CuPy array. "
+                    "This indicates an internal error. Arrays must match the use_gpu setting."
+                )
             f_new = (B0_new.T @ P).astype(np.float64)
         
         return x_new, f_new
@@ -1627,11 +1805,13 @@ class bspf1d:
         f_spline = BT0 @ P
         residual = f_x - f_spline
         
-        # Convert back to numpy if input was numpy
+        # Error if input was NumPy but operator uses GPU (avoid implicit conversions)
         if self.use_gpu and _HAS_CUPY and input_was_numpy:
-            P = cp.asnumpy(P)
-            f_spline = cp.asnumpy(f_spline)
-            residual = cp.asnumpy(residual)
+            raise ValueError(
+                "Cannot convert GPU results back to NumPy. "
+                "When use_gpu=True, provide CuPy arrays as input to avoid GPU↔CPU conversions. "
+                "Either: (1) convert input to CuPy array before calling, or (2) use use_gpu=False."
+            )
         
         return P, f_spline, residual
 
@@ -1690,7 +1870,22 @@ class bspf1d:
         >>> print(f"Original: {len(f)}, Refined: {len(f_fine)}")
         Original: 100, Refined: 199
         """
-        f = np.asarray(f, dtype=np.float64)
+        # Convert input to appropriate backend
+        if self.use_gpu and _HAS_CUPY:
+            if not isinstance(f, cp.ndarray):
+                raise ValueError(
+                    "Cannot use NumPy array in interpolate_split_mesh when use_gpu=True. "
+                    "Either: (1) convert input to CuPy array, or (2) use use_gpu=False."
+                )
+            f = cp.asarray(f, dtype=cp.float64)
+        else:
+            if _HAS_CUPY and isinstance(f, cp.ndarray):
+                raise ValueError(
+                    "Cannot use CuPy array in interpolate_split_mesh when use_gpu=False. "
+                    "Either: (1) convert input to NumPy array, or (2) use use_gpu=True."
+                )
+            f = np.asarray(f, dtype=np.float64)
+        
         N = self.grid.n
         dx = self.grid.dx
         x0 = self.grid.a
@@ -1702,6 +1897,15 @@ class bspf1d:
         P, f_spline, residual = self.fit_spline(f, lam=lam, neumann_bc=neumann_bc)
 
         # 2) FFT split-mesh interpolation of periodic residual
+        # This method uses NumPy-specific functions (np.fft.rfft, np.interp)
+        # For GPU support, we would need to implement GPU equivalents
+        if self.use_gpu and _HAS_CUPY:
+            raise ValueError(
+                "interpolate_split_mesh is not supported when use_gpu=True. "
+                "The FFT split-mesh interpolation uses NumPy-specific functions (np.fft.rfft, np.interp). "
+                "Either: (1) use use_gpu=False, or (2) use the interpolate() method instead."
+            )
+        
         M = int(refine_factor)
         if M < 1:
             raise ValueError("refine_factor must be a positive integer")
@@ -1779,14 +1983,8 @@ class bspf1d:
         for i, s in enumerate(self.basis._splines):
             B_fine[i, :] = s(x_fine)
         
-        # Convert P to appropriate backend if needed
-        if self.use_gpu and _HAS_CUPY:
-            P_xp = cp.asarray(P)
-            B_fine_xp = cp.asarray(B_fine)
-            f_spline_fine = (B_fine_xp.T @ P_xp).astype(cp.float64)
-            f_spline_fine = cp.asnumpy(f_spline_fine)
-        else:
-            f_spline_fine = (B_fine.T @ P).astype(np.float64)
+        # P and residual are already NumPy arrays (since use_gpu=False at this point)
+        f_spline_fine = (B_fine.T @ P).astype(np.float64)
 
         # 5) Combine
         f_fine = f_spline_fine + r_fine

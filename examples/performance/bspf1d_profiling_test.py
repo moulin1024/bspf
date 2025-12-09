@@ -14,7 +14,7 @@ from bspf1d_profiling import bspf1d
 def main():
     # Domain and grid
     a, b = 0.0, 2.0 * np.pi
-    n = 10000
+    n = 2**16
     x = np.linspace(a, b, n, endpoint=True)
 
     # Test function: f(x) = sin(x / (1.05 + cos x)) with Sympy exact derivatives
