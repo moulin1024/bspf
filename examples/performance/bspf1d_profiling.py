@@ -819,7 +819,17 @@ class bspf1d:
 
         # Solve KKT with cached CPU LU (copied to device if needed)
         lu_cpu, piv_cpu = self._kkt_lu(lam)
-        SOL = la.lu_solve((xp.asarray(lu_cpu), xp.asarray(piv_cpu)), rhs)
+        if bk.is_gpu:
+            # Convert LU factors to GPU arrays
+            lu_gpu = xp.asarray(lu_cpu)
+            piv_gpu = xp.asarray(piv_cpu)
+            # If RHS is complex, convert LU factors to complex as well
+            # (KKT matrix is real, so LU factors can be treated as complex with zero imaginary part)
+            if is_complex and _HAS_CUPY and not cp.iscomplexobj(lu_gpu):
+                lu_gpu = lu_gpu.astype(xp.complex128)
+            SOL = la.lu_solve((lu_gpu, piv_gpu), rhs)
+        else:
+            SOL = la.lu_solve((lu_cpu, piv_cpu), rhs)
 
         n_b = self.basis.B0.shape[0]
         P = SOL[:n_b]
@@ -1049,7 +1059,14 @@ class bspf1d:
 
         lu_cpu, piv_cpu = self._kkt_lu(lam)
         if bk.is_gpu:
-            SOL = la.lu_solve((xp.asarray(lu_cpu), xp.asarray(piv_cpu)), rhs)
+            # Convert LU factors to GPU arrays
+            lu_gpu = xp.asarray(lu_cpu)
+            piv_gpu = xp.asarray(piv_cpu)
+            # If RHS is complex, convert LU factors to complex as well
+            # (KKT matrix is real, so LU factors can be treated as complex with zero imaginary part)
+            if is_complex and not cp.iscomplexobj(lu_gpu):
+                lu_gpu = lu_gpu.astype(xp.complex128)
+            SOL = la.lu_solve((lu_gpu, piv_gpu), rhs)
         else:
             SOL = la.lu_solve((lu_cpu, piv_cpu), bk.to_host(rhs))
             SOL = xp.asarray(SOL)
@@ -1231,7 +1248,13 @@ class bspf1d:
         # Solve KKT system
         lu_cpu, piv_cpu = self._kkt_lu(lam)
         if bk.is_gpu:
-            SOL = la.lu_solve((xp.asarray(lu_cpu), xp.asarray(piv_cpu)), rhs)
+            # Convert LU factors to GPU arrays
+            lu_gpu = xp.asarray(lu_cpu)
+            piv_gpu = xp.asarray(piv_cpu)
+            # Check if RHS is complex (batched version currently only supports real)
+            # If we add complex support later, convert LU factors to complex as well
+            # For now, batched version only handles real arrays
+            SOL = la.lu_solve((lu_gpu, piv_gpu), rhs)
         else:
             SOL = la.lu_solve((lu_cpu, piv_cpu), bk.to_host(rhs))
             SOL = xp.asarray(SOL)
