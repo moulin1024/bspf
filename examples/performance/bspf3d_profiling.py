@@ -100,20 +100,54 @@ class bspf3d(_bspf3d_base):
         """
         Override differentiate_1_2 to fix GPU array handling.
         The parent method has a bug where it tries to use np.asarray() on CuPy arrays.
-        This wrapper ensures GPU arrays are properly converted to NumPy before calling parent,
-        then converts results back to GPU if needed.
+        This wrapper avoids unnecessary conversions by implementing the batched path directly
+        when GPU arrays are used and batched method is available.
         """
         # Check if input is GPU array
         is_gpu_array = _HAS_CUPY and cp is not None and isinstance(F, cp.ndarray)
         
-        # Always convert GPU array to NumPy for parent method (parent has bugs with GPU arrays)
+        # Check if batched method is available
+        has_batched = hasattr(self.x_model, 'differentiate_1_2_batched') if not use_loop else False
+        
+        # If using batched operations with GPU arrays, implement directly to avoid conversions
+        if is_gpu_array and not use_loop and has_batched:
+            # Use batched method directly with GPU arrays - no conversion needed!
+            F_gpu = F
+            nz, ny, nx = F_gpu.shape
+            
+            # For x-direction: differentiate along axis=2 (columns)
+            # Reshape to (nx, nz*ny) for batched differentiation
+            F_reshaped_x = F_gpu.reshape(nz * ny, nx).T  # (nx, nz*ny)
+            dF_dx_T, d2F_dx2_T, _ = self.x_model.differentiate_1_2_batched(F_reshaped_x, lam=lam_x)
+            dF_dx = dF_dx_T.T.reshape(nz, ny, nx)
+            d2F_dx2 = d2F_dx2_T.T.reshape(nz, ny, nx)
+            
+            # For y-direction: differentiate along axis=1 (rows)
+            # Reshape to (ny, nz*nx) for batched differentiation
+            F_reshaped_y = F_gpu.transpose(0, 2, 1).reshape(nz * nx, ny).T  # (ny, nz*nx)
+            dF_dy_T, d2F_dy2_T, _ = self.y_model.differentiate_1_2_batched(F_reshaped_y, lam=lam_y)
+            dF_dy_T_reshaped = dF_dy_T.T.reshape(nz, nx, ny)
+            dF_dy = dF_dy_T_reshaped.transpose(0, 2, 1)
+            d2F_dy2_T_reshaped = d2F_dy2_T.T.reshape(nz, nx, ny)
+            d2F_dy2 = d2F_dy2_T_reshaped.transpose(0, 2, 1)
+            
+            # For z-direction: differentiate along axis=0 (depth)
+            # Reshape to (nz, ny*nx) for batched differentiation
+            F_reshaped_z = F_gpu.reshape(nz, ny * nx)  # (nz, ny*nx)
+            dF_dz, d2F_dz2, _ = self.z_model.differentiate_1_2_batched(F_reshaped_z, lam=lam_z)
+            dF_dz = dF_dz.reshape(nz, ny, nx)
+            d2F_dz2 = d2F_dz2.reshape(nz, ny, nx)
+            
+            return (dF_dx, dF_dy, dF_dz, d2F_dx2, d2F_dy2, d2F_dz2)
+        
+        # For loop operations or when batched is not available, convert to NumPy
+        # (parent method has bugs with GPU arrays in these paths)
         if is_gpu_array:
             F_np = cp.asnumpy(F).astype(np.float64)
         else:
             F_np = np.asarray(F, dtype=np.float64)
         
         # Call parent method with NumPy array
-        # Use the base class method directly (stored in _bspf3d_base)
         result = _bspf3d_base.differentiate_1_2(
             self,
             F_np,
@@ -123,7 +157,7 @@ class bspf3d(_bspf3d_base):
             use_loop=use_loop,
         )
         
-        # Convert back to GPU if input was GPU
+        # Convert back to GPU if input was GPU (only needed for loop/fallback paths)
         if is_gpu_array:
             result = tuple(cp.asarray(r, dtype=cp.float64) for r in result)
         
