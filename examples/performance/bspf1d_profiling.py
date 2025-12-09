@@ -391,6 +391,29 @@ class bspf1d:
 
         self.end = EndpointOps1D(self.basis, order=self.order, num_bd=self.num_bd)
 
+        # Precompute Fortran-order (column-major) copies for faster, more stable BLAS matvecs
+        # This significantly reduces variability in rhs_build (see investigate_rhs_build.py)
+        # Fortran-order is optimal for BLAS matrix-vector operations
+        self._BW_f = np.asfortranarray(self.BW)
+        self._BND_f = np.asfortranarray(self.end.BND)
+        self._BT0_f = np.asfortranarray(self.basis.BT0)
+        # Cache BkT(1) and BkT(2) in Fortran order for differentiate_1_2
+        self._B1T_f = np.asfortranarray(self.basis.BkT(1))
+        self._B2T_f = np.asfortranarray(self.basis.BkT(2))
+        
+        # Pre-allocate RHS buffer to avoid concatenate overhead
+        n_b = self.basis.B0.shape[0]
+        self._rhs_buf = np.empty(n_b + 2 * self.order, dtype=np.float64)
+        
+        # Pre-compute FFT frequency multipliers for spectral correction
+        # This avoids recomputing (1j * omega) and (1j * omega)**2 on every call
+        omega = self.grid.omega
+        self._iomega = 1j * omega  # Pre-computed for first derivative correction
+        self._iomega2 = self._iomega ** 2  # Pre-computed for second derivative correction
+        
+        # Pre-allocate buffer for residual computation to avoid allocations
+        self._residual_buf = np.empty(self.grid.n, dtype=np.float64)
+
         if correction == "spectral":
             self._correct = lambda residual, omega, kind, order, n: ResidualCorrection.spectral(
                 residual, omega, kind=kind, order=order, n=n, x=self.grid.x
@@ -522,27 +545,37 @@ class bspf1d:
                     raise ValueError("Length of f must match grid size.")
 
                 t_rhs_start = time.perf_counter()
-                # Compute RHS directly (matches bfpsm1d performance)
-                rhs_2bw = 2.0 * (self.BW @ f)
-                dY = self.end.BND @ f
+                # Compute RHS using Fortran-order matrices for better BLAS performance
+                # This reduces variability significantly (see investigate_rhs_build.py)
+                # Use pre-allocated buffer to avoid concatenate overhead
+                rhs = self._rhs_buf
+                n_b = self._BW_f.shape[0]
+                rhs[:n_b] = 2.0 * (self._BW_f @ f)
+                rhs[n_b:] = self._BND_f @ f
                 # Neumann BC: overwrite first-derivative rows
                 if neumann_bc is not None:
                     if self.order < 1:
                         raise ValueError("Neumann BC requires self.order ≥ 1.")
                     left_flux, right_flux = neumann_bc
                     if left_flux is not None:
-                        dY[1] = float(left_flux)
+                        rhs[n_b + 1] = float(left_flux)
                     if right_flux is not None:
-                        dY[self.order + 1] = float(right_flux)
-                
-                rhs = np.concatenate((rhs_2bw, dY))
+                        rhs[n_b + self.order + 1] = float(right_flux)
 
                 lu, piv = self._kkt_lu(lam)
                 sol = sla.lu_solve((lu, piv), rhs, overwrite_b=False)
                 P = sol[: self.basis.B0.shape[0]]
 
-                f_spline = self.basis.BT0 @ P
-                df = self.basis.BkT(k) @ P
+                # Use Fortran-order matrices for spline evaluation
+                f_spline = self._BT0_f @ P
+                # For k-th derivative, use Fortran-order if available, otherwise convert on-the-fly
+                BkT = self.basis.BkT(k)
+                if k == 1:
+                    df = self._B1T_f @ P
+                elif k == 2:
+                    df = self._B2T_f @ P
+                else:
+                    df = np.asfortranarray(BkT) @ P
 
                 residual = f - f_spline
                 corr = self._correct(residual, self.grid.omega, kind="diff", order=k, n=self.grid.n)
@@ -706,20 +739,23 @@ class bspf1d:
                     raise ValueError("Length of f must match grid size.")
 
                 t_rhs_start = time.perf_counter()
-                # Compute RHS directly (matches bfpsm1d performance)
-                rhs_2bw = 2.0 * (self.BW @ f)
-                dY = self.end.BND @ f
+                # Compute RHS using Fortran-order matrices for better BLAS performance
+                # This reduces variability significantly (see investigate_rhs_build.py)
+                # Use pre-allocated buffer to avoid concatenate overhead
+                rhs = self._rhs_buf
+                n_b = self._BW_f.shape[0]
+                rhs[:n_b] = 2.0 * (self._BW_f @ f)
+                rhs[n_b:] = self._BND_f @ f
 
                 if neumann_bc is not None:
                     if self.order < 1:
                         raise ValueError("Neumann BC requires self.order ≥ 1.")
                     left_flux, right_flux = neumann_bc
                     if left_flux is not None:
-                        dY[1] = float(left_flux)
+                        rhs[n_b + 1] = float(left_flux)
                     if right_flux is not None:
-                        dY[self.order + 1] = float(right_flux)
+                        rhs[n_b + self.order + 1] = float(right_flux)
                 
-                rhs = np.concatenate((rhs_2bw, dY))
                 t_rhs_end = time.perf_counter()
 
                 lu, piv = self._kkt_lu(lam)
@@ -727,17 +763,20 @@ class bspf1d:
                 P = sol[: self.basis.B0.shape[0]]
                 t_solve_end = time.perf_counter()
 
-                f_spline = self.basis.BT0 @ P
-                df1_spline = self.basis.BkT(1) @ P
-                df2_spline = self.basis.BkT(2) @ P
+                # Use Fortran-order matrices for spline evaluation
+                f_spline = self._BT0_f @ P
+                df1_spline = self._B1T_f @ P
+                df2_spline = self._B2T_f @ P
                 t_spline_end = time.perf_counter()
 
-                residual = f - f_spline
-                R = np.fft.rfft(residual)
-                omega = self.grid.omega
-
-                corr1 = np.fft.irfft(R * (1j * omega), n=self.grid.n)
-                corr2 = np.fft.irfft(R * (1j * omega) ** 2, n=self.grid.n)
+                # FFT correction using pre-computed frequency multipliers and buffers
+                residual = self._residual_buf
+                residual[:] = f - f_spline  # In-place assignment to pre-allocated buffer
+                R = np.fft.rfft(residual)  # FFT returns new array, but residual buffer is reused
+                
+                # Use pre-computed frequency multipliers (avoids recomputing 1j*omega each time)
+                corr1 = np.fft.irfft(R * self._iomega, n=self.grid.n)
+                corr2 = np.fft.irfft(R * self._iomega2, n=self.grid.n)
                 t_fft_end = time.perf_counter()
 
                 df1 = (df1_spline + corr1).astype(np.float64)
