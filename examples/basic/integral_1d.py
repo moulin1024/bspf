@@ -44,6 +44,52 @@ GRID_SIZES = np.geomspace(1000, 10000, 50).astype(int)  # Grid sizes for converg
 
 
 # ============================================================================
+# Trapezoidal Integration Function
+# ============================================================================
+
+def linear_integration(x, y_deriv, left_value=0.0):
+    """
+    Compute antiderivative using linear integration (cumulative trapezoidal rule).
+    
+    Uses the trapezoidal rule to integrate from the left boundary:
+    u(x_i) = u(x_0) + integral from x_0 to x_i of f'(x) dx
+    
+    Parameters
+    ----------
+    x : array_like
+        Grid points (must be uniformly spaced)
+    y_deriv : array_like
+        Derivative values f'(x) at grid points
+    left_value : float, default 0.0
+        Value of the antiderivative at the left boundary u(x_0)
+    
+    Returns
+    -------
+    u : ndarray
+        Antiderivative values at grid points
+    """
+    x = np.asarray(x)
+    y_deriv = np.asarray(y_deriv)
+    n = len(x)
+    u = np.zeros_like(y_deriv)
+    
+    # Check if grid is uniform
+    dx = x[1] - x[0]
+    if not np.allclose(np.diff(x), dx, rtol=1e-10):
+        raise ValueError("Grid must be uniformly spaced for linear integration")
+    
+    # Set left boundary value
+    u[0] = left_value
+    
+    # Cumulative trapezoidal rule
+    # u(x_i) = u(x_0) + sum from j=0 to i-1 of (f'(x_j) + f'(x_{j+1})) * dx / 2
+    for i in range(1, n):
+        u[i] = u[i-1] + 0.5 * (y_deriv[i-1] + y_deriv[i]) * dx
+    
+    return u
+
+
+# ============================================================================
 # Test Function Definition
 # ============================================================================
 
@@ -124,14 +170,19 @@ def main():
     )
     u_cheb = u_cheb + y[0]  # Adjust for left boundary value
     
+    # 3. Trapezoidal integration method (cumulative trapezoidal rule)
+    u_linear = linear_integration(x, y_deriv, left_value=y[0])
+    
     # Compute errors
     error_bspf = np.max(np.abs(u_bspf - y))
     error_cheb = np.max(np.abs(u_cheb - test_func(x_cheb)))
+    error_linear = np.max(np.abs(u_linear - y))
     
     print("=" * 60)
     print("Errors (L∞ Norm):")
     print(f"  BSPF:      {error_bspf:.6e}")
     print(f"  Chebyshev: {error_cheb:.6e}")
+    print(f"  Trapezoidal:    {error_linear:.6e}")
     print("=" * 60)
     
     # ========================================================================
@@ -141,6 +192,7 @@ def main():
     print("\nRunning convergence study...")
     errors_bspf = []
     errors_cheb = []
+    errors_linear = []
     
     for n_points in GRID_SIZES:
         # Create grid
@@ -186,8 +238,13 @@ def main():
         error_cheb_test = np.max(np.abs(u_cheb_test - test_func(x_cheb_test)))
         errors_cheb.append(error_cheb_test)
         
+        # Trapezoidal integration method
+        u_linear_test = linear_integration(x_test, y_deriv_test, left_value=y_test[0])
+        error_linear_test = np.max(np.abs(u_linear_test - y_test))
+        errors_linear.append(error_linear_test)
+        
         print(f"N = {n_points:5d} | BSPF: {error_bspf_test:.6e} | "
-              f"Chebyshev: {error_cheb_test:.6e}")
+              f"Chebyshev: {error_cheb_test:.6e} | Trapezoidal: {error_linear_test:.6e}")
     
     # ========================================================================
     # Visualization
@@ -195,63 +252,66 @@ def main():
     
     # Set up plotting parameters
     plt.rcParams.update({
-        'axes.labelsize': 20,
-        'axes.titlesize': 20,
-        'xtick.labelsize': 20,
-        'ytick.labelsize': 20,
-        'legend.fontsize': 16,
-        'figure.titlesize': 24,
+        'axes.labelsize': 12,
+        'axes.titlesize': 12,
+        'xtick.labelsize': 12,
+        'ytick.labelsize': 12,
+        'legend.fontsize': 10,
+        'figure.titlesize': 16,
         'axes.grid': True,
         'grid.alpha': 0.5
     })
     
-    fig = plt.figure(figsize=(16, 10))
+    fig = plt.figure(figsize=(15, 4))
     default_colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
     
     # (a) Integrand and spline approximation
-    ax1 = plt.subplot(2, 2, 1)
+    ax1 = plt.subplot(1, 3, 1)
     ax1.plot(x, y_deriv, '-', label='$f\'(x)$', linewidth=1)
     ax1.plot(x, deriv_spline, '-', label='$f\'_s(x)$', linewidth=1.5)
     ax1.set_xlabel('$x$')
     ax1.set_ylabel('$f\'(x)$')
     ax1.legend(loc='upper left')
-    ax1.set_title('(a)', loc='left', x=-0.15, fontsize=24, fontweight='bold')
+    ax1.set_title('(a)', loc='left', x=-0.15, fontsize=16, fontweight='bold')
     
-    # (b) Antiderivatives comparison
-    ax2 = plt.subplot(2, 2, 2)
-    ax2.plot(x, y, 'k-', label='Exact', linewidth=1)
-    ax2.plot(x, u_bspf, '-', label='BSPF', linewidth=1)
-    ax2.set_xlabel('$x$')
-    ax2.set_ylabel('$f(x)$')
-    ax2.legend()
-    ax2.set_title('(b)', loc='left', x=-0.15, fontsize=24, fontweight='bold')
+    # # (b) Antiderivatives comparison
+    # ax2 = plt.subplot(2, 2, 2)
+    # ax2.plot(x, y, 'k-', label='Exact', linewidth=1)
+    # ax2.plot(x, u_bspf, '-', label='BSPF', linewidth=1)
+    # ax2.set_xlabel('$x$')
+    # ax2.set_ylabel('$f(x)$')
+    # ax2.legend()
+    # ax2.set_title('(b)', loc='left', x=-0.15, fontsize=16, fontweight='bold')
     
     # (c) Pointwise errors
-    ax3 = plt.subplot(2, 2, 3)
+    ax3 = plt.subplot(1, 3, 2)
     ax3.semilogy(x, np.abs(u_bspf - y), '-', label='BSPF', linewidth=1)
     ax3.semilogy(x_cheb, np.abs(u_cheb - test_func(x_cheb)), '-', 
                 label='Chebyshev', linewidth=1)
+    ax3.semilogy(x, np.abs(u_linear - y), '-', 
+                label='Trapezoidal', linewidth=1)
     ax3.set_xlabel('$x$')
     ax3.set_ylabel('$|Error|$')
     ax3.set_ylim(1e-17, 0.91e4)
     ax3.legend(loc='upper left')
-    ax3.set_title('(c)', loc='left', x=-0.15, fontsize=24, fontweight='bold')
+    ax3.set_title('(b)', loc='left', x=-0.15, fontsize=16, fontweight='bold')
     ax3.grid(True)
     
     # (d) Convergence study
-    ax4 = plt.subplot(2, 2, 4)
+    ax4 = plt.subplot(1, 3, 3)
     ax4.loglog(GRID_SIZES, errors_bspf, '.-', label='BSPF', linewidth=1)
     ax4.loglog(GRID_SIZES, errors_cheb, '.-', label='Chebyshev', linewidth=1)
+    ax4.loglog(GRID_SIZES, errors_linear, '.-', label='Trapezoidal', linewidth=1)
     
     # Mark the grid size used in (a)-(c)
     ax4.axvline(NUM_POINTS, linestyle='--', color='gray', linewidth=1)
-    ax4.text(NUM_POINTS + 10, 2e-12, '$(a)-(c)$', color='gray', fontsize=18)
+    ax4.text(NUM_POINTS + 10, 2e-13, '$(a)-(b)$', color='gray', fontsize=10)
     
     ax4.set_xlabel('$N$')
     ax4.set_ylabel('$\\|Error\\|_\\infty$')
-    ax4.set_ylim(1e-12, 0.9*1e4)
+    ax4.set_ylim(1e-13, 0.9*1e4)
     ax4.legend()
-    ax4.set_title('(d)', loc='left', x=-0.15, fontsize=24, fontweight='bold')
+    ax4.set_title('(c)', loc='left', x=-0.15, fontsize=16, fontweight='bold')
     ax4.grid(True)
     
     plt.tight_layout()

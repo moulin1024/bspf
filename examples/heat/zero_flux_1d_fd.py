@@ -30,7 +30,7 @@ x = np.linspace(0.0, L_domain, nx)
 dx = x[1] - x[0]  # grid spacing
 
 # Initial condition compatible with homogeneous Neumann BC (u_x=0 at ends)
-u0 = np.sin(x)
+u0 = np.cos(x)
 
 # ============================================================
 # Build Finite Difference Laplacian Matrix with Neumann BCs
@@ -141,59 +141,6 @@ def create_heat_rhs_fd(L_matrix, nu):
 # Create RHS function
 rhs_func = create_heat_rhs_fd(L_fd, nu)
 
-# ============================================================
-# Create Jacobian function for BDF2
-# ============================================================
-def create_heat_jacobian_fd(L_matrix, nu, dt):
-    """
-    Create Jacobian function for heat equation with BDF2.
-    
-    For BDF2: (3/2)*u^{n+1} - 2*u^n + (1/2)*u^{n-1} = dt * f(u^{n+1})
-    Linearizing: f(u^{n+1}) ≈ f(u^n) + J * (u^{n+1} - u^n)
-    where J = ∂f/∂u = nu * L
-    
-    The Jacobian for the implicit system is:
-    J_BDF2 = (3/2)*I - dt * nu * L
-    
-    Parameters
-    ----------
-    L_matrix : sparse matrix
-        Laplacian matrix
-    nu : float
-        Diffusivity coefficient
-    dt : float
-        Time step
-    
-    Returns
-    -------
-    jacobian_func : callable
-        Jacobian function with signature: jacobian_func(u) -> J
-    """
-    n = L_matrix.shape[0]
-    I = sp.eye(n, dtype=np.float64, format='csr')
-    J_BDF2 = (3.0/2.0) * I - dt * nu * L_matrix
-    
-    def jacobian_func(u: Array) -> sp.csr_matrix:
-        """
-        Compute Jacobian matrix.
-        
-        Parameters
-        ----------
-        u : array
-            Current solution (not used for linear problem, but required by interface)
-        
-        Returns
-        -------
-        J : sparse matrix
-            Jacobian matrix
-        """
-        return J_BDF2
-    
-    return jacobian_func
-
-# Create Jacobian function for BDF2
-jacobian_func = create_heat_jacobian_fd(L_fd, nu, dt)
-
 # ---------- Time integration with RK45 ----------
 print("\n" + "="*60)
 print("Running RK45 embedded time integration (Finite Difference)...")
@@ -218,32 +165,6 @@ l2_error_rk45 = np.sqrt(np.mean(error_rk45**2))
 print(f"RK45 Results:")
 print(f"  Max error: {max_error_rk45:.6e}")
 print(f"  L2 error: {l2_error_rk45:.6e}")
-
-# ---------- Time integration with BDF2 ----------
-print("\n" + "="*60)
-print("Running BDF2 time integration (Finite Difference)...")
-print("="*60)
-
-state_bdf2 = TimeStepperState(u0.copy(), t_init=0.0, dt=dt, method='bdf2')
-U_bdf2 = np.empty((nt, nx), dtype=np.float64)
-U_bdf2[0] = u0.copy()
-times_bdf2 = np.zeros(nt)
-times_bdf2[0] = 0.0
-
-for step in range(1, nt):
-    u_next = time_step(state_bdf2, dt, rhs_func, method='bdf2', 
-                       jacobian_func=jacobian_func)
-    U_bdf2[step] = state_bdf2.get_current()
-    times_bdf2[step] = state_bdf2.get_current_time()
-
-u_exact_bdf2 = heat_neumann_cosx(x[None, :], times_bdf2[:, None], kappa=nu)
-error_bdf2 = np.abs(U_bdf2 - u_exact_bdf2)
-max_error_bdf2 = np.max(error_bdf2)
-l2_error_bdf2 = np.sqrt(np.mean(error_bdf2**2))
-
-print(f"BDF2 Results:")
-print(f"  Max error: {max_error_bdf2:.6e}")
-print(f"  L2 error: {l2_error_bdf2:.6e}")
 
 # ---------- Time integration with RK23 ----------
 print("\n" + "="*60)
@@ -270,92 +191,124 @@ print(f"RK23 Results:")
 print(f"  Max error: {max_error_rk23:.6e}")
 print(f"  L2 error: {l2_error_rk23:.6e}")
 
-# ---------- Comparison ----------
-print("\n" + "="*60)
-print("Comparison:")
-print("="*60)
-print(f"RK45  - Max error: {max_error_rk45:.6e}, L2 error: {l2_error_rk45:.6e}")
-print(f"RK23 - Max error: {max_error_rk23:.6e}, L2 error: {l2_error_rk23:.6e}")
-print(f"BDF2 - Max error: {max_error_bdf2:.6e}, L2 error: {l2_error_bdf2:.6e}")
-print(f"\nError ratios:")
-print(f"  RK23/RK45: Max={max_error_rk23/max_error_rk45:.3f}, L2={l2_error_rk23/l2_error_rk45:.3f}")
-print(f"  BDF2/RK45: Max={max_error_bdf2/max_error_rk45:.3f}, L2={l2_error_bdf2/l2_error_rk45:.3f}")
-print(f"  BDF2/RK23: Max={max_error_bdf2/max_error_rk23:.3f}, L2={l2_error_bdf2/l2_error_rk23:.3f}")
-
 # ---------- quick BC check ----------
 # Check Neumann BCs using finite differences with ghost cells
 du_dx_rk45 = np.zeros(nx, dtype=np.float64)
 du_dx_rk23 = np.zeros(nx, dtype=np.float64)
-du_dx_bdf2 = np.zeros(nx, dtype=np.float64)
 
 # Interior: centered difference
 du_dx_rk45[1:-1] = (U_rk45[-1, 2:] - U_rk45[-1, :-2]) / (2.0 * dx)
 du_dx_rk23[1:-1] = (U_rk23[-1, 2:] - U_rk23[-1, :-2]) / (2.0 * dx)
-du_dx_bdf2[1:-1] = (U_bdf2[-1, 2:] - U_bdf2[-1, :-2]) / (2.0 * dx)
 
 # Boundaries: use ghost cell method for zero-flux Neumann BC
 # Left boundary: ghost point u[-1] = u[1] → ∂u/∂x[0] = 0
 du_dx_rk45[0] = 0.0
 du_dx_rk23[0] = 0.0
-du_dx_bdf2[0] = 0.0
 
 # Right boundary: ghost point u[n] = u[n-2] → ∂u/∂x[n-1] = 0
 du_dx_rk45[-1] = 0.0
 du_dx_rk23[-1] = 0.0
-du_dx_bdf2[-1] = 0.0
 
 print(f"\nNeumann BC check (final time, using finite differences):")
 print(f"  RK45:  u_x(0)={du_dx_rk45[0]: .3e}, u_x(L)={du_dx_rk45[-1]: .3e}")
 print(f"  RK23: u_x(0)={du_dx_rk23[0]: .3e}, u_x(L)={du_dx_rk23[-1]: .3e}")
-print(f"  BDF2: u_x(0)={du_dx_bdf2[0]: .3e}, u_x(L)={du_dx_bdf2[-1]: .3e}")
+
+# ---------- Comparison ----------
+print("\n" + "="*60)
+print("Comparison:")
+print("="*60)
+print(f"RK45              - Max error: {max_error_rk45:.6e}, L2 error: {l2_error_rk45:.6e}")
+print(f"RK23              - Max error: {max_error_rk23:.6e}, L2 error: {l2_error_rk23:.6e}")
+print(f"\nError ratios:")
+print(f"  RK23/RK45: Max={max_error_rk23/max_error_rk45:.3f}, L2={l2_error_rk23/l2_error_rk45:.3f}")
 
 # ---------- Visualization ----------
 try:
     import matplotlib.pyplot as plt
 
-    # Create figure with organized layout: 1 row x 3 columns
-    fig, axes = plt.subplots(1, 3, figsize=(15, 5))
+    # Create figure with organized layout: 2 rows x 3 columns
+    fig, axes = plt.subplots(2, 3, figsize=(18, 10))
     fig.suptitle(f'Heat Equation (FD): u_t = νu_xx with Neumann BCs (ν={nu:.1e}, T={T}s)', 
                  fontsize=14, fontweight='bold')
     
     # Plot 1: Solutions at initial and final time
-    ax = axes[0]
+    ax = axes[0, 0]
     ax.plot(x, U_rk45[0], 'b-', label="Initial (t=0)", linewidth=2)
     ax.plot(x, U_rk45[-1], 'r-', label=f"RK45 (t={T})", linewidth=2)
     ax.plot(x, U_rk23[-1], 'm-.', label=f"RK23 (t={T})", linewidth=2)
-    ax.plot(x, U_bdf2[-1], 'g--', label=f"BDF2 (t={T})", linewidth=2)
     ax.plot(x, u_exact_rk45[-1], 'k:', label="Exact", linewidth=2)
     ax.set_xlabel("x")
     ax.set_ylabel("u(x,t)")
     ax.set_title("Solutions")
-    ax.legend(loc='best', fontsize=9)
+    ax.legend(loc='best', fontsize=8)
     ax.grid(True, alpha=0.3)
     
     # Plot 2: Error comparison at final time
-    ax = axes[1]
+    ax = axes[0, 1]
     ax.plot(x, error_rk45[-1], 'r-', label="RK45", linewidth=2)
     ax.plot(x, error_rk23[-1], 'm-.', label="RK23", linewidth=2)
-    ax.plot(x, error_bdf2[-1], 'g--', label="BDF2", linewidth=2)
     ax.set_xlabel("x")
     ax.set_ylabel("|Error|")
     ax.set_title(f"Error at Final Time (t={T}s)")
     ax.set_yscale('log')
-    ax.legend(loc='best', fontsize=9)
+    ax.legend(loc='best', fontsize=8)
     ax.grid(True, alpha=0.3)
     
     # Plot 3: Max error evolution over time
-    ax = axes[2]
+    ax = axes[0, 2]
     max_error_rk45_time = np.max(error_rk45, axis=1)
     max_error_rk23_time = np.max(error_rk23, axis=1)
-    max_error_bdf2_time = np.max(error_bdf2, axis=1)
     ax.plot(times_rk45, max_error_rk45_time, 'r-', label="RK45", linewidth=2)
     ax.plot(times_rk23, max_error_rk23_time, 'm-.', label="RK23", linewidth=2)
-    ax.plot(times_bdf2, max_error_bdf2_time, 'g--', label="BDF2", linewidth=2)
     ax.set_xlabel("Time")
     ax.set_ylabel("Max |Error|")
     ax.set_title("Error Evolution Over Time")
     ax.set_yscale('log')
-    ax.legend(loc='best', fontsize=9)
+    ax.legend(loc='best', fontsize=8)
+    ax.grid(True, alpha=0.3)
+    
+    # Plot 4: Boundary region zoom (left)
+    ax = axes[1, 0]
+    zoom_width = 0.5
+    mask = x <= x[0] + zoom_width
+    ax.plot(x[mask], U_rk45[-1][mask], 'r-', label="RK45", linewidth=2)
+    ax.plot(x[mask], U_rk23[-1][mask], 'm-.', label="RK23", linewidth=2)
+    ax.plot(x[mask], u_exact_rk45[-1][mask], 'k:', label="Exact", linewidth=2)
+    ax.axvline(x[0], color='k', linestyle='--', linewidth=1, alpha=0.5, label='Boundary')
+    ax.set_xlabel("x")
+    ax.set_ylabel("u(x,t)")
+    ax.set_title(f"Left Boundary Region (t={T}s)")
+    ax.legend(loc='best', fontsize=8)
+    ax.grid(True, alpha=0.3)
+    
+    # Plot 5: Boundary region zoom (right)
+    ax = axes[1, 1]
+    mask = x >= x[-1] - zoom_width
+    ax.plot(x[mask], U_rk45[-1][mask], 'r-', label="RK45", linewidth=2)
+    ax.plot(x[mask], U_rk23[-1][mask], 'm-.', label="RK23", linewidth=2)
+    ax.plot(x[mask], u_exact_rk45[-1][mask], 'k:', label="Exact", linewidth=2)
+    ax.axvline(x[-1], color='k', linestyle='--', linewidth=1, alpha=0.5, label='Boundary')
+    ax.set_xlabel("x")
+    ax.set_ylabel("u(x,t)")
+    ax.set_title(f"Right Boundary Region (t={T}s)")
+    ax.legend(loc='best', fontsize=8)
+    ax.grid(True, alpha=0.3)
+    
+    # Plot 6: Error at boundaries over time
+    ax = axes[1, 2]
+    error_left_rk45 = error_rk45[:, 0]
+    error_right_rk45 = error_rk45[:, -1]
+    error_left_rk23 = error_rk23[:, 0]
+    error_right_rk23 = error_rk23[:, -1]
+    ax.plot(times_rk45, error_left_rk45, 'b-', label="RK45 (left)", linewidth=2)
+    ax.plot(times_rk45, error_right_rk45, 'r-', label="RK45 (right)", linewidth=2)
+    ax.plot(times_rk23, error_left_rk23, 'm-.', label="RK23 (left)", linewidth=2)
+    ax.plot(times_rk23, error_right_rk23, 'c-.', label="RK23 (right)", linewidth=2)
+    ax.set_xlabel("Time")
+    ax.set_ylabel("|Error| at Boundary")
+    ax.set_title("Boundary Error Evolution")
+    ax.set_yscale('log')
+    ax.legend(loc='best', fontsize=8)
     ax.grid(True, alpha=0.3)
     
     plt.tight_layout()

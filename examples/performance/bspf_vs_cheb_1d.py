@@ -22,19 +22,10 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'paper'))
 import numpy as np
 import matplotlib.pyplot as plt
 import time
+import sympy as sp
 
 from bspf import bspf1d
-
-# Import Chebyshev utilities - check if they're in utils or need to be imported from paper examples
-try:
-    from bspf.utils import chebyshev_derivative_from_values, _construct_chebyshev_nodes
-except ImportError:
-    # Fallback: try importing from paper examples
-    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'paper'))
-    try:
-        from chebyshev import chebyshev_derivative_from_values, _construct_chebyshev_nodes
-    except ImportError:
-        raise ImportError("Could not find chebyshev utilities. Please ensure they are available.")
+from specderiv import cheb_deriv
 
 # =============================================================================
 # Configuration Parameters
@@ -43,21 +34,27 @@ except ImportError:
 DOMAIN = (0.0, 2.0 * np.pi)
 
 # BSPF parameters
-DEGREE = 5
+DEGREE = 7
 ORDER = DEGREE
 NUM_BOUNDARY_POINTS = ORDER
-N_BASIS = 2 * DEGREE
+N_BASIS = 4 * DEGREE
 LAM = 0.01
 USE_CLUSTERING = True
 CLUSTERING_FACTOR = 2.0
 
-# Test function parameters
-# f(x) = tanh(alpha * (x - center))
-TANH_ALPHA = 100.0
-TANH_CENTER = np.pi
+# Test function: f(t) = sin( t / (1.01 + cos t) )
+t_sym = sp.symbols("t")
+f_sym = sp.sin(t_sym / (1.001 + sp.cos(t_sym)))
+f_prime_sym = sp.diff(f_sym, t_sym)
+f_second_sym = sp.diff(f_prime_sym, t_sym)
+
+# Numeric callables
+f_func = sp.lambdify(t_sym, f_sym, modules=["numpy"])
+f_prime_func = sp.lambdify(t_sym, f_prime_sym, modules=["numpy"])
+f_second_func = sp.lambdify(t_sym, f_second_sym, modules=["numpy"])
 
 # Timing parameters
-N_RUNS = 1000
+N_RUNS = 10
 
 
 def time_bspf_cpu(N, n_runs=N_RUNS):
@@ -81,7 +78,7 @@ def time_bspf_cpu(N, n_runs=N_RUNS):
     )
     
     # Test function
-    f = np.tanh(TANH_ALPHA * (x - TANH_CENTER))
+    f = f_func(x)
     
     # Warmup
     _, _ = model.differentiate(f, k=1, lam=LAM)
@@ -144,21 +141,21 @@ def time_bspf_gpu(N, n_runs=N_RUNS):
 
 def time_chebyshev(N, n_runs=N_RUNS):
     """Time Chebyshev derivative for size N"""
-    # Setup
+    # Setup Chebyshev-Gauss-Lobatto nodes (N intervals → N+1 nodes)
     a, b = DOMAIN
-    
-    # Pre-compute Chebyshev nodes once
-    x, _ = _construct_chebyshev_nodes(N-1, domain=DOMAIN)
-    f_vals = np.tanh(TANH_ALPHA * (x - TANH_CENTER))  # evaluate function at nodes
+    n_intervals = N - 1
+    t = np.cos(np.arange(n_intervals + 1) * np.pi / n_intervals)  # [-1, 1]
+    x = (b - a) * t / 2.0 + (b + a) / 2.0
+    f_vals = f_func(x)  # evaluate function at nodes
     
     # Warmup
-    _ = chebyshev_derivative_from_values(f_vals, x, domain=DOMAIN)
+    _ = cheb_deriv(f_vals, x, order=1)
     
     # Timing
     times = []
     for _ in range(n_runs):
         start_time = time.perf_counter()
-        _ = chebyshev_derivative_from_values(f_vals, x, domain=DOMAIN)
+        _ = cheb_deriv(f_vals, x, order=1)
         end_time = time.perf_counter()
         times.append(end_time - start_time)
     
@@ -170,16 +167,17 @@ def compute_errors(N_bspf, N_cheb):
     # Setup
     a, b = DOMAIN
     x_bspf = np.linspace(a, b, N_bspf)
-    x_cheb, _ = _construct_chebyshev_nodes(N_cheb-1, domain=DOMAIN)
+    # Chebyshev-Gauss-Lobatto nodes (N intervals → N+1 nodes)
+    n_intervals = N_cheb - 1
+    t_cheb = np.cos(np.arange(n_intervals + 1) * np.pi / n_intervals)  # [-1,1]
+    x_cheb = (b - a) * t_cheb / 2.0 + (b + a) / 2.0
     
-    # Test function and its analytical derivative
-    # f(x) = tanh(alpha * (x - center))
-    # f'(x) = alpha * sech^2(alpha * (x - center)) = alpha / cosh^2(alpha * (x - center))
-    f_bspf = np.tanh(TANH_ALPHA * (x_bspf - TANH_CENTER))
-    f_cheb = np.tanh(TANH_ALPHA * (x_cheb - TANH_CENTER))
+    # Test function and its analytical derivatives via sympy lambdify
+    f_bspf = f_func(x_bspf)
+    f_cheb = f_func(x_cheb)
     
-    df_exact_bspf = TANH_ALPHA / np.cosh(TANH_ALPHA * (x_bspf - TANH_CENTER))**2
-    df_exact_cheb = TANH_ALPHA / np.cosh(TANH_ALPHA * (x_cheb - TANH_CENTER))**2
+    df_exact_bspf = f_prime_func(x_bspf)
+    df_exact_cheb = f_prime_func(x_cheb)
     
     # BSPF computation
     model = bspf1d.from_grid(
@@ -198,7 +196,7 @@ def compute_errors(N_bspf, N_cheb):
     df_bspf, _ = model.differentiate(f_bspf, k=1, lam=LAM)
     
     # Chebyshev computation
-    df_cheb = chebyshev_derivative_from_values(f_cheb, x_cheb, domain=DOMAIN)
+    df_cheb = cheb_deriv(f_cheb, x_cheb, order=1)
     
     # Compute L2 errors
     error_bspf = np.sqrt(np.mean((df_bspf - df_exact_bspf)**2))

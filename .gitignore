@@ -2,10 +2,23 @@
 __pycache__/
 *.py[codz]
 *$py.class
+*.npy
 *.png
+NLS/
+*.gif
+*.out
+*.mp4
+*.avi
+*.mov
+*.webm
+*.mkv
+*.flv
+*.wmv
+*.mpg
 # C extensions
 *.so
-
+*.csv
+*.png
 # Distribution / packaging
 .Python
 build/
@@ -15,6 +28,7 @@ downloads/
 eggs/
 .eggs/
 lib/
+backup/
 lib64/
 parts/
 sdist/
@@ -74,13 +88,15 @@ docs/_build/
 # PyBuilder
 .pybuilder/
 target/
-
+spectral-derivatives/
 # Jupyter Notebook
 .ipynb_checkpoints
 
 # IPython
 profile_default/
 ipython_config.py
+*.txt
+bspf-cpp*
 
 # pyenv
 #   For a library or package, you might want to ignore these files since the code is

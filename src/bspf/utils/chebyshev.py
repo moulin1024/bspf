@@ -1,13 +1,11 @@
 """
-Chebyshev spectral methods for differentiation.
+In-house Chebyshev spectral differentiation utilities.
 
-FFT-based Chebyshev differentiation using DCT-I via rFFT/irFFT.
+Uses FFT-based DCT-I for coefficient computation and stable recurrence
+for derivative computation.
 """
 
 import numpy as np
-import numpy.typing as npt
-
-Array = npt.NDArray[np.float64]
 
 
 # ---------- FFT-based Chebyshev helpers (DCT-I / IDCT-I via rfft/irfft) ----------
@@ -95,6 +93,28 @@ def _chebyshev_derivative_coeffs(a):
     return b
 
 
+def _chebyshev_second_derivative_coeffs(a):
+    """
+    Compute second derivative coefficients directly from original coefficients.
+    This avoids intermediate evaluation errors by applying the derivative
+    transformation twice in coefficient space.
+    
+    Parameters
+    ----------
+    a : ndarray
+        Chebyshev coefficients for the function
+        
+    Returns
+    -------
+    c : ndarray
+        Chebyshev coefficients for the second derivative
+    """
+    # Apply derivative transformation twice
+    b = _chebyshev_derivative_coeffs(a)  # First derivative coefficients
+    c = _chebyshev_derivative_coeffs(b)  # Second derivative coefficients
+    return c
+
+
 def construct_chebyshev_nodes(N, domain=(-1.0, 1.0)):
     """
     Construct first-kind Chebyshev nodes and map them to the given domain.
@@ -122,7 +142,7 @@ def construct_chebyshev_nodes(N, domain=(-1.0, 1.0)):
 
 def chebyshev_derivative_from_values(f_vals, x, domain=(-1.0, 1.0)):
     """
-    Version that accepts pre-computed values and nodes instead of function.
+    Compute first derivative using Chebyshev spectral method.
     
     Parameters
     ----------
@@ -136,7 +156,7 @@ def chebyshev_derivative_from_values(f_vals, x, domain=(-1.0, 1.0)):
     Returns
     -------
     df_dx : ndarray
-        Derivative values at the nodes
+        First derivative values at the nodes
     """
     if len(f_vals) < 2:
         raise ValueError("f_vals must have length at least 2.")
@@ -157,4 +177,48 @@ def chebyshev_derivative_from_values(f_vals, x, domain=(-1.0, 1.0)):
     df_dx = df_dt * (2.0 / (b_dom - a_dom))
 
     return df_dx
+
+
+def chebyshev_second_derivative_from_values(f_vals, x, domain=(-1.0, 1.0)):
+    """
+    Compute second derivative using Chebyshev spectral method.
+    
+    This function computes the second derivative directly from the original
+    function values by applying the derivative transformation twice in
+    coefficient space, avoiding intermediate evaluation errors.
+    
+    Parameters
+    ----------
+    f_vals : ndarray
+        Function values at Chebyshev nodes
+    x : ndarray
+        Pre-computed Chebyshev nodes mapped to domain
+    domain : (float, float), optional
+        Interval [a, b] on which nodes are mapped (default [-1, 1])
+    
+    Returns
+    -------
+    d2f_dx2 : ndarray
+        Second derivative values at the nodes
+    """
+    if len(f_vals) < 2:
+        raise ValueError("f_vals must have length at least 2.")
+    a_dom, b_dom = domain
+    if not np.isfinite(a_dom) or not np.isfinite(b_dom) or a_dom == b_dom:
+        raise ValueError("`domain` must be finite with a != b.")
+
+    # 1) Chebyshev coefficients via rFFT-based DCT-I
+    a_k = _chebyshev_coeffs_rfft(f_vals)
+
+    # 2) Second derivative coefficients via stable recurrence (applied twice)
+    c_k = _chebyshev_second_derivative_coeffs(a_k)
+
+    # 3) Evaluate second derivative series at the nodes via inverse DCT-I
+    d2f_dt2 = _values_from_cheb_coeffs_irfft(c_k)
+
+    # 4) Chain rule for x-mapping t -> x: d²/dx² = (2/(b-a))² * d²/dt²
+    d2f_dx2 = d2f_dt2 * (2.0 / (b_dom - a_dom))**2
+
+    return d2f_dx2
+
 

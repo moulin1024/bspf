@@ -186,15 +186,31 @@ class padefd:
 
     # Vectorized RHS assembly via direct slices (faster than sparse matvec)
     def _assemble_rhs(self, f):
-        rhs = np.zeros(self.M, dtype=float)
-        for k, c in zip(self.ks, self.bs):
-            rhs += c * f[self.i0 + k : self.i1 + 1 + k]
-            rhs -= c * f[self.i0 - k : self.i1 + 1 - k]
-        rhs /= self.h
-        # Coupling to known boundary derivative values adjacent to interior
-        rhs[0]  -= self.a1 * (self.row_lhs @ f)
-        rhs[-1] -= self.a1 * (self.row_rhs @ f)
-        return rhs
+        if f.ndim == 1:
+            rhs = np.zeros(self.M, dtype=float)
+            for k, c in zip(self.ks, self.bs):
+                rhs += c * f[self.i0 + k : self.i1 + 1 + k]
+                rhs -= c * f[self.i0 - k : self.i1 + 1 - k]
+            rhs /= self.h
+            # Coupling to known boundary derivative values adjacent to interior
+            rhs[0]  -= self.a1 * (self.row_lhs @ f)
+            rhs[-1] -= self.a1 * (self.row_rhs @ f)
+            return rhs
+        else:
+            # Batch version: f has shape (N, nfields)
+            nfields = f.shape[1]
+            rhs = np.zeros((self.M, nfields), dtype=float)
+            for k, c in zip(self.ks, self.bs):
+                rhs += c * f[self.i0 + k : self.i1 + 1 + k, :]
+                rhs -= c * f[self.i0 - k : self.i1 + 1 - k, :]
+            rhs /= self.h
+            # Coupling to known boundary derivative values adjacent to interior
+            # row_lhs @ f may have shape (1, nfields) or (nfields,), ensure it's 1D
+            coupling_lhs = np.asarray(self.row_lhs @ f).ravel()  # Shape: (nfields,)
+            coupling_rhs = np.asarray(self.row_rhs @ f).ravel()  # Shape: (nfields,)
+            rhs[0, :]  -= self.a1 * coupling_lhs
+            rhs[-1, :] -= self.a1 * coupling_rhs
+            return rhs
 
     def __call__(self, f):
         f = np.asarray(f, dtype=float)
@@ -215,12 +231,179 @@ class padefd:
             return fp
 
         elif f.ndim == 2 and f.shape[0] == self.N:
-            # simple per-column apply; vectorized enough for clarity
-            out = np.empty_like(f)
-            for j in range(f.shape[1]):
-                out[:, j] = self(f[:, j])
-            return out
+            # Batch version: process all columns at once
+            nfields = f.shape[1]
+            fp = np.empty_like(f)
+
+            # boundary derivatives (batched matrix multiplication)
+            fp[:self.K, :]  = self.D_top @ f
+            fp[-self.K:, :] = self.D_bot @ f
+
+            # interior via DST-I (batched)
+            rhs = self._assemble_rhs(f)  # Shape: (M, nfields)
+            # Apply DST-I along first axis for each column
+            # DST-I expects 1D or 2D with axis=0, so transpose, apply, transpose back
+            rhs_T = rhs.T  # Shape: (nfields, M)
+            y_T = idst(dst(rhs_T, type=1, norm='ortho', axis=-1) / self._lam[None, :], 
+                       type=1, norm='ortho', axis=-1)
+            y = y_T.T  # Shape: (M, nfields)
+            fp[self.i0:self.i1 + 1, :] = y
+            return fp
 
         else:
             raise ValueError("f must be shape (N,) or (N, nfields)")
 
+class padefd2:
+    """
+    Compact (Padé-type) second derivative on a uniform, NON-PERIODIC 1D grid.
+
+    Interior 4th-order tridiagonal compact scheme:
+        f''_i + a1 * (f''_{i-1} + f''_{i+1})
+        = (1/h^2) * b1 * (f_{i+1} - 2 f_i + f_{i-1})
+
+    with a1 = 1/10, b1 = 6/5.
+
+    Boundaries: handled by one-sided stencils from `findiff` for the second
+    derivative over the first/last K points, where K = max RHS offset
+    (half-stencil width). For this 4th-order scheme, K = 1.
+
+    Interior unknowns: i = 1 .. N-2.
+
+    Interior solve: A y = rhs via DST-I:
+        A = I + a1*T1  ⇒  λ_j = 1 + 2 a1 cos(jπ/(M+1)),  j=1..M
+        y = IDST_I( DST_I(rhs) / λ )
+
+    Parameters
+    ----------
+    N : int
+        Number of grid points.
+    h : float
+        Grid spacing.
+    order : {4}
+        Currently only the 4th-order scheme (K=1) is implemented.
+    acc : int or None
+        Accuracy for `findiff` boundary rows (second derivative). Default:
+        min(order, 10).
+
+    Usage
+    -----
+    d2op = padefd2(N=513, h=1/512, order=4)
+    fpp  = d2op(f)                     # f shape (N,) or (N, nfields)
+    """
+
+    _SCHEMES = {
+        # 4th-order: a1 = 1/10, b1 = 6/5, K = 1
+        4: dict(a1=1.0/10.0, b={1: 6.0/5.0}, K=1),
+    }
+
+    def __init__(self, N, h, order=4, acc=None):
+        if order not in self._SCHEMES:
+            raise ValueError(f"Unsupported order {order}. Choose from {sorted(self._SCHEMES)}.")
+        params = self._SCHEMES[order]
+
+        self.N = int(N)
+        self.h = float(h)
+        self.order = int(order)
+        # cap boundary accuracy; very high accuracy is not always better
+        self.acc = int(acc if acc is not None else min(self.order, 10))
+
+        self.a1 = float(params["a1"])
+        self.ks = np.array(sorted(params["b"].keys()), dtype=int)
+        self.bs = np.array([params["b"][k] for k in self.ks], dtype=float)
+        self.K  = int(params["K"])
+
+        # Minimal N so interior & boundary blocks exist: N >= 4K + 1
+        if self.N < 4*self.K + 1:
+            raise ValueError(f"N must be >= {4*self.K + 1} for order {self.order} (K={self.K}).")
+
+        # Interior range and size
+        self.i0, self.i1 = self.K, self.N - self.K - 1
+        self.M = self.i1 - self.i0 + 1
+
+        # DST-I eigenvalues λ_j for A = I + a1 T1
+        j = np.arange(1, self.M + 1, dtype=float)
+        self._lam = 1.0 + 2.0*self.a1 * np.cos(np.pi * j / (self.M + 1))
+
+        # Boundary second-derivative operators: keep only rows we need
+        D2 = FinDiff(0, self.h, 2, acc=self.acc).matrix((self.N,)).tocsr()
+        self.D_top   = D2[0:self.K, :]         # f''[0..K-1]
+        self.D_bot   = D2[-self.K:, :]         # f''[N-K..N-1]
+        self.row_lhs = D2[self.K - 1, :]       # f''[K-1]  (for left interior coupling)
+        self.row_rhs = D2[self.N - self.K, :]  # f''[N-K]  (for right interior coupling)
+
+    # Vectorized RHS assembly for the compact 2nd derivative
+    def _assemble_rhs(self, f):
+        if f.ndim == 1:
+            rhs = np.zeros(self.M, dtype=float)
+            for k, c in zip(self.ks, self.bs):
+                rhs += c * (
+                    f[self.i0 + k : self.i1 + 1 + k]
+                    - 2.0 * f[self.i0 : self.i1 + 1]
+                    + f[self.i0 - k : self.i1 + 1 - k]
+                )
+            rhs /= self.h**2
+
+            # Coupling to known boundary second derivatives adjacent to interior
+            rhs[0]  -= self.a1 * (self.row_lhs @ f)
+            rhs[-1] -= self.a1 * (self.row_rhs @ f)
+            return rhs
+        else:
+            # Batch version: f has shape (N, nfields)
+            nfields = f.shape[1]
+            rhs = np.zeros((self.M, nfields), dtype=float)
+            for k, c in zip(self.ks, self.bs):
+                rhs += c * (
+                    f[self.i0 + k : self.i1 + 1 + k, :]
+                    - 2.0 * f[self.i0 : self.i1 + 1, :]
+                    + f[self.i0 - k : self.i1 + 1 - k, :]
+                )
+            rhs /= self.h**2
+
+            # Coupling to known boundary second derivatives adjacent to interior
+            # row_lhs @ f may have shape (1, nfields) or (nfields,), ensure it's 1D
+            coupling_lhs = np.asarray(self.row_lhs @ f).ravel()  # Shape: (nfields,)
+            coupling_rhs = np.asarray(self.row_rhs @ f).ravel()  # Shape: (nfields,)
+            rhs[0, :]  -= self.a1 * coupling_lhs
+            rhs[-1, :] -= self.a1 * coupling_rhs
+            return rhs
+
+    def __call__(self, f):
+        f = np.asarray(f, dtype=float)
+
+        if f.ndim == 1:
+            if f.size != self.N:
+                raise ValueError(f"Expected f.size == {self.N}, got {f.size}")
+            fpp = np.empty_like(f)
+
+            # boundary second derivatives
+            fpp[:self.K]  = self.D_top @ f
+            fpp[-self.K:] = self.D_bot @ f
+
+            # interior via DST-I
+            rhs = self._assemble_rhs(f)
+            y = idst(dst(rhs, type=1, norm="ortho") / self._lam, type=1, norm="ortho")
+            fpp[self.i0:self.i1 + 1] = y
+            return fpp
+
+        elif f.ndim == 2 and f.shape[0] == self.N:
+            # Batch version: process all columns at once
+            nfields = f.shape[1]
+            fpp = np.empty_like(f)
+
+            # boundary second derivatives (batched matrix multiplication)
+            fpp[:self.K, :]  = self.D_top @ f
+            fpp[-self.K:, :] = self.D_bot @ f
+
+            # interior via DST-I (batched)
+            rhs = self._assemble_rhs(f)  # Shape: (M, nfields)
+            # Apply DST-I along first axis for each column
+            # DST-I expects 1D or 2D with axis=0, so transpose, apply, transpose back
+            rhs_T = rhs.T  # Shape: (nfields, M)
+            y_T = idst(dst(rhs_T, type=1, norm="ortho", axis=-1) / self._lam[None, :], 
+                       type=1, norm="ortho", axis=-1)
+            y = y_T.T  # Shape: (M, nfields)
+            fpp[self.i0:self.i1 + 1, :] = y
+            return fpp
+
+        else:
+            raise ValueError("f must be shape (N,) or (N, nfields)")

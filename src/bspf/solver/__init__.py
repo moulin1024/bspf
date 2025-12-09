@@ -14,6 +14,7 @@ from .schrodinger import (
 
 from .heat import (
     create_heat_rhs_1d,
+    create_heat_rhs_2d,
     build_laplacian_matrix_1d,
     create_heat_jacobian_1d
 )
@@ -24,6 +25,7 @@ __all__ = [
     "create_neumann_bc_enforcer",
     "solve_schrodinger",
     "create_heat_rhs_1d",
+    "create_heat_rhs_2d",
     "build_laplacian_matrix_1d",
     "create_heat_jacobian_1d"
 ]

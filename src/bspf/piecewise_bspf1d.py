@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Optional, Tuple, List
+from typing import Optional, Tuple, List, Union
 import numpy as np
 import numpy.typing as npt
 
@@ -122,9 +122,18 @@ class PiecewiseBSPF1D:
             left_flux_global = right_flux_global = None
         
         n_seg = len(self.segments)
+        df_segments = []
+        fs_segments = []
+        
         for seg_idx, seg in enumerate(self.segments):
             i0, i1, op = seg["i0"], seg["i1"], seg["op"]
-            f_seg = f[i0:i1 + 1]
+            
+            # Get function values on segment grid (interpolate if needed)
+            if "x_seg" in seg:
+                x_seg = seg["x_seg"]
+                f_seg = np.interp(x_seg, self.x, f)
+            else:
+                f_seg = f[i0:i1 + 1]
             
             # Only apply global Neumann BC at the two ends of the entire domain
             if seg_idx == 0:
@@ -141,8 +150,12 @@ class PiecewiseBSPF1D:
                 f_seg, k=k, lam=lam, neumann_bc=neumann_bc_seg
             )
             
-            df_full[i0:i1 + 1] = df_seg
-            fs_full[i0:i1 + 1] = fs_seg
+            df_segments.append(df_seg)
+            fs_segments.append(fs_seg)
+        
+        # Interpolate results back to full grid
+        df_full = self._interpolate_from_segments(df_segments)
+        fs_full = self._interpolate_from_segments(fs_segments)
         
         return df_full, fs_full
     
@@ -187,9 +200,19 @@ class PiecewiseBSPF1D:
             left_flux_global = right_flux_global = None
         
         n_seg = len(self.segments)
+        d1_segments = []
+        d2_segments = []
+        fs_segments = []
+        
         for k, seg in enumerate(self.segments):
             i0, i1, op = seg["i0"], seg["i1"], seg["op"]
-            f_seg = f[i0:i1 + 1]
+            
+            # Get function values on segment grid (interpolate if needed)
+            if "x_seg" in seg:
+                x_seg = seg["x_seg"]
+                f_seg = np.interp(x_seg, self.x, f)
+            else:
+                f_seg = f[i0:i1 + 1]
             
             # Only apply global Neumann BC at the two ends of the entire domain
             if k == 0:
@@ -206,9 +229,173 @@ class PiecewiseBSPF1D:
                 f_seg, lam=lam, neumann_bc=neumann_bc_seg
             )
             
-            df1_full[i0:i1 + 1] = d1_seg
-            df2_full[i0:i1 + 1] = d2_seg
-            fs_full[i0:i1 + 1] = fs_seg
+            d1_segments.append(d1_seg)
+            d2_segments.append(d2_seg)
+            fs_segments.append(fs_seg)
+        
+        # Interpolate results back to full grid
+        df1_full = self._interpolate_from_segments(d1_segments)
+        df2_full = self._interpolate_from_segments(d2_segments)
+        fs_full = self._interpolate_from_segments(fs_segments)
         
         return df1_full, df2_full, fs_full
+    
+    @classmethod
+    def from_domains(
+        cls,
+        degree: int,
+        domain_boundaries: List[float],
+        n_points_per_segment: Union[int, List[int]],
+        **bspf_kwargs
+    ) -> "PiecewiseBSPF1D":
+        """
+        Create PiecewiseBSPF1D with independent mesh resolution for each subdomain.
+        
+        This method allows you to specify different grid resolutions for each
+        subdomain, enabling local refinement strategies.
+        
+        Parameters
+        ----------
+        degree : int
+            B-spline degree for each segment
+        domain_boundaries : List[float]
+            List of domain boundaries [a, b1, b2, ..., bN, c] defining N+1 subdomains:
+            [a, b1), [b1, b2), ..., [bN, c]
+        n_points_per_segment : int or List[int]
+            If int: same number of points for all segments
+            If List[int]: number of points for each segment (length must be N+1)
+        **bspf_kwargs
+            Additional arguments passed to bspf1d.from_grid for each segment
+        
+        Returns
+        -------
+        PiecewiseBSPF1D
+            Instance with independent grids for each subdomain
+        
+        Example
+        -------
+        >>> # Create 3 subdomains with different resolutions
+        >>> pw = PiecewiseBSPF1D.from_domains(
+        ...     degree=5,
+        ...     domain_boundaries=[0, np.pi/2, 3*np.pi/2, 2*np.pi],
+        ...     n_points_per_segment=[100, 500, 100]  # Fine resolution in middle
+        ... )
+        """
+        domain_boundaries = sorted(domain_boundaries)
+        if len(domain_boundaries) < 2:
+            raise ValueError("domain_boundaries must have at least 2 elements")
+        
+        n_segments = len(domain_boundaries) - 1
+        
+        # Handle n_points_per_segment
+        if isinstance(n_points_per_segment, int):
+            n_points_list = [n_points_per_segment] * n_segments
+        elif isinstance(n_points_per_segment, list):
+            if len(n_points_per_segment) != n_segments:
+                raise ValueError(
+                    f"n_points_per_segment length {len(n_points_per_segment)} "
+                    f"must match number of segments {n_segments}"
+                )
+            n_points_list = n_points_per_segment
+        else:
+            raise TypeError("n_points_per_segment must be int or List[int]")
+        
+        # Create grids for each segment
+        segment_grids = []
+        segment_domains = []
+        for i in range(n_segments):
+            a = domain_boundaries[i]
+            b = domain_boundaries[i + 1]
+            n_pts = n_points_list[i]
+            x_seg = np.linspace(a, b, n_pts, endpoint=True)
+            segment_grids.append(x_seg)
+            segment_domains.append((a, b))
+        
+        # Build full grid by concatenating segment grids, handling boundaries carefully
+        # For interior boundaries, include the point only once (from the right segment)
+        x_full_list = []
+        for i, x_seg in enumerate(segment_grids):
+            if i == 0:
+                # First segment: include all points
+                x_full_list.append(x_seg)
+            else:
+                # Subsequent segments: skip first point (it's the boundary from previous segment)
+                x_full_list.append(x_seg[1:])
+        
+        x_full = np.concatenate(x_full_list)
+        
+        # Create instance with dummy initialization
+        instance = cls.__new__(cls)
+        instance.degree = int(degree)
+        instance.x = x_full
+        instance.breakpoints = domain_boundaries[1:-1]  # Interior boundaries only
+        instance.min_points_per_seg = 16
+        
+        # Create segments with independent grids
+        instance.segments = []
+        
+        for i, (x_seg, domain_seg) in enumerate(zip(segment_grids, segment_domains)):
+            # Find indices in full grid corresponding to this segment
+            # For first segment: [a, b]
+            # For subsequent segments: (prev_b, b] - need to find where prev_b ends
+            if i == 0:
+                # First segment: find all points in [a, b]
+                mask = (x_full >= domain_seg[0] - 1e-12) & (x_full <= domain_seg[1] + 1e-12)
+            else:
+                # Subsequent segments: find points in (prev_b, b]
+                # Use > instead of >= to exclude the boundary point
+                prev_b = domain_boundaries[i]
+                mask = (x_full > prev_b - 1e-12) & (x_full <= domain_seg[1] + 1e-12)
+            
+            indices = np.where(mask)[0]
+            
+            if len(indices) < instance.min_points_per_seg:
+                continue
+            
+            i0 = int(indices[0])
+            i1 = int(indices[-1])
+            
+            # Create bspf1d operator for this segment using its own grid
+            op = bspf1d.from_grid(degree=instance.degree, x=x_seg, domain=domain_seg, **bspf_kwargs)
+            
+            instance.segments.append(dict(
+                i0=i0, 
+                i1=i1, 
+                op=op,
+                x_seg=x_seg,  # Store segment grid
+                domain=domain_seg  # Store domain
+            ))
+        
+        return instance
+    
+    def _interpolate_from_segments(self, results_segments: List[Array]) -> Array:
+        """
+        Interpolate results from segment grids back to full grid.
+        
+        Parameters
+        ----------
+        results_segments : List[Array]
+            List of result arrays, one per segment (on segment grids)
+        
+        Returns
+        -------
+        Array
+            Results interpolated to full grid
+        """
+        result_full = np.zeros_like(self.x, dtype=np.float64)
+        
+        for seg, result_seg in zip(self.segments, results_segments):
+            i0, i1 = seg["i0"], seg["i1"]
+            
+            if "x_seg" in seg:
+                # Interpolate from segment grid to full grid
+                x_seg = seg["x_seg"]
+                x_full_seg = self.x[i0:i1 + 1]
+                result_interp = np.interp(x_full_seg, x_seg, result_seg)
+                result_full[i0:i1 + 1] = result_interp
+            else:
+                # Direct assignment (same grid)
+                result_full[i0:i1 + 1] = result_seg
+        
+        return result_full
 

@@ -215,7 +215,9 @@ class _AxisPlan:
         spline = self.BT @ P
         deriv  = self.BkT @ P
 
-        resid = FT - spline
+        resid = FT - spline  # shape: (n, batch)
+        # Batch FFT: fft.rfft along axis=0 performs 'batch' FFTs of length 'n' in one call
+        # R shape: (n//2+1, batch), omega shape: (n//2+1,), broadcasting works correctly
         R     = fft.rfft(resid, axis=0)
         corr  = fft.irfft(R * (1j * self.omega)[:, None]**self.order, n=self.n, axis=0)
 
@@ -400,7 +402,9 @@ class bspf2d:
         P = SOL[:n_b, :]
         spline = BT @ P
         deriv  = BkT @ P
-        resid  = FT - spline
+        resid  = FT - spline  # shape: (n, batch)
+        # Batch FFT: fft.rfft along axis=0 performs 'batch' FFTs of length 'n' in one call
+        # R shape: (n//2+1, batch), om shape: (n//2+1,), broadcasting works correctly
         R      = fft.rfft(resid, axis=0)
         corr   = fft.irfft(R * (1j * om)[:, None]**k, n=n, axis=0)
 
@@ -486,7 +490,9 @@ class bspf2d:
         P = SOL[:n_b, :]
         spline = BT @ P
         deriv  = BkT @ P
-        resid  = FT - spline
+        resid  = FT - spline  # shape: (n, batch)
+        # Batch FFT: fft.rfft along axis=0 performs 'batch' FFTs of length 'n' in one call
+        # R shape: (n//2+1, batch), om shape: (n//2+1,), broadcasting works correctly
         R      = fft.rfft(resid, axis=0)
         corr   = fft.irfft(R * (1j * om)[:, None]**k, n=n, axis=0)
 
@@ -610,6 +616,94 @@ class bspf2d:
         dFy = self._diff_axis(F, self.y_model, lam=lam_y, k=1, axis=0, return_spline=False, use_gpu=self.use_gpu)
         dyx = self._diff_axis(dFy, self.x_model, lam=lam_x, k=1, axis=1, return_spline=False, use_gpu=self.use_gpu)
         return (0.5 * (dxy + dyx)).astype(np.float64)
+
+    # ---- compute first and second derivatives together (efficient) ----
+    def differentiate_1_2(
+        self,
+        F: Array,
+        *,
+        lam_x: float = 0.0,
+        lam_y: float = 0.0,
+        uniform_bc_x: bool = False,
+        uniform_bc_y: bool = False,
+        bc_x: float | Array | None = None,
+        bc_y: float | Array | None = None,
+    ) -> Tuple[Array, Array, Array, Array]:
+        """
+        Compute first and second derivatives in both x and y directions together.
+        More efficient than calling partial_dx, partial_dy, partial_dxx, partial_dyy separately
+        because it reuses intermediate computations.
+        
+        Parameters
+        ----------
+        F : Array
+            2D array of shape (ny, nx)
+        lam_x : float, default 0.0
+            Tikhonov regularization parameter for x-direction
+        lam_y : float, default 0.0
+            Tikhonov regularization parameter for y-direction
+        uniform_bc_x : bool, default False
+            Whether to use uniform boundary conditions in x-direction (currently unused)
+        uniform_bc_y : bool, default False
+            Whether to use uniform boundary conditions in y-direction (currently unused)
+        bc_x : float | Array | None, default None
+            Boundary condition values for x-direction (currently unused)
+        bc_y : float | Array | None, default None
+            Boundary condition values for y-direction (currently unused)
+        
+        Returns
+        -------
+        dF_dx : Array
+            First derivative in x-direction: ∂F/∂x, shape (ny, nx)
+        dF_dy : Array
+            First derivative in y-direction: ∂F/∂y, shape (ny, nx)
+        d2F_dx2 : Array
+            Second derivative in x-direction: ∂²F/∂x², shape (ny, nx)
+        d2F_dy2 : Array
+            Second derivative in y-direction: ∂²F/∂y², shape (ny, nx)
+        """
+        self._check_shape(F)
+        
+        # Convert F to numpy for bspf1d operations (bspf1d handles GPU internally if needed)
+        F_np = np.asarray(F, dtype=np.float64)
+        ny, nx = F_np.shape
+        
+        # For x-direction: differentiate along columns (axis=1)
+        # Each row F[i, :] has shape (nx,) and is differentiated along x
+        dF_dx_list = []
+        d2F_dx2_list = []
+        
+        for i in range(ny):
+            f_row = F_np[i, :]  # (nx,) - one row
+            df1_x, df2_x, _ = self.x_model.differentiate_1_2(f_row, lam=lam_x)
+            dF_dx_list.append(df1_x)
+            d2F_dx2_list.append(df2_x)
+        
+        # Stack to (ny, nx)
+        dF_dx = np.stack(dF_dx_list, axis=0)  # (ny, nx)
+        d2F_dx2 = np.stack(d2F_dx2_list, axis=0)  # (ny, nx)
+        
+        # For y-direction: differentiate along rows (axis=0)
+        # Each column F[:, j] has shape (ny,) and is differentiated along y
+        dF_dy_list = []
+        d2F_dy2_list = []
+        
+        for j in range(nx):
+            f_col = F_np[:, j]  # (ny,) - one column
+            df1_y, df2_y, _ = self.y_model.differentiate_1_2(f_col, lam=lam_y)
+            dF_dy_list.append(df1_y)
+            d2F_dy2_list.append(df2_y)
+        
+        # Stack to (ny, nx)
+        dF_dy = np.stack(dF_dy_list, axis=1)  # (ny, nx)
+        d2F_dy2 = np.stack(d2F_dy2_list, axis=1)  # (ny, nx)
+        
+        return (
+            dF_dx.astype(np.float64),
+            dF_dy.astype(np.float64),
+            d2F_dx2.astype(np.float64),
+            d2F_dy2.astype(np.float64),
+        )
 
     # ---- Neumann-enforced variants ----
     def partial_dx_neumann(

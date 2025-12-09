@@ -14,15 +14,15 @@ Array = npt.NDArray[np.complex128]
 # Control Parameters
 # ============================================================
 # Domain parameters
-L_domain = 40.0  # domain length (dimensionless)
-nx = 512        # grid points (including endpoints)
+L_domain = 100.0  # domain length (dimensionless)
+nx = 1024        # grid points (including endpoints)
 
 # Time parameters
 T = 5.0         # final time (dimensionless)
 dt = 0.001      # time step (dimensionless)
 
 # BSPF parameters
-degree = 5       # B-spline degree
+degree = 7       # B-spline degree
 
 # Potential barrier parameters
 V0 = 10.0        # Barrier height (dimensionless)
@@ -109,7 +109,7 @@ print("="*60)
 nt = int(T / dt) + 1
 
 # Create BSPF operator
-bf = bspf1d.from_grid(degree=degree, x=x)
+bf = bspf1d.from_grid(degree=degree, x=x, use_clustering=True, clustering_factor=2.0)
 
 # Create RHS function using built library function
 # Schrödinger: i*∂ψ/∂t = -(1/2)*∂²ψ/∂x² + V*ψ + g*|ψ|²*ψ

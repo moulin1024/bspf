@@ -14,19 +14,19 @@ Array = npt.NDArray[np.complex128]
 # Control Parameters
 # ============================================================
 # Domain parameters
-L_domain = 40  # domain length
-nx = 512              # grid points (including endpoints)
+L_domain = 100  # domain length
+nx = 1024              # grid points (including endpoints)
 
 # Time parameters
-T = 5.0             # final time
+T = 10            # final time
 dt = 0.001             # time step
 
 # BSPF parameters
-degree = 5            # B-spline degree
+degree = 7            # B-spline degree
 
 # Initial condition parameters (Gaussian wave packet)
 x0 = None             # Will be set to L_domain / 2.0
-sigma = L_domain/10.0          # Will be set to L_domain / 10.0
+sigma = L_domain/20.0          # Will be set to L_domain / 10.0
 
 # Boundary condition parameters
 neumann_bc = (0.0, 0.0)  # (left_flux, right_flux) = (0, 0) for zero flux
@@ -70,8 +70,11 @@ print("="*60)
 nt = int(T / dt) + 1
 
 # Create BSPF operator
-bf = bspf1d.from_grid(degree=degree, x=x)
+bf = bspf1d.from_grid(degree=degree, x=x, use_clustering=True, clustering_factor=2.0)
 
+# Initial condition: Peregrine breather
+# Our simulation time starts at t=0, but peregrine_exact uses t starting from -1
+# So at t=0, we use peregrine_exact(x, -1)
 # Initial condition: Gaussian wave packet at domain center
 # ψ(x,0) = exp(-(x-x0)²/(2σ²))
 psi0 = np.exp(-(x - x0)**2 / (2.0 * sigma**2)).astype(np.complex128) + 1
@@ -116,94 +119,82 @@ with TimeStepperState(psi0.copy(), t_init=0.0, dt=dt, method='rk23', t_final=T, 
 
 print("Focusing case completed successfully!")
 
-# ============================================================
-# Defocusing Case (g > 0)
-# ============================================================
-print("\n" + "="*60)
-print("Running DEFOCUSING case (g > 0)...")
-print("="*60)
-
-# Create RHS function for defocusing case
-rhs_func_defocusing = create_schrodinger_rhs(bf, V, g=g_defocusing, neumann_bc=neumann_bc)
-print("  Created RHS function (defocusing case: g > 0, Neumann BCs: zero flux)")
-
-# Time integration
-with TimeStepperState(psi0.copy(), t_init=0.0, dt=dt, method='rk23', t_final=T, show_progress=True) as state_defocusing:
-    Psi_defocusing = np.empty((nt, nx), dtype=np.complex128)
-    Psi_defocusing[0] = psi0.copy()
-    times_defocusing = np.zeros(nt)
-    times_defocusing[0] = 0.0
-
-    for step in range(1, nt):
-        psi_next = time_step(state_defocusing, dt, rhs_func_defocusing, method='rk23')
-        psi = state_defocusing.get_current()
-        
-        # Enforce zero-flux Neumann BCs explicitly after each time step
-        psi = enforce_zero_flux_neumann_bc(psi, dx, order=bc_order)
-        state_defocusing.psi_now = psi.copy()
-        
-        Psi_defocusing[step] = psi.copy()
-        times_defocusing[step] = state_defocusing.get_current_time()
-
-print("Defocusing case completed successfully!")
-
 # ---------- BC check ----------
 dpsi_dx_focusing, _, _ = bf.differentiate_1_2(Psi_focusing[-1], neumann_bc=(0.0, 0.0))
-dpsi_dx_defocusing, _, _ = bf.differentiate_1_2(Psi_defocusing[-1], neumann_bc=(0.0, 0.0))
 print(f"\nNeumann BC check (final time):")
 print(f"  Focusing:  |ψ_x(0)|={np.abs(dpsi_dx_focusing[0]): .3e}, |ψ_x(L)|={np.abs(dpsi_dx_focusing[-1]): .3e}")
-print(f"  Defocusing: |ψ_x(0)|={np.abs(dpsi_dx_defocusing[0]): .3e}, |ψ_x(L)|={np.abs(dpsi_dx_defocusing[-1]): .3e}")
 
-# ---------- Visualization ----------
+# ---------- Visualization and Animation ----------
 try:
     import matplotlib.pyplot as plt
-
-    fig, axes = plt.subplots(2, 2, figsize=(16, 12))
-    fig.suptitle('Modulation Instability: Focusing vs Defocusing NLS', fontsize=16, fontweight='bold')
+    from matplotlib.animation import FuncAnimation
     
-    # Plot 1: Focusing - |ψ|² at initial and final time
-    ax1 = axes[0, 0]
-    ax1.plot(x, np.abs(Psi_focusing[0])**2, label="t=0 s", linewidth=2)
-    ax1.plot(x, np.abs(Psi_focusing[-1])**2, label=f"t={T} s", linewidth=2)
-    ax1.set_xlabel("x")
-    ax1.set_ylabel("|ψ|²")
-    ax1.set_title("Focusing (g < 0): |ψ|² at Initial and Final Time")
-    ax1.legend()
-    ax1.grid(True, alpha=0.3)
+    # Subsample data for animation (every nth frame)
+    anim_skip = max(1, nt // 200)  # Show ~200 frames max
+    anim_frames = list(range(0, nt, anim_skip))
     
-    # Plot 2: Defocusing - |ψ|² at initial and final time
-    ax2 = axes[0, 1]
-    ax2.plot(x, np.abs(Psi_defocusing[0])**2, label="t=0 s", linewidth=2)
-    ax2.plot(x, np.abs(Psi_defocusing[-1])**2, label=f"t={T} s", linewidth=2)
-    ax2.set_xlabel("x")
-    ax2.set_ylabel("|ψ|²")
-    ax2.set_title("Defocusing (g > 0): |ψ|² at Initial and Final Time")
-    ax2.legend()
-    ax2.grid(True, alpha=0.3)
+    print(f"\nCreating animation with {len(anim_frames)} frames...")
     
-    # Plot 3: Focusing - Space-time plot of |ψ|² evolution
-    ax3 = axes[1, 0]
-    im3 = ax3.imshow(np.abs(Psi_focusing)**2, aspect='auto', 
-                     extent=[0, L_domain, 0, T], origin='lower',
-                     cmap='plasma', interpolation='bilinear')
-    ax3.set_xlabel("x")
-    ax3.set_ylabel("t")
-    ax3.set_title("Focusing (g < 0): |ψ|² Evolution (Space-Time)")
-    plt.colorbar(im3, ax=ax3, label="|ψ|²")
+    # Create figure with single plot for focusing case
+    fig, ax = plt.subplots(1, 1, figsize=(12, 6))
+    fig.suptitle('Modulation Instability: Focusing Case (g < 0)', fontsize=16, fontweight='bold')
     
-    # Plot 4: Defocusing - Space-time plot of |ψ|² evolution
-    ax4 = axes[1, 1]
-    im4 = ax4.imshow(np.abs(Psi_defocusing)**2, aspect='auto', 
-                     extent=[0, L_domain, 0, T], origin='lower',
-                     cmap='plasma', interpolation='bilinear')
-    ax4.set_xlabel("x")
-    ax4.set_ylabel("t")
-    ax4.set_title("Defocusing (g > 0): |ψ|² Evolution (Space-Time)")
-    plt.colorbar(im4, ax=ax4, label="|ψ|²")
+    # Initialize plot line
+    line, = ax.plot([], [], 'b-', linewidth=2, label='|ψ|²')
+    
+    # Set up axes
+    ax.set_xlabel("x", fontsize=12)
+    ax.set_ylabel("|ψ|²", fontsize=12)
+    ax.set_title("Focusing (g < 0)", fontsize=14, fontweight='bold')
+    ax.legend()
+    ax.grid(True, alpha=0.3)
+    ax.set_xlim([x[0], x[-1]])
+    
+    # Find global y-limits for consistent scaling
+    amp_focusing_max = np.max(np.abs(Psi_focusing)**2)
+    y_max = amp_focusing_max * 1.1
+    ax.set_ylim([0, y_max])
+    
+    # Add time text
+    time_text = ax.text(0.02, 0.95, '', transform=ax.transAxes,
+                        fontsize=12, verticalalignment='top',
+                        bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.8))
+    
+    def animate(frame_idx):
+        """Update animation frame."""
+        # Get actual step index
+        step = anim_frames[frame_idx]
+        
+        # Update plot
+        amp = np.abs(Psi_focusing[step])**2
+        line.set_data(x, amp)
+        time_text.set_text(f'Time: t = {times_focusing[step]:.3f}\nStep: {step}/{nt-1}')
+        
+        return line, time_text
+    
+    # Create animation
+    anim = FuncAnimation(fig, animate, frames=len(anim_frames), 
+                        interval=50, blit=False, repeat=True)
     
     plt.tight_layout()
     plt.show()
+    
+    # Optionally save animation
+    save_animation = False  # Set to True to save
+    if save_animation:
+        try:
+            output_file = 'modulation_instability_animation.gif'
+            print(f"Saving animation to '{output_file}'...")
+            anim.save(output_file, writer='pillow', fps=20, dpi=100)
+            print(f"Animation saved to '{output_file}'")
+        except Exception as e:
+            print(f"Could not save animation: {e}")
+    
+except ImportError as e:
+    print(f"Visualization skipped (missing dependency): {e}")
 except Exception as exc:  # pragma: no cover - visualization is optional
-    print("Plot skipped:", exc)
+    print("Visualization error:", exc)
+    import traceback
+    traceback.print_exc()
 
 

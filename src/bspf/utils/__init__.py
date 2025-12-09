@@ -15,12 +15,8 @@ from .time_steppers import (
 # Chebyshev utilities
 from .chebyshev import (
     construct_chebyshev_nodes,
-    chebyshev_derivative_from_values
-)
-
-# Chebyshev integration utilities
-from .chebyshev_integral import (
-    chebyshev_antiderivatives_fft
+    chebyshev_derivative_from_values,
+    chebyshev_second_derivative_from_values
 )
 
 # Padé finite difference utilities
@@ -38,6 +34,18 @@ except ImportError:
     build_schemes_table = None
     _HAS_PADEFD = False
 
+# Grid mapping utilities
+from .grid_mapping import (
+    logistic,
+    build_multi_sigmoid_expr,
+    transform_to_unit_interval,
+    transform_from_unit_interval,
+    validate_domain,
+    build_expr_via_connections_with_values,
+    create_adaptive_mapping,
+    create_simple_mapping
+)
+
 __all__ = [
     "TimeStepperState",
     "time_step",
@@ -48,7 +56,15 @@ __all__ = [
     "create_time_stepper",
     "construct_chebyshev_nodes",
     "chebyshev_derivative_from_values",
-    "chebyshev_antiderivatives_fft",
+    "chebyshev_second_derivative_from_values",
+    "logistic",
+    "build_multi_sigmoid_expr",
+    "transform_to_unit_interval",
+    "transform_from_unit_interval",
+    "validate_domain",
+    "build_expr_via_connections_with_values",
+    "create_adaptive_mapping",
+    "create_simple_mapping",
 ]
 
 if _HAS_PADEFD:

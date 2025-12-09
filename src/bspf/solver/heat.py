@@ -1,16 +1,18 @@
 """
 Heat equation solver utilities.
 
-Provides reusable functions for solving the 1D heat equation:
-    ∂u/∂t = ν*∂²u/∂x²
+Provides reusable functions for solving the 1D and 2D heat equation:
+    1D: ∂u/∂t = ν*∂²u/∂x²
+    2D: ∂u/∂t = ν*(∂²u/∂x² + ∂²u/∂y²)
 
 Supports Neumann boundary conditions (zero flux or specified flux).
 Supports both CPU (NumPy) and GPU (CuPy) computing.
 """
 
 import numpy as np
-from typing import Callable, Optional, Tuple
+from typing import Callable, Optional, Tuple, Union
 from ..bspf1d import bspf1d
+from ..bspf2d import bspf2d
 
 # Optional GPU backend
 _HAS_CUPY = False
@@ -176,4 +178,70 @@ def create_heat_jacobian_1d(
         return J
     
     return jacobian_func
+
+
+def create_heat_rhs_2d(
+    bspf_op: bspf2d,
+    nu: float,
+    flux_x: Tuple[Optional[float], Optional[float]] = (0.0, 0.0),
+    flux_y: Tuple[Optional[float], Optional[float]] = (0.0, 0.0),
+    lam: float = 0.0
+) -> Callable:
+    """
+    Create RHS function for the 2D heat equation.
+    
+    The equation: ∂u/∂t = ν*(∂²u/∂x² + ∂²u/∂y²)
+    
+    Parameters
+    ----------
+    bspf_op : bspf2d
+        BSPF 2D operator for spatial differentiation
+    nu : float
+        Diffusion coefficient (ν > 0)
+    flux_x : tuple, optional
+        Neumann boundary conditions for x-direction (left_flux, right_flux).
+        Default: (0.0, 0.0) for zero flux (homogeneous Neumann)
+    flux_y : tuple, optional
+        Neumann boundary conditions for y-direction (bottom_flux, top_flux).
+        Default: (0.0, 0.0) for zero flux (homogeneous Neumann)
+    lam : float, optional
+        Tikhonov regularization parameter for differentiation.
+        Default: 0.0
+    
+    Returns
+    -------
+    rhs_func : callable
+        RHS function with signature: rhs_func(u, t) -> du_dt
+        where:
+            u : array, shape (ny, nx), current solution
+            t : float, current time (not used but kept for interface consistency)
+            du_dt : array, shape (ny, nx), time derivative
+    """
+    def rhs_func(u: np.ndarray, t: float = 0.0) -> np.ndarray:
+        """
+        Compute RHS of 2D heat equation: du/dt = nu * (d²u/dx² + d²u/dy²)
+        
+        Parameters
+        ----------
+        u : array, shape (ny, nx)
+            Current solution
+        t : float, optional
+            Current time (not used, kept for interface consistency)
+        
+        Returns
+        -------
+        du_dt : array, shape (ny, nx)
+            Time derivative
+        """
+        # Compute second derivatives with Neumann BCs
+        u_xx = bspf_op.partial_dxx_neumann(u, lam=lam, flux=flux_x)
+        u_yy = bspf_op.partial_dyy_neumann(u, lam=lam, flux=flux_y)
+        
+        # Laplacian: ∇²u = ∂²u/∂x² + ∂²u/∂y²
+        laplacian = u_xx + u_yy
+        
+        # RHS: du/dt = nu * ∇²u
+        return nu * laplacian
+    
+    return rhs_func
 
