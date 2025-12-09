@@ -1,8 +1,8 @@
 """
 Standalone test/driver for bspf2d_profiling with correctness checking.
 
-Uses the same test data and configurations as examples/basic/diff_2d.py
-(turbulence field with exact derivatives).
+Uses 2D Taylor-Green vortex test function: f(x,y) = sin(x) * sin(y)
+with exact analytical derivatives.
 
 Run:
     python examples/performance/bspf2d_profiling_test.py
@@ -25,10 +25,6 @@ for p in (_root, _src, _examples):
 
 # Import after adjusting sys.path
 from examples.performance.bspf2d_profiling import run_profile_2d, bspf2d
-from examples.basic.diff_2d import (
-    random_turbulence_signal_2d_with_derivatives,
-    add_circular_shock_wave
-)
 
 # Optional GPU support
 _HAS_CUPY = False
@@ -39,53 +35,38 @@ except ImportError:
     cp = None
 
 
-def check_correctness(nx, ny, degree, use_gpu=False, shock_enabled=False):
+def check_correctness(nx, ny, degree, use_gpu=False):
     """
-    Check correctness of differentiate_1_2 against exact turbulence field derivatives.
+    Check correctness of differentiate_1_2 against exact 2D Taylor-Green vortex derivatives.
     
-    Uses the same test data and configuration as examples/basic/diff_2d.py.
+    Uses f(x,y) = sin(x) * sin(y) with exact analytical derivatives:
+      df/dx = cos(x) * sin(y)
+      df/dy = sin(x) * cos(y)
+      d2f/dx2 = -sin(x) * sin(y)
+      d2f/dy2 = -sin(x) * sin(y)
     """
     print("\n" + "="*80)
-    print("=== Correctness Check (Turbulence Field) ===")
+    print("=== Correctness Check (2D Taylor-Green Vortex) ===")
     print("="*80)
     
-    # Parameters matching diff_2d.py
-    DOMAIN_X = [0, 2*np.pi]
-    DOMAIN_Y = [0, 2*np.pi]
-    TURB_N_MODES = 64
-    TURB_SEED = 123
-    SHOCK_CENTER_X = np.pi
-    SHOCK_CENTER_Y = np.pi
-    SHOCK_RADIUS = 0.5
-    SHOCK_AMPLITUDE = 2.0
-    SHOCK_WIDTH = 0.02
-    
     # Domain
-    Lx = DOMAIN_X[1] - DOMAIN_X[0]
-    Ly = DOMAIN_Y[1] - DOMAIN_Y[0]
-    x = np.linspace(DOMAIN_X[0], DOMAIN_X[1], nx, endpoint=True)
-    y = np.linspace(DOMAIN_Y[0], DOMAIN_Y[1], ny, endpoint=True)
-    X_grid, Y_grid = np.meshgrid(x, y)  # (ny, nx) - matches diff_2d.py convention
+    DOMAIN = [0, 2*np.pi]
+    x = np.linspace(DOMAIN[0], DOMAIN[1], nx, endpoint=True)
+    y = np.linspace(DOMAIN[0], DOMAIN[1], ny, endpoint=True)
+    # Use indexing="xy" so that X varies along axis 1 (columns) and Y varies along axis 0 (rows)
+    # This matches bspf2d convention: F is (ny, nx), df/dx differentiates along columns, df/dy along rows
+    X, Y = np.meshgrid(x, y, indexing="xy")  # (ny, nx) - X[i,j]=x[j], Y[i,j]=y[i]
     
-    # Generate turbulence field with exact derivatives
-    print(f"Generating turbulence field: {nx}x{ny} grid, {TURB_N_MODES} modes...")
-    _, _, F, df_dx_exact, df_dy_exact, d2f_dx2_exact, d2f_dy2_exact, _ = \
-        random_turbulence_signal_2d_with_derivatives(
-            Lx=Lx, Ly=Ly, Nx=nx, Ny=ny,
-            nmodes=TURB_N_MODES, seed=TURB_SEED
-        )
-    # F, df_dx_exact, etc. are already in (ny, nx) format
+    # 2D Taylor-Green vortex scalar field: f(x,y) = sin(x) * sin(y)
+    print(f"Generating 2D Taylor-Green vortex field: {nx}x{ny} grid...")
+    F = np.sin(X) * np.sin(Y)  # (ny, nx)
     
-    # Add shock wave if enabled
-    if shock_enabled:
-        print("Adding circular shock wave...")
-        F, df_dx_exact, df_dy_exact, d2f_dx2_exact, d2f_dy2_exact, _ = \
-            add_circular_shock_wave(
-                X_grid, Y_grid, F, df_dx_exact, df_dy_exact,
-                d2f_dx2_exact, d2f_dy2_exact, np.zeros_like(F),
-                center_x=SHOCK_CENTER_X, center_y=SHOCK_CENTER_Y,
-                radius=SHOCK_RADIUS, amplitude=SHOCK_AMPLITUDE, width=SHOCK_WIDTH
-            )
+    # Exact derivatives
+    # With indexing="xy": X[i,j] = x[j] (x varies along axis 1), Y[i,j] = y[i] (y varies along axis 0)
+    df_dx_exact = np.cos(X) * np.sin(Y)  # (ny, nx) - derivative w.r.t. x (varies along axis 1)
+    df_dy_exact = np.sin(X) * np.cos(Y)  # (ny, nx) - derivative w.r.t. y (varies along axis 0)
+    d2f_dx2_exact = -np.sin(X) * np.sin(Y)  # (ny, nx)
+    d2f_dy2_exact = -np.sin(X) * np.sin(Y)  # (ny, nx)
     
     # Build operator (matching diff_2d.py configuration)
     print(f"Building BSPF2D operator: degree={degree}, clustering=True, use_gpu={use_gpu}...")
@@ -184,17 +165,14 @@ def check_correctness(nx, ny, degree, use_gpu=False, shock_enabled=False):
     l2_err_dy2 = np.sqrt(np.mean(err_dy2**2))
     
     print(f"\nGrid: nx={nx}, ny={ny}, degree={degree}")
-    if shock_enabled:
-        print(f"Shock: center=({SHOCK_CENTER_X}, {SHOCK_CENTER_Y}), radius={SHOCK_RADIUS}")
     print(f"\nError metrics:")
     print(f"  df/dx:  max={max_err_dx:.6e}, L2={l2_err_dx:.6e}")
     print(f"  df/dy:  max={max_err_dy:.6e}, L2={l2_err_dy:.6e}")
     print(f"  d2f/dx2: max={max_err_dx2:.6e}, L2={l2_err_dx2:.6e}")
     print(f"  d2f/dy2: max={max_err_dy2:.6e}, L2={l2_err_dy2:.6e}")
     
-    # Check if errors are reasonable (turbulence field may have larger errors than smooth functions)
-    # Use a more relaxed tolerance for turbulence field
-    tolerance = 1e-6 if not shock_enabled else 1e-4
+    # Check if errors are reasonable (Taylor-Green vortex is smooth, so we expect high accuracy)
+    tolerance = 1e-6
     all_ok = (max_err_dx < tolerance and max_err_dy < tolerance and
               max_err_dx2 < tolerance and max_err_dy2 < tolerance)
     
@@ -202,7 +180,7 @@ def check_correctness(nx, ny, degree, use_gpu=False, shock_enabled=False):
         print(f"\n✓ All errors below tolerance ({tolerance:.1e})")
     else:
         print(f"\n⚠ Some errors exceed tolerance ({tolerance:.1e})")
-        print("  (This may be expected for turbulence fields with high-frequency content)")
+        print("  (This may indicate a numerical issue)")
     
     print("="*80 + "\n")
     
@@ -231,12 +209,12 @@ def compare_performance(nx, ny, degree, use_gpu=False, n_runs=10):
     print("=== Performance Comparison (Loop vs Batched) ===")
     print("="*80)
     
-    # Setup
+    # Setup - 2D Taylor-Green vortex: f(x,y) = sin(x) * sin(y)
     a, b = 0.0, 2.0 * np.pi
     x = np.linspace(a, b, nx, endpoint=True)
     y = np.linspace(a, b, ny, endpoint=True)
-    X, Y = np.meshgrid(x, y, indexing="ij")
-    F = np.sin(X / (1.01 + np.cos(Y)))
+    X, Y = np.meshgrid(x, y, indexing="xy")  # X varies along axis 1, Y along axis 0
+    F = np.sin(X) * np.sin(Y)
     
     # Convert to GPU array if needed
     if use_gpu and _HAS_CUPY:
@@ -367,12 +345,12 @@ def compare_gpu_cpu(nx, ny, degree, n_runs=10):
     print("=== GPU vs CPU Comparison (Batched Version) ===")
     print("="*80)
     
-    # Setup
+    # Setup - 2D Taylor-Green vortex: f(x,y) = sin(x) * sin(y)
     a, b = 0.0, 2.0 * np.pi
     x = np.linspace(a, b, nx, endpoint=True)
     y = np.linspace(a, b, ny, endpoint=True)
-    X, Y = np.meshgrid(x, y, indexing="ij")
-    F = np.sin(X / (1.01 + np.cos(Y)))
+    X, Y = np.meshgrid(x, y, indexing="xy")  # X varies along axis 1, Y along axis 0
+    F = np.sin(X) * np.sin(Y)
     
     # Build CPU operator
     print("Building CPU operator...")
@@ -474,22 +452,20 @@ def compare_gpu_cpu(nx, ny, degree, n_runs=10):
 
 def parse_args():
     p = argparse.ArgumentParser(
-        description="Profile bspf2d.differentiate_1_2 using turbulence field test data",
+        description="Profile bspf2d.differentiate_1_2 using 2D Taylor-Green vortex test data",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
     p.add_argument("--nx", type=int, default=512, 
-                   help="Grid points in x (matching diff_2d.py default)")
+                   help="Grid points in x")
     p.add_argument("--ny", type=int, default=512, 
-                   help="Grid points in y (matching diff_2d.py default)")
+                   help="Grid points in y")
     p.add_argument("--degree", type=int, default=7, 
-                   help="B-spline degree (matching diff_2d.py)")
+                   help="B-spline degree")
     p.add_argument("--runs", type=int, default=10, help="Number of timing runs")
     p.add_argument("--gpu", action="store_true", help="Use GPU (CuPy) if available")
     p.add_argument("--no-check", action="store_true", help="Skip correctness check")
     p.add_argument("--no-gpu-cpu", action="store_true", 
                    help="Skip GPU vs CPU comparison (requires CuPy)")
-    p.add_argument("--shock", action="store_true", 
-                   help="Enable circular shock wave (matching diff_2d.py)")
     return p.parse_args()
 
 
@@ -503,7 +479,6 @@ def main():
             ny=args.ny,
             degree=args.degree,
             use_gpu=args.gpu,
-            shock_enabled=args.shock,
         )
     
     # Compare performance of loop vs batched versions
@@ -524,12 +499,11 @@ def main():
             n_runs=args.runs,
         )
     
-    # Then run detailed profiling (using simple test function for profiling, not turbulence)
-    # Note: run_profile_2d uses a simple test function, not the turbulence field
+    # Then run detailed profiling (using 2D Taylor-Green vortex)
     print("\n" + "="*80)
     print("=== Detailed Performance Profiling (Batched Version) ===")
     print("="*80)
-    print("Note: Profiling uses a simple test function, not the turbulence field.")
+    print("Note: Profiling uses 2D Taylor-Green vortex: f(x,y) = sin(x) * sin(y)")
     print("="*80 + "\n")
     run_profile_2d(
         nx=args.nx,

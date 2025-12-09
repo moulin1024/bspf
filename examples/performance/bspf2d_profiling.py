@@ -198,6 +198,21 @@ class _AxisPlan:
         """Compute ∂^order(F)/∂axis^order with optional Neumann flux enforcement (GPU-aware)."""
         xp, la, fft = self._bk.xp, self._bk.la, self._bk.fft
         input_was_numpy = (not self._bk.is_gpu) or isinstance(F, np.ndarray)
+        
+        # Validate device consistency - throw error instead of implicit conversion
+        if self._bk.is_gpu:
+            if _HAS_CUPY and isinstance(F, np.ndarray):
+                raise ValueError(
+                    "Cannot use NumPy array when use_gpu=True. "
+                    "Either: (1) convert input to CuPy array before calling, or (2) use use_gpu=False."
+                )
+        else:
+            if _HAS_CUPY and isinstance(F, cp.ndarray):
+                raise ValueError(
+                    "Cannot use CuPy array when use_gpu=False. "
+                    "Either: (1) convert input to NumPy array, or (2) use use_gpu=True."
+                )
+        
         # Optimize: avoid unnecessary asarray if F is already the right type and on the right device
         if self._bk.is_gpu and isinstance(F, cp.ndarray) and F.dtype == xp.float64:
             # Already a GPU array with correct dtype - just moveaxis
@@ -358,6 +373,13 @@ class bspf2d:
         if bc is None:
             return None, None
         m = model.end.BND.shape[0]
+        # Error if bc is a CuPy array (this method prepares CPU arrays)
+        if _HAS_CUPY and isinstance(bc, cp.ndarray):
+            raise ValueError(
+                "Cannot use CuPy array in _prepare_bc_vector. "
+                "This method prepares boundary condition vectors on CPU. "
+                "Either: (1) convert input to NumPy array, or (2) use a GPU-aware BC preparation method."
+            )
         v = np.asarray(bc, dtype=np.float64)
         if v.ndim == 0:
             vec = np.full(m, float(v))
@@ -388,6 +410,20 @@ class bspf2d:
         bk = _Backend(use_gpu)
         xp, la, fft = bk.xp, bk.la, bk.fft
         input_was_numpy = (not bk.is_gpu) or isinstance(F, np.ndarray)
+        
+        # Validate device consistency - throw error instead of implicit conversion
+        if bk.is_gpu:
+            if _HAS_CUPY and isinstance(F, np.ndarray):
+                raise ValueError(
+                    "Cannot use NumPy array when use_gpu=True in _diff_axis. "
+                    "Either: (1) convert input to CuPy array before calling, or (2) use use_gpu=False."
+                )
+        else:
+            if _HAS_CUPY and isinstance(F, cp.ndarray):
+                raise ValueError(
+                    "Cannot use CuPy array when use_gpu=False in _diff_axis. "
+                    "Either: (1) convert input to NumPy array, or (2) use use_gpu=True."
+                )
 
         FT = xp.moveaxis(xp.asarray(F, dtype=xp.float64), axis, 0)  # (n, batch)
         n, batch = FT.shape
@@ -417,8 +453,26 @@ class bspf2d:
         RHS = xp.vstack([2.0 * (BW @ FT), dY])
         lu_cpu, piv_cpu = model._kkt_lu(lam)
         if bk.is_gpu:
-            SOL = la.lu_solve((xp.asarray(lu_cpu), xp.asarray(piv_cpu)), RHS)
+            # Validate LU factors are on correct device
+            if _HAS_CUPY and isinstance(lu_cpu, np.ndarray):
+                # This is OK - we'll convert to GPU
+                lu_gpu = xp.asarray(lu_cpu)
+                piv_gpu = xp.asarray(piv_cpu)
+            elif _HAS_CUPY and isinstance(lu_cpu, cp.ndarray):
+                # Already on GPU
+                lu_gpu = lu_cpu
+                piv_gpu = piv_cpu
+            else:
+                lu_gpu = xp.asarray(lu_cpu)
+                piv_gpu = xp.asarray(piv_cpu)
+            SOL = la.lu_solve((lu_gpu, piv_gpu), RHS)
         else:
+            # Validate LU factors are NumPy arrays
+            if _HAS_CUPY and isinstance(lu_cpu, cp.ndarray):
+                raise ValueError(
+                    "Cannot use CuPy LU factors when use_gpu=False in _diff_axis. "
+                    "This indicates an internal inconsistency in the operator setup."
+                )
             SOL = la.lu_solve((lu_cpu, piv_cpu), bk.to_host(RHS))
             SOL = xp.asarray(SOL)
 
@@ -467,6 +521,20 @@ class bspf2d:
         bk = _Backend(use_gpu)
         xp, la, fft = bk.xp, bk.la, bk.fft
         input_was_numpy = (not bk.is_gpu) or isinstance(F, np.ndarray)
+        
+        # Validate device consistency - throw error instead of implicit conversion
+        if bk.is_gpu:
+            if _HAS_CUPY and isinstance(F, np.ndarray):
+                raise ValueError(
+                    "Cannot use NumPy array when use_gpu=True in _diff_axis_neumann. "
+                    "Either: (1) convert input to CuPy array before calling, or (2) use use_gpu=False."
+                )
+        else:
+            if _HAS_CUPY and isinstance(F, cp.ndarray):
+                raise ValueError(
+                    "Cannot use CuPy array when use_gpu=False in _diff_axis_neumann. "
+                    "Either: (1) convert input to NumPy array, or (2) use use_gpu=True."
+                )
 
         FT = xp.moveaxis(xp.asarray(F, dtype=xp.float64), axis, 0)
         n, batch = FT.shape
@@ -505,8 +573,26 @@ class bspf2d:
         RHS = xp.vstack([2.0 * (BW @ FT), dY])
         lu_cpu, piv_cpu = model._kkt_lu(lam)
         if bk.is_gpu:
-            SOL = la.lu_solve((xp.asarray(lu_cpu), xp.asarray(piv_cpu)), RHS)
+            # Validate LU factors are on correct device
+            if _HAS_CUPY and isinstance(lu_cpu, np.ndarray):
+                # This is OK - we'll convert to GPU
+                lu_gpu = xp.asarray(lu_cpu)
+                piv_gpu = xp.asarray(piv_cpu)
+            elif _HAS_CUPY and isinstance(lu_cpu, cp.ndarray):
+                # Already on GPU
+                lu_gpu = lu_cpu
+                piv_gpu = piv_cpu
+            else:
+                lu_gpu = xp.asarray(lu_cpu)
+                piv_gpu = xp.asarray(piv_cpu)
+            SOL = la.lu_solve((lu_gpu, piv_gpu), RHS)
         else:
+            # Validate LU factors are NumPy arrays
+            if _HAS_CUPY and isinstance(lu_cpu, cp.ndarray):
+                raise ValueError(
+                    "Cannot use CuPy LU factors when use_gpu=False in _diff_axis_neumann. "
+                    "This indicates an internal inconsistency in the operator setup."
+                )
             SOL = la.lu_solve((lu_cpu, piv_cpu), bk.to_host(RHS))
             SOL = xp.asarray(SOL)
 
@@ -703,7 +789,26 @@ class bspf2d:
             # The batched version is better for GPU or very large grids where:
             # - Parallelization benefits outweigh cache misses
             # - Memory bandwidth is the bottleneck (not CPU cache)
-            F_np = np.asarray(F, dtype=np.float64)
+            
+            # Validate device consistency - throw error instead of implicit conversion
+            if self.use_gpu:
+                if _HAS_CUPY and isinstance(F, np.ndarray):
+                    raise ValueError(
+                        "Cannot use NumPy array when use_gpu=True in differentiate_1_2 (use_loop=True). "
+                        "Either: (1) convert input to CuPy array before calling, or (2) use use_gpu=False, or (3) use use_loop=False."
+                    )
+                # Convert CuPy to NumPy for loop version (loop version uses CPU)
+                if _HAS_CUPY and isinstance(F, cp.ndarray):
+                    F_np = cp.asnumpy(F).astype(np.float64)
+                else:
+                    F_np = np.asarray(F, dtype=np.float64)
+            else:
+                if _HAS_CUPY and isinstance(F, cp.ndarray):
+                    raise ValueError(
+                        "Cannot use CuPy array when use_gpu=False in differentiate_1_2 (use_loop=True). "
+                        "Either: (1) convert input to NumPy array, or (2) use use_gpu=True."
+                    )
+                F_np = np.asarray(F, dtype=np.float64)
             ny, nx = F_np.shape
             
             # For x-direction: differentiate along columns (axis=1)
@@ -874,7 +979,8 @@ def run_profile_2d(
     use_gpu: bool = False,
 ) -> Dict[str, Tuple[float, float, float, float]]:
     """
-    Benchmark bspf2d.differentiate_1_2 over a simple smooth test function.
+    Benchmark bspf2d.differentiate_1_2 over 2D Taylor-Green vortex test function.
+    Uses f(x,y) = sin(x) * sin(y) as the scalar field.
     Returns a dict of timing stats (mean, std, min, max) in seconds.
     """
     a, b = 0.0, 2.0 * np.pi
@@ -882,8 +988,13 @@ def run_profile_2d(
     y = np.linspace(a, b, ny, endpoint=True)
     X, Y = np.meshgrid(x, y, indexing="ij")
 
-    # Test function
-    F = np.sin(X / (1.01 + np.cos(Y)))
+    # 2D Taylor-Green vortex scalar field: f(x,y) = sin(x) * sin(y)
+    # Exact derivatives:
+    #   df/dx = cos(x) * sin(y)
+    #   df/dy = sin(x) * cos(y)
+    #   d2f/dx2 = -sin(x) * sin(y)
+    #   d2f/dy2 = -sin(x) * sin(y)
+    F = np.sin(X) * np.sin(Y)
     
     # Convert to GPU array if needed
     if use_gpu and _HAS_CUPY:
