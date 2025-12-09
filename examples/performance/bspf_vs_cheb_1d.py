@@ -25,7 +25,7 @@ import time
 import sympy as sp
 
 from bspf import bspf1d
-from specderiv import cheb_deriv
+from bspf.utils import chebyshev_derivative_from_values, _construct_chebyshev_nodes
 
 # =============================================================================
 # Configuration Parameters
@@ -117,7 +117,7 @@ def time_bspf_gpu(N, n_runs=N_RUNS):
     # Test function - convert to GPU array
     try:
         import cupy as cp
-        f = cp.asarray(np.tanh(TANH_ALPHA * (x - TANH_CENTER)))
+        f = cp.asarray(f_func(x))
     except ImportError:
         raise RuntimeError("CuPy is required for GPU benchmarking. Install cupy (e.g., `pip install cupy-cuda12x`)")
     
@@ -142,20 +142,17 @@ def time_bspf_gpu(N, n_runs=N_RUNS):
 def time_chebyshev(N, n_runs=N_RUNS):
     """Time Chebyshev derivative for size N"""
     # Setup Chebyshev-Gauss-Lobatto nodes (N intervals → N+1 nodes)
-    a, b = DOMAIN
-    n_intervals = N - 1
-    t = np.cos(np.arange(n_intervals + 1) * np.pi / n_intervals)  # [-1, 1]
-    x = (b - a) * t / 2.0 + (b + a) / 2.0
+    x, _ = _construct_chebyshev_nodes(N - 1, domain=DOMAIN)
     f_vals = f_func(x)  # evaluate function at nodes
     
     # Warmup
-    _ = cheb_deriv(f_vals, x, order=1)
+    _ = chebyshev_derivative_from_values(f_vals, x, domain=DOMAIN)
     
     # Timing
     times = []
     for _ in range(n_runs):
         start_time = time.perf_counter()
-        _ = cheb_deriv(f_vals, x, order=1)
+        _ = chebyshev_derivative_from_values(f_vals, x, domain=DOMAIN)
         end_time = time.perf_counter()
         times.append(end_time - start_time)
     
@@ -168,9 +165,7 @@ def compute_errors(N_bspf, N_cheb):
     a, b = DOMAIN
     x_bspf = np.linspace(a, b, N_bspf)
     # Chebyshev-Gauss-Lobatto nodes (N intervals → N+1 nodes)
-    n_intervals = N_cheb - 1
-    t_cheb = np.cos(np.arange(n_intervals + 1) * np.pi / n_intervals)  # [-1,1]
-    x_cheb = (b - a) * t_cheb / 2.0 + (b + a) / 2.0
+    x_cheb, _ = _construct_chebyshev_nodes(N_cheb - 1, domain=DOMAIN)
     
     # Test function and its analytical derivatives via sympy lambdify
     f_bspf = f_func(x_bspf)
@@ -196,7 +191,7 @@ def compute_errors(N_bspf, N_cheb):
     df_bspf, _ = model.differentiate(f_bspf, k=1, lam=LAM)
     
     # Chebyshev computation
-    df_cheb = cheb_deriv(f_cheb, x_cheb, order=1)
+    df_cheb = chebyshev_derivative_from_values(f_cheb, x_cheb, domain=DOMAIN)
     
     # Compute L2 errors
     error_bspf = np.sqrt(np.mean((df_bspf - df_exact_bspf)**2))
