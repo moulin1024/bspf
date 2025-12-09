@@ -25,7 +25,7 @@ import time
 import sympy as sp
 
 from bspf import bspf1d
-from bspf.utils import chebyshev_derivative_from_values, _construct_chebyshev_nodes
+from bspf.utils import chebyshev_derivative_from_values, construct_chebyshev_nodes
 
 # =============================================================================
 # Configuration Parameters
@@ -142,7 +142,7 @@ def time_bspf_gpu(N, n_runs=N_RUNS):
 def time_chebyshev(N, n_runs=N_RUNS):
     """Time Chebyshev derivative for size N"""
     # Setup Chebyshev-Gauss-Lobatto nodes (N intervals → N+1 nodes)
-    x, _ = _construct_chebyshev_nodes(N - 1, domain=DOMAIN)
+    x, _ = construct_chebyshev_nodes(N - 1, domain=DOMAIN)
     f_vals = f_func(x)  # evaluate function at nodes
     
     # Warmup
@@ -165,7 +165,7 @@ def compute_errors(N_bspf, N_cheb):
     a, b = DOMAIN
     x_bspf = np.linspace(a, b, N_bspf)
     # Chebyshev-Gauss-Lobatto nodes (N intervals → N+1 nodes)
-    x_cheb, _ = _construct_chebyshev_nodes(N_cheb - 1, domain=DOMAIN)
+    x_cheb, _ = construct_chebyshev_nodes(N_cheb - 1, domain=DOMAIN)
     
     # Test function and its analytical derivatives via sympy lambdify
     f_bspf = f_func(x_bspf)
