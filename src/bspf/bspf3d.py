@@ -635,6 +635,201 @@ class bspf3d:
     def partial_dzz(self, F: Array, *, lam: float = 0.0, uniform_bc: bool = False, bc: float | Array | None = None):
         return self.partial_dz(F, order=2, lam=lam, uniform_bc=uniform_bc, bc=bc)
 
+    # ---- compute first and second derivatives together (efficient) ----
+    def differentiate_1_2(
+        self,
+        F: Array,
+        *,
+        lam_x: float = 0.0,
+        lam_y: float = 0.0,
+        lam_z: float = 0.0,
+        uniform_bc_x: bool = False,
+        uniform_bc_y: bool = False,
+        uniform_bc_z: bool = False,
+        bc_x: float | Array | None = None,
+        bc_y: float | Array | None = None,
+        bc_z: float | Array | None = None,
+        use_loop: bool = False,
+    ) -> Tuple[Array, Array, Array, Array, Array, Array]:
+        """
+        Compute first and second derivatives in x, y, and z directions together.
+        More efficient than calling partial_dx, partial_dy, partial_dz, partial_dxx, partial_dyy, partial_dzz separately
+        because it reuses intermediate computations.
+        
+        Parameters
+        ----------
+        F : Array
+            3D array of shape (nz, ny, nx)
+        lam_x : float, default 0.0
+            Tikhonov regularization parameter for x-direction
+        lam_y : float, default 0.0
+            Tikhonov regularization parameter for y-direction
+        lam_z : float, default 0.0
+            Tikhonov regularization parameter for z-direction
+        uniform_bc_x : bool, default False
+            Whether to use uniform boundary conditions in x-direction
+        uniform_bc_y : bool, default False
+            Whether to use uniform boundary conditions in y-direction
+        uniform_bc_z : bool, default False
+            Whether to use uniform boundary conditions in z-direction
+        bc_x : float | Array | None, default None
+            Boundary condition values for x-direction
+        bc_y : float | Array | None, default None
+            Boundary condition values for y-direction
+        bc_z : float | Array | None, default None
+            Boundary condition values for z-direction
+        use_loop : bool, default False
+            If True, use loop-based implementation (faster for CPU on smaller grids).
+            If False, use batched operations (better for GPU or very large grids).
+        
+        Returns
+        -------
+        dF_dx : Array
+            First derivative in x-direction: ∂F/∂x, shape (nz, ny, nx)
+        dF_dy : Array
+            First derivative in y-direction: ∂F/∂y, shape (nz, ny, nx)
+        dF_dz : Array
+            First derivative in z-direction: ∂F/∂z, shape (nz, ny, nx)
+        d2F_dx2 : Array
+            Second derivative in x-direction: ∂²F/∂x², shape (nz, ny, nx)
+        d2F_dy2 : Array
+            Second derivative in y-direction: ∂²F/∂y², shape (nz, ny, nx)
+        d2F_dz2 : Array
+            Second derivative in z-direction: ∂²F/∂z², shape (nz, ny, nx)
+        """
+        self._check_shape(F)
+        
+        if use_loop:
+            # Loop-based implementation (better cache behavior for CPU)
+            F_np = np.asarray(F, dtype=np.float64)
+            nz, ny, nx = F_np.shape
+            
+            # For x-direction: differentiate along axis=2 (columns)
+            dF_dx_list = []
+            d2F_dx2_list = []
+            for i in range(nz):
+                for j in range(ny):
+                    f_col = F_np[i, j, :]  # (nx,)
+                    df1_x, df2_x, _ = self.x_model.differentiate_1_2(f_col, lam=lam_x)
+                    dF_dx_list.append(df1_x)
+                    d2F_dx2_list.append(df2_x)
+            dF_dx = np.array(dF_dx_list).reshape(nz, ny, nx)
+            d2F_dx2 = np.array(d2F_dx2_list).reshape(nz, ny, nx)
+            
+            # For y-direction: differentiate along axis=1 (rows)
+            dF_dy_list = []
+            d2F_dy2_list = []
+            for i in range(nz):
+                for j in range(nx):
+                    f_row = F_np[i, :, j]  # (ny,)
+                    df1_y, df2_y, _ = self.y_model.differentiate_1_2(f_row, lam=lam_y)
+                    dF_dy_list.append(df1_y)
+                    d2F_dy2_list.append(df2_y)
+            # Reshape: list order is (z=0,x=0), (z=0,x=1), ..., (z=0,x=nx-1), (z=1,x=0), ...
+            # So reshape to (nz, nx, ny) then transpose to (nz, ny, nx)
+            dF_dy = np.array(dF_dy_list).reshape(nz, nx, ny).transpose(0, 2, 1)
+            d2F_dy2 = np.array(d2F_dy2_list).reshape(nz, nx, ny).transpose(0, 2, 1)
+            
+            # For z-direction: differentiate along axis=0 (depth)
+            dF_dz_list = []
+            d2F_dz2_list = []
+            for j in range(ny):
+                for k in range(nx):
+                    f_depth = F_np[:, j, k]  # (nz,)
+                    df1_z, df2_z, _ = self.z_model.differentiate_1_2(f_depth, lam=lam_z)
+                    dF_dz_list.append(df1_z)
+                    d2F_dz2_list.append(df2_z)
+            # Reshape: list order is (y=0,x=0), (y=0,x=1), ..., (y=0,x=nx-1), (y=1,x=0), ...
+            # So reshape to (ny, nx, nz) then transpose to (nz, ny, nx)
+            dF_dz = np.array(dF_dz_list).reshape(ny, nx, nz).transpose(2, 0, 1)
+            d2F_dz2 = np.array(d2F_dz2_list).reshape(ny, nx, nz).transpose(2, 0, 1)
+        else:
+            # Batched implementation (better for GPU or very large grids)
+            # Check if differentiate_1_2_batched is available (temporarily in profiling version)
+            has_batched = hasattr(self.x_model, 'differentiate_1_2_batched')
+            
+            if not has_batched:
+                # Fall back to loop version if batched method is not available
+                # This will happen when using the regular bspf1d module (not profiling version)
+                F_np = np.asarray(F, dtype=np.float64)
+                nz, ny, nx = F_np.shape
+                
+                # For x-direction: differentiate along axis=2 (columns)
+                dF_dx_list = []
+                d2F_dx2_list = []
+                for i in range(nz):
+                    for j in range(ny):
+                        f_col = F_np[i, j, :]  # (nx,)
+                        df1_x, df2_x, _ = self.x_model.differentiate_1_2(f_col, lam=lam_x)
+                        dF_dx_list.append(df1_x)
+                        d2F_dx2_list.append(df2_x)
+                dF_dx = np.array(dF_dx_list).reshape(nz, ny, nx)
+                d2F_dx2 = np.array(d2F_dx2_list).reshape(nz, ny, nx)
+                
+                # For y-direction: differentiate along axis=1 (rows)
+                dF_dy_list = []
+                d2F_dy2_list = []
+                for i in range(nz):
+                    for j in range(nx):
+                        f_row = F_np[i, :, j]  # (ny,)
+                        df1_y, df2_y, _ = self.y_model.differentiate_1_2(f_row, lam=lam_y)
+                        dF_dy_list.append(df1_y)
+                        d2F_dy2_list.append(df2_y)
+                # Reshape: list order is (z=0,x=0), (z=0,x=1), ..., (z=0,x=nx-1), (z=1,x=0), ...
+                # So reshape to (nz, nx, ny) then transpose to (nz, ny, nx)
+                dF_dy = np.array(dF_dy_list).reshape(nz, nx, ny).transpose(0, 2, 1)
+                d2F_dy2 = np.array(d2F_dy2_list).reshape(nz, nx, ny).transpose(0, 2, 1)
+                
+                # For z-direction: differentiate along axis=0 (depth)
+                dF_dz_list = []
+                d2F_dz2_list = []
+                for j in range(ny):
+                    for k in range(nx):
+                        f_depth = F_np[:, j, k]  # (nz,)
+                        df1_z, df2_z, _ = self.z_model.differentiate_1_2(f_depth, lam=lam_z)
+                        dF_dz_list.append(df1_z)
+                        d2F_dz2_list.append(df2_z)
+                # Reshape: list order is (y=0,x=0), (y=0,x=1), ..., (y=0,x=nx-1), (y=1,x=0), ...
+                # So reshape to (ny, nx, nz) then transpose to (nz, ny, nx)
+                dF_dz = np.array(dF_dz_list).reshape(ny, nx, nz).transpose(2, 0, 1)
+                d2F_dz2 = np.array(d2F_dz2_list).reshape(ny, nx, nz).transpose(2, 0, 1)
+            else:
+                # Use batched implementation when available
+                F_np = np.asarray(F, dtype=np.float64)
+                nz, ny, nx = F_np.shape
+                
+                # For x-direction: differentiate along axis=2 (columns)
+                # Reshape to (nx, nz*ny) for batched differentiation
+                F_reshaped_x = F_np.reshape(nz * ny, nx).T  # (nx, nz*ny)
+                dF_dx_T, d2F_dx2_T, _ = self.x_model.differentiate_1_2_batched(F_reshaped_x, lam=lam_x)
+                dF_dx = dF_dx_T.T.reshape(nz, ny, nx)
+                d2F_dx2 = d2F_dx2_T.T.reshape(nz, ny, nx)
+                
+                # For y-direction: differentiate along axis=1 (rows)
+                # Reshape to (ny, nz*nx) for batched differentiation
+                F_reshaped_y = F_np.transpose(0, 2, 1).reshape(nz * nx, ny).T  # (ny, nz*nx)
+                dF_dy_T, d2F_dy2_T, _ = self.y_model.differentiate_1_2_batched(F_reshaped_y, lam=lam_y)
+                dF_dy_T_reshaped = dF_dy_T.T.reshape(nz, nx, ny)
+                dF_dy = dF_dy_T_reshaped.transpose(0, 2, 1)
+                d2F_dy2_T_reshaped = d2F_dy2_T.T.reshape(nz, nx, ny)
+                d2F_dy2 = d2F_dy2_T_reshaped.transpose(0, 2, 1)
+                
+                # For z-direction: differentiate along axis=0 (depth)
+                # Reshape to (nz, ny*nx) for batched differentiation
+                F_reshaped_z = F_np.reshape(nz, ny * nx)  # (nz, ny*nx)
+                dF_dz, d2F_dz2, _ = self.z_model.differentiate_1_2_batched(F_reshaped_z, lam=lam_z)
+                dF_dz = dF_dz.reshape(nz, ny, nx)
+                d2F_dz2 = d2F_dz2.reshape(nz, ny, nx)
+        
+        return (
+            dF_dx.astype(np.float64),
+            dF_dy.astype(np.float64),
+            dF_dz.astype(np.float64),
+            d2F_dx2.astype(np.float64),
+            d2F_dy2.astype(np.float64),
+            d2F_dz2.astype(np.float64),
+        )
+
     # ---- Neumann-enforced variants ----
     def partial_dx_neumann(
         self,
