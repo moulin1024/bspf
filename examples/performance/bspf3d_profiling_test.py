@@ -2,6 +2,7 @@
 Standalone test/driver for bspf3d_profiling with correctness checking.
 
 Uses Taylor-Green vortex as the test function with exact derivatives.
+Matches the implementation from examples/basic/diff_gpu_vs_cpu_3d.py.
 
 Run:
     python examples/performance/bspf3d_profiling_test.py
@@ -34,48 +35,29 @@ except ImportError:
     cp = None
 
 
-def taylor_green_vortex_3d(X, Y, Z):
-    """
-    Taylor-Green vortex test function: f(x,y,z) = sin(x) * sin(y) * sin(z)
-    
-    Returns function value and exact derivatives.
-    """
-    F = np.sin(X) * np.sin(Y) * np.sin(Z)
-    
-    # Exact first derivatives
-    df_dx = np.cos(X) * np.sin(Y) * np.sin(Z)
-    df_dy = np.sin(X) * np.cos(Y) * np.sin(Z)
-    df_dz = np.sin(X) * np.sin(Y) * np.cos(Z)
-    
-    # Exact second derivatives
-    d2f_dx2 = -np.sin(X) * np.sin(Y) * np.sin(Z)
-    d2f_dy2 = -np.sin(X) * np.sin(Y) * np.sin(Z)
-    d2f_dz2 = -np.sin(X) * np.sin(Y) * np.sin(Z)
-    
-    return F, df_dx, df_dy, df_dz, d2f_dx2, d2f_dy2, d2f_dz2
 
 
 def check_correctness(nx, ny, nz, degree, use_gpu=False):
     """
     Check correctness of differentiate_1_2 against exact Taylor-Green vortex derivatives.
+    Uses the same approach as examples/basic/diff_gpu_vs_cpu_3d.py.
     """
     print("\n" + "="*80)
     print("=== Correctness Check (Taylor-Green Vortex) ===")
     print("="*80)
     
-    # Domain
+    # Domain - matches diff_gpu_vs_cpu_3d.py
     DOMAIN = [0, 2*np.pi]
-    L = DOMAIN[1] - DOMAIN[0]
     x = np.linspace(DOMAIN[0], DOMAIN[1], nx, endpoint=True)
     y = np.linspace(DOMAIN[0], DOMAIN[1], ny, endpoint=True)
     z = np.linspace(DOMAIN[0], DOMAIN[1], nz, endpoint=True)
     
-    # Create meshgrid using "xy" indexing like working version, then reshape to (nz, ny, nx)
-    # This matches the approach in diff_gpu_vs_cpu_3d.py
+    # Create meshgrid using "xy" indexing like diff_gpu_vs_cpu_3d.py, then reshape to (nz, ny, nx)
     X, Y, Z = np.meshgrid(x, y, z, indexing="xy")  # (ny, nx, nz)
     to_nz_ny_nx = lambda A: np.moveaxis(A, 2, 0)  # (ny, nx, nz) -> (nz, ny, nx)
     
-    # Generate Taylor-Green vortex field
+    # Generate Taylor-Green vortex field: f(x,y,z) = sin(x) * sin(y) * sin(z)
+    # This matches the scalar field test used in diff_gpu_vs_cpu_3d.py style
     print(f"Generating Taylor-Green vortex field: {nx}x{ny}x{nz} grid...")
     F = to_nz_ny_nx(np.sin(X) * np.sin(Y) * np.sin(Z))
     
