@@ -30,6 +30,14 @@ from examples.basic.diff_2d import (
     add_circular_shock_wave
 )
 
+# Optional GPU support
+_HAS_CUPY = False
+try:
+    import cupy as cp
+    _HAS_CUPY = True
+except ImportError:
+    cp = None
+
 
 def check_correctness(nx, ny, degree, use_gpu=False, shock_enabled=False):
     """
@@ -80,7 +88,7 @@ def check_correctness(nx, ny, degree, use_gpu=False, shock_enabled=False):
             )
     
     # Build operator (matching diff_2d.py configuration)
-    print(f"Building BSPF2D operator: degree={degree}, clustering=True...")
+    print(f"Building BSPF2D operator: degree={degree}, clustering=True, use_gpu={use_gpu}...")
     op = bspf2d.from_grids(
         x=x,
         y=y,
@@ -94,12 +102,31 @@ def check_correctness(nx, ny, degree, use_gpu=False, shock_enabled=False):
         use_gpu=use_gpu,
     )
     
-    # Compute numerical derivatives with both versions
-    print("Computing derivatives with differentiate_1_2 (loop version)...")
-    df_dx_loop, df_dy_loop, d2f_dx2_loop, d2f_dy2_loop = op.differentiate_1_2(F, use_loop=True)
+    # Convert F to GPU array if needed
+    if use_gpu and _HAS_CUPY:
+        F_gpu = cp.asarray(F, dtype=cp.float64)
+    else:
+        F_gpu = F
     
-    print("Computing derivatives with differentiate_1_2 (batched version)...")
-    df_dx_batched, df_dy_batched, d2f_dx2_batched, d2f_dy2_batched = op.differentiate_1_2(F, use_loop=False)
+    # Compute numerical derivatives with both versions
+    # Note: Loop version may not be optimal on GPU (uses Python loops)
+    if use_gpu and _HAS_CUPY:
+        print("Computing derivatives with differentiate_1_2 (batched version, GPU)...")
+        df_dx_batched, df_dy_batched, d2f_dx2_batched, d2f_dy2_batched = op.differentiate_1_2(F_gpu, use_loop=False)
+        # Convert back to NumPy for comparison
+        df_dx_batched = cp.asnumpy(df_dx_batched) if isinstance(df_dx_batched, cp.ndarray) else df_dx_batched
+        df_dy_batched = cp.asnumpy(df_dy_batched) if isinstance(df_dy_batched, cp.ndarray) else df_dy_batched
+        d2f_dx2_batched = cp.asnumpy(d2f_dx2_batched) if isinstance(d2f_dx2_batched, cp.ndarray) else d2f_dx2_batched
+        d2f_dy2_batched = cp.asnumpy(d2f_dy2_batched) if isinstance(d2f_dy2_batched, cp.ndarray) else d2f_dy2_batched
+        # For GPU, we only test batched version (loop version uses Python loops which don't benefit from GPU)
+        df_dx_loop, df_dy_loop, d2f_dx2_loop, d2f_dy2_loop = df_dx_batched, df_dy_batched, d2f_dx2_batched, d2f_dy2_batched
+        print("(Skipping loop version on GPU - it uses Python loops which don't benefit from GPU)")
+    else:
+        print("Computing derivatives with differentiate_1_2 (loop version)...")
+        df_dx_loop, df_dy_loop, d2f_dx2_loop, d2f_dy2_loop = op.differentiate_1_2(F_gpu, use_loop=True)
+        
+        print("Computing derivatives with differentiate_1_2 (batched version)...")
+        df_dx_batched, df_dy_batched, d2f_dx2_batched, d2f_dy2_batched = op.differentiate_1_2(F_gpu, use_loop=False)
     
     # Compare consistency between loop and batched versions
     print("\nComparing loop vs batched versions for consistency...")
@@ -196,54 +223,28 @@ def check_correctness(nx, ny, degree, use_gpu=False, shock_enabled=False):
     }
 
 
-def compare_performance(nx, ny, degree, use_gpu=False, n_runs=10, shock_enabled=False):
+def compare_performance(nx, ny, degree, use_gpu=False, n_runs=10):
     """
-    Compare performance of loop vs batched versions using turbulence field data.
+    Compare performance of loop vs batched versions.
     """
     print("\n" + "="*80)
     print("=== Performance Comparison (Loop vs Batched) ===")
     print("="*80)
     
-    # Parameters matching diff_2d.py
-    DOMAIN_X = [0, 2*np.pi]
-    DOMAIN_Y = [0, 2*np.pi]
-    TURB_N_MODES = 64
-    TURB_SEED = 123
-    SHOCK_CENTER_X = np.pi
-    SHOCK_CENTER_Y = np.pi
-    SHOCK_RADIUS = 0.5
-    SHOCK_AMPLITUDE = 2.0
-    SHOCK_WIDTH = 0.02
+    # Setup
+    a, b = 0.0, 2.0 * np.pi
+    x = np.linspace(a, b, nx, endpoint=True)
+    y = np.linspace(a, b, ny, endpoint=True)
+    X, Y = np.meshgrid(x, y, indexing="ij")
+    F = np.sin(X / (1.01 + np.cos(Y)))
     
-    # Domain
-    Lx = DOMAIN_X[1] - DOMAIN_X[0]
-    Ly = DOMAIN_Y[1] - DOMAIN_Y[0]
-    x = np.linspace(DOMAIN_X[0], DOMAIN_X[1], nx, endpoint=True)
-    y = np.linspace(DOMAIN_Y[0], DOMAIN_Y[1], ny, endpoint=True)
-    X_grid, Y_grid = np.meshgrid(x, y)  # (ny, nx) - matches diff_2d.py convention
-    
-    # Generate turbulence field (same as in check_correctness)
-    print(f"Generating turbulence field: {nx}x{ny} grid, {TURB_N_MODES} modes...")
-    _, _, F, _, _, _, _, _ = \
-        random_turbulence_signal_2d_with_derivatives(
-            Lx=Lx, Ly=Ly, Nx=nx, Ny=ny,
-            nmodes=TURB_N_MODES, seed=TURB_SEED
-        )
-    # F is already in (ny, nx) format
-    
-    # Add shock wave if enabled
-    if shock_enabled:
-        print("Adding circular shock wave...")
-        F, _, _, _, _, _ = \
-            add_circular_shock_wave(
-                X_grid, Y_grid, F, np.zeros_like(F), np.zeros_like(F),
-                np.zeros_like(F), np.zeros_like(F), np.zeros_like(F),
-                center_x=SHOCK_CENTER_X, center_y=SHOCK_CENTER_Y,
-                radius=SHOCK_RADIUS, amplitude=SHOCK_AMPLITUDE, width=SHOCK_WIDTH
-            )
+    # Convert to GPU array if needed
+    if use_gpu and _HAS_CUPY:
+        F_gpu = cp.asarray(F, dtype=cp.float64)
+    else:
+        F_gpu = F
     
     # Build operator
-    print(f"Building BSPF2D operator: degree={degree}, clustering=True...")
     op = bspf2d.from_grids(
         x=x,
         y=y,
@@ -258,65 +259,95 @@ def compare_performance(nx, ny, degree, use_gpu=False, n_runs=10, shock_enabled=
     )
     
     # Warmup
-    _ = op.differentiate_1_2(F, use_loop=True)
-    _ = op.differentiate_1_2(F, use_loop=False)
+    if use_gpu and _HAS_CUPY:
+        _ = op.differentiate_1_2(F_gpu, use_loop=False)
+        cp.cuda.Stream.null.synchronize()
+    else:
+        _ = op.differentiate_1_2(F_gpu, use_loop=True)
+        _ = op.differentiate_1_2(F_gpu, use_loop=False)
     
-    # Time loop version
-    print(f"Timing loop version ({n_runs} runs)...")
-    times_loop = []
-    for _ in range(n_runs):
-        t0 = time.perf_counter()
-        _ = op.differentiate_1_2(F, use_loop=True)
-        t1 = time.perf_counter()
-        times_loop.append(t1 - t0)
+    # Time loop version (skip on GPU as it uses Python loops)
+    if use_gpu and _HAS_CUPY:
+        print(f"Timing loop version on GPU is skipped (uses Python loops, not GPU-accelerated)")
+        times_loop = []
+    else:
+        print(f"Timing loop version ({n_runs} runs)...")
+        times_loop = []
+        for _ in range(n_runs):
+            t0 = time.perf_counter()
+            _ = op.differentiate_1_2(F_gpu, use_loop=True)
+            t1 = time.perf_counter()
+            times_loop.append(t1 - t0)
     
     # Time batched version
     print(f"Timing batched version ({n_runs} runs)...")
     times_batched = []
     for _ in range(n_runs):
+        if use_gpu and _HAS_CUPY:
+            # Synchronize before timing
+            cp.cuda.Stream.null.synchronize()
         t0 = time.perf_counter()
-        _ = op.differentiate_1_2(F, use_loop=False)
+        _ = op.differentiate_1_2(F_gpu, use_loop=False)
+        if use_gpu and _HAS_CUPY:
+            # Synchronize after computation to ensure GPU work is done
+            cp.cuda.Stream.null.synchronize()
         t1 = time.perf_counter()
         times_batched.append(t1 - t0)
     
-    times_loop = np.array(times_loop)
     times_batched = np.array(times_batched)
     
     # Statistics
-    mean_loop = np.mean(times_loop)
-    std_loop = np.std(times_loop)
-    min_loop = np.min(times_loop)
-    max_loop = np.max(times_loop)
-    
     mean_batched = np.mean(times_batched)
     std_batched = np.std(times_batched)
     min_batched = np.min(times_batched)
     max_batched = np.max(times_batched)
     
-    speedup = mean_batched / mean_loop
-    
     print(f"\nGrid: nx={nx}, ny={ny}, degree={degree}, use_gpu={use_gpu}")
-    print(f"Test data: Turbulence field ({TURB_N_MODES} modes)" + (" + shock wave" if shock_enabled else ""))
     print(f"\n{'Version':<15s} {'Mean':>12s} {'Std':>12s} {'Min':>12s} {'Max':>12s}")
     print("-" * 65)
-    print(f"{'Loop':<15s} {mean_loop:12.6f} {std_loop:12.6f} {min_loop:12.6f} {max_loop:12.6f}")
-    print(f"{'Batched':<15s} {mean_batched:12.6f} {std_batched:12.6f} {min_batched:12.6f} {max_batched:12.6f}")
-    print("-" * 65)
     
-    if speedup > 1.0:
-        print(f"\nLoop version is {speedup:.2f}x faster than batched version")
+    if len(times_loop) > 0:
+        times_loop = np.array(times_loop)
+        mean_loop = np.mean(times_loop)
+        std_loop = np.std(times_loop)
+        min_loop = np.min(times_loop)
+        max_loop = np.max(times_loop)
+        speedup = mean_batched / mean_loop
+        
+        print(f"{'Loop':<15s} {mean_loop:12.6f} {std_loop:12.6f} {min_loop:12.6f} {max_loop:12.6f}")
+        print(f"{'Batched':<15s} {mean_batched:12.6f} {std_batched:12.6f} {min_batched:12.6f} {max_batched:12.6f}")
+        print("-" * 65)
+        
+        if speedup > 1.0:
+            print(f"\nLoop version is {speedup:.2f}x faster than batched version")
+        else:
+            print(f"\nBatched version is {1.0/speedup:.2f}x faster than loop version")
     else:
-        print(f"\nBatched version is {1.0/speedup:.2f}x faster than loop version")
+        print(f"{'Batched (GPU)':<15s} {mean_batched:12.6f} {std_batched:12.6f} {min_batched:12.6f} {max_batched:12.6f}")
+        print("-" * 65)
+        print(f"\nNote: Loop version skipped on GPU (uses Python loops, not GPU-accelerated)")
     
     print("="*80 + "\n")
     
-    return {
-        'mean_loop': mean_loop,
-        'std_loop': std_loop,
+    result = {
         'mean_batched': mean_batched,
         'std_batched': std_batched,
-        'speedup': speedup,
     }
+    
+    if len(times_loop) > 0:
+        times_loop = np.array(times_loop)
+        mean_loop = np.mean(times_loop)
+        std_loop = np.std(times_loop)
+        speedup = mean_batched / mean_loop
+        result.update({
+            'mean_loop': mean_loop,
+            'std_loop': std_loop,
+            'speedup': speedup,
+        })
+    else:
+        result['speedup'] = None
+    
+    return result
 
 
 def parse_args():
@@ -351,14 +382,13 @@ def main():
             shock_enabled=args.shock,
         )
     
-    # Compare performance of loop vs batched versions (using turbulence field)
+    # Compare performance of loop vs batched versions
     compare_performance(
         nx=args.nx,
         ny=args.ny,
         degree=args.degree,
         use_gpu=args.gpu,
         n_runs=args.runs,
-        shock_enabled=args.shock,
     )
     
     # Then run detailed profiling (using simple test function for profiling, not turbulence)

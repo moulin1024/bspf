@@ -884,6 +884,10 @@ def run_profile_2d(
 
     # Test function
     F = np.sin(X / (1.01 + np.cos(Y)))
+    
+    # Convert to GPU array if needed
+    if use_gpu and _HAS_CUPY:
+        F = cp.asarray(F, dtype=cp.float64)
 
     # Build operator
     op = bspf2d.from_grids(
@@ -901,6 +905,8 @@ def run_profile_2d(
 
     # Warmup
     _ = op.differentiate_1_2(F)
+    if use_gpu and _HAS_CUPY:
+        cp.cuda.Stream.null.synchronize()
 
     # With batched operations, we can only measure total time per direction
     # Detailed component timing (rhs_build, kkt_solve, etc.) is not available
@@ -914,6 +920,8 @@ def run_profile_2d(
     t_y_k2 = []     # Time for y-direction k=2 only
 
     for _ in range(n_runs):
+        if use_gpu and _HAS_CUPY:
+            cp.cuda.Stream.null.synchronize()
         t0 = time.perf_counter()
 
         # X direction: batched differentiation along columns (axis=1)
@@ -923,6 +931,8 @@ def run_profile_2d(
         dF_dx_T, d2F_dx2_T, _ = op.x_model.differentiate_1_2_batched(F_T, lam=0.0)
         dF_dx = dF_dx_T.T  # (ny, nx) - transpose back
         d2F_dx2 = d2F_dx2_T.T  # (ny, nx) - transpose back
+        if use_gpu and _HAS_CUPY:
+            cp.cuda.Stream.null.synchronize()
         t_x1 = time.perf_counter()
         t_x_batch.append(t_x1 - t_x0)
         # Note: With batched differentiate_1_2, we can't separate k=1 and k=2 timing
@@ -933,6 +943,8 @@ def run_profile_2d(
         # Y direction: batched differentiation along rows (axis=0)
         t_y0 = time.perf_counter()
         dF_dy, d2F_dy2, _ = op.y_model.differentiate_1_2_batched(F, lam=0.0)
+        if use_gpu and _HAS_CUPY:
+            cp.cuda.Stream.null.synchronize()
         t_y1 = time.perf_counter()
         t_y_batch.append(t_y1 - t_y0)
         # Note: With batched differentiate_1_2, we can't separate k=1 and k=2 timing
