@@ -394,25 +394,41 @@ class bspf1d:
         # Precompute Fortran-order (column-major) copies for faster, more stable BLAS matvecs
         # This significantly reduces variability in rhs_build (see investigate_rhs_build.py)
         # Fortran-order is optimal for BLAS matrix-vector operations
-        self._BW_f = np.asfortranarray(self.BW)
-        self._BND_f = np.asfortranarray(self.end.BND)
-        self._BT0_f = np.asfortranarray(self.basis.BT0)
-        # Cache BkT(1) and BkT(2) in Fortran order for differentiate_1_2
-        self._B1T_f = np.asfortranarray(self.basis.BkT(1))
-        self._B2T_f = np.asfortranarray(self.basis.BkT(2))
-        
-        # Pre-allocate RHS buffer to avoid concatenate overhead
-        n_b = self.basis.B0.shape[0]
-        self._rhs_buf = np.empty(n_b + 2 * self.order, dtype=np.float64)
-        
-        # Pre-compute FFT frequency multipliers for spectral correction
-        # This avoids recomputing (1j * omega) and (1j * omega)**2 on every call
-        omega = self.grid.omega
-        self._iomega = 1j * omega  # Pre-computed for first derivative correction
-        self._iomega2 = self._iomega ** 2  # Pre-computed for second derivative correction
-        
-        # Pre-allocate buffer for residual computation to avoid allocations
-        self._residual_buf = np.empty(self.grid.n, dtype=np.float64)
+        # Only create these for CPU - GPU arrays don't need this optimization
+        if self.use_gpu and _HAS_CUPY:
+            # For GPU, just store references (CuPy handles memory layout efficiently)
+            self._BW_f = self.BW
+            self._BND_f = self.end.BND
+            self._BT0_f = self.basis.BT0
+            self._B1T_f = self.basis.BkT(1)
+            self._B2T_f = self.basis.BkT(2)
+            # Pre-allocate RHS buffer on GPU
+            n_b = self.basis.B0.shape[0]
+            self._rhs_buf = cp.empty(n_b + 2 * self.order, dtype=cp.float64)
+            # Pre-compute FFT frequency multipliers on GPU
+            omega = cp.asarray(self.grid.omega)
+            self._iomega = 1j * omega
+            self._iomega2 = self._iomega ** 2
+            # Pre-allocate buffer for residual computation on GPU
+            self._residual_buf = cp.empty(self.grid.n, dtype=cp.float64)
+        else:
+            # CPU path: use Fortran-order for better BLAS performance
+            self._BW_f = np.asfortranarray(self.BW)
+            self._BND_f = np.asfortranarray(self.end.BND)
+            self._BT0_f = np.asfortranarray(self.basis.BT0)
+            # Cache BkT(1) and BkT(2) in Fortran order for differentiate_1_2
+            self._B1T_f = np.asfortranarray(self.basis.BkT(1))
+            self._B2T_f = np.asfortranarray(self.basis.BkT(2))
+            # Pre-allocate RHS buffer to avoid concatenate overhead
+            n_b = self.basis.B0.shape[0]
+            self._rhs_buf = np.empty(n_b + 2 * self.order, dtype=np.float64)
+            # Pre-compute FFT frequency multipliers for spectral correction
+            # This avoids recomputing (1j * omega) and (1j * omega)**2 on every call
+            omega = self.grid.omega
+            self._iomega = 1j * omega  # Pre-computed for first derivative correction
+            self._iomega2 = self._iomega ** 2  # Pre-computed for second derivative correction
+            # Pre-allocate buffer for residual computation to avoid allocations
+            self._residual_buf = np.empty(self.grid.n, dtype=np.float64)
 
         if correction == "spectral":
             self._correct = lambda residual, omega, kind, order, n: ResidualCorrection.spectral(
