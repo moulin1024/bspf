@@ -28,15 +28,27 @@ except Exception:
     cpla = None
 
 # Support running as a script or as part of the package
+# Prefer optimized profiling version, fall back to regular version
 try:
-    from .bspf1d import bspf1d  # when imported as package
+    from .bspf1d_profiling import bspf1d  # optimized profiling version
 except ImportError:
-    # when executed as a script: add repository src to sys.path
-    _here = os.path.abspath(os.path.dirname(__file__))
-    _root = os.path.abspath(os.path.join(_here, "..", "..", "src"))
-    if _root not in sys.path:
-        sys.path.insert(0, _root)
-    from bspf.bspf1d import bspf1d  # type: ignore
+    try:
+        from .bspf1d import bspf1d  # when imported as package
+    except ImportError:
+        # when executed as a script: add repository src to sys.path
+        import sys
+        _here = os.path.abspath(os.path.dirname(__file__))
+        _root = os.path.abspath(os.path.join(_here, "..", "..", "src"))
+        if _root not in sys.path:
+            sys.path.insert(0, _root)
+        try:
+            from bspf.bspf1d import bspf1d  # type: ignore
+        except ImportError:
+            # Fallback: try importing from examples/performance
+            _perf_dir = os.path.abspath(os.path.dirname(__file__))
+            if _perf_dir not in sys.path:
+                sys.path.insert(0, _perf_dir)
+            from bspf1d_profiling import bspf1d  # optimized profiling version
 
 Array = npt.NDArray[np.float64]
 
@@ -871,15 +883,19 @@ def run_profile_2d(
     # Warmup
     _ = op.differentiate_1_2(F)
 
-    # Detailed decomposition: x-pass, y-pass, total
-    t_x = []
-    t_y = []
+    # Detailed decomposition: collect timing from 1D models
+    # Initialize timing accumulators for 1D components
+    timing_keys = ['rhs_build', 'kkt_solve', 'spline_eval', 'fft_corr', 'total']
+    x_timings = {k: [] for k in timing_keys}
+    y_timings = {k: [] for k in timing_keys}
     t_total = []
+    t_x_loop = []  # Time for x-direction loop (including stacking)
+    t_y_loop = []  # Time for y-direction loop (including stacking)
 
     for _ in range(n_runs):
         t0 = time.perf_counter()
 
-        # X direction (rows)
+        # X direction: differentiate along columns (axis=1)
         t_x0 = time.perf_counter()
         dF_dx_list = []
         d2F_dx2_list = []
@@ -891,8 +907,16 @@ def run_profile_2d(
         dF_dx = np.stack(dF_dx_list, axis=0)
         d2F_dx2 = np.stack(d2F_dx2_list, axis=0)
         t_x1 = time.perf_counter()
+        t_x_loop.append(t_x1 - t_x0)
 
-        # Y direction (cols)
+        # Collect 1D timing from x_model (from last call in the loop)
+        if hasattr(op.x_model, 'last_timing_d12') and op.x_model.last_timing_d12:
+            for k in timing_keys:
+                if k in op.x_model.last_timing_d12:
+                    # Multiply by ny since we called it ny times
+                    x_timings[k].append(op.x_model.last_timing_d12[k] * ny)
+
+        # Y direction: differentiate along rows (axis=0)
         t_y0 = time.perf_counter()
         dF_dy_list = []
         d2F_dy2_list = []
@@ -904,31 +928,77 @@ def run_profile_2d(
         dF_dy = np.stack(dF_dy_list, axis=1)
         d2F_dy2 = np.stack(d2F_dy2_list, axis=1)
         t_y1 = time.perf_counter()
+        t_y_loop.append(t_y1 - t_y0)
 
-        # Combine (cheap)
-        _ = (dF_dx, dF_dy, d2F_dx2, d2F_dy2)
+        # Collect 1D timing from y_model (from last call in the loop)
+        if hasattr(op.y_model, 'last_timing_d12') and op.y_model.last_timing_d12:
+            for k in timing_keys:
+                if k in op.y_model.last_timing_d12:
+                    # Multiply by nx since we called it nx times
+                    y_timings[k].append(op.y_model.last_timing_d12[k] * nx)
+
         t1 = time.perf_counter()
-
-        t_x.append(t_x1 - t_x0)
-        t_y.append(t_y1 - t_y0)
         t_total.append(t1 - t0)
 
-    t_x = np.asarray(t_x)
-    t_y = np.asarray(t_y)
     t_total = np.asarray(t_total)
+    t_x_loop = np.asarray(t_x_loop)
+    t_y_loop = np.asarray(t_y_loop)
 
+    # Convert timing lists to arrays
+    for k in timing_keys:
+        if x_timings[k]:
+            x_timings[k] = np.asarray(x_timings[k])
+        if y_timings[k]:
+            y_timings[k] = np.asarray(y_timings[k])
+
+    # Print detailed breakdown
+    print("\n" + "="*80)
+    print("=== bspf2d differentiate_1_2 profiling (detailed decomposition) ===")
+    print("="*80)
+    print(f"grid: nx={nx}, ny={ny}, degree={degree}, runs={n_runs}, use_gpu={use_gpu}")
+    print(f"\n{'Component':20s} {'Mean':>12s} {'Std':>12s} {'Min':>12s} {'Max':>12s} {'% of total':>12s}")
+    print("-" * 80)
+    
+    # X-direction breakdown
+    print("\nX-direction (ny={} rows):".format(ny))
+    mean, std, tmin, tmax = _stats(t_x_loop)
+    pct = 100.0 * mean / np.mean(t_total) if np.mean(t_total) > 0 else 0.0
+    print(f"{'  x_loop_total':20s}: {mean:12.6f} {std:12.6f} {tmin:12.6f} {tmax:12.6f} {pct:11.2f}%")
+    for k in timing_keys:
+        if x_timings[k] is not None and len(x_timings[k]) > 0:
+            mean, std, tmin, tmax = _stats(x_timings[k])
+            pct = 100.0 * mean / np.mean(t_total) if np.mean(t_total) > 0 else 0.0
+            print(f"{'  x_'+k:20s}: {mean:12.6f} {std:12.6f} {tmin:12.6f} {tmax:12.6f} {pct:11.2f}%")
+    
+    # Y-direction breakdown
+    print("\nY-direction (nx={} cols):".format(nx))
+    mean, std, tmin, tmax = _stats(t_y_loop)
+    pct = 100.0 * mean / np.mean(t_total) if np.mean(t_total) > 0 else 0.0
+    print(f"{'  y_loop_total':20s}: {mean:12.6f} {std:12.6f} {tmin:12.6f} {tmax:12.6f} {pct:11.2f}%")
+    for k in timing_keys:
+        if y_timings[k] is not None and len(y_timings[k]) > 0:
+            mean, std, tmin, tmax = _stats(y_timings[k])
+            pct = 100.0 * mean / np.mean(t_total) if np.mean(t_total) > 0 else 0.0
+            print(f"{'  y_'+k:20s}: {mean:12.6f} {std:12.6f} {tmin:12.6f} {tmax:12.6f} {pct:11.2f}%")
+    
+    # Overall
+    print("\nOverall:")
+    mean, std, tmin, tmax = _stats(t_total)
+    print(f"{'total':20s}: {mean:12.6f} {std:12.6f} {tmin:12.6f} {tmax:12.6f} {'100.00':>12s}%")
+    print("="*80 + "\n")
+
+    # Return summary for programmatic access
     summary = {
-        "x_pass": _stats(t_x),
-        "y_pass": _stats(t_y),
+        "x_loop_total": _stats(t_x_loop),
+        "y_loop_total": _stats(t_y_loop),
         "total": _stats(t_total),
     }
-
-    # Print summary
-    print("=== bspf2d differentiate_1_2 profiling (decomposed) ===")
-    print(f"grid: nx={nx}, ny={ny}, degree={degree}, runs={n_runs}, use_gpu={use_gpu}")
-    for key in ("x_pass", "y_pass", "total"):
-        mean, std, tmin, tmax = summary[key]
-        print(f"{key:8s}: mean={mean:.6f}s, std={std:.6f}s, min={tmin:.6f}s, max={tmax:.6f}s")
+    for k in timing_keys:
+        if x_timings[k] is not None and len(x_timings[k]) > 0:
+            summary[f"x_{k}"] = _stats(x_timings[k])
+        if y_timings[k] is not None and len(y_timings[k]) > 0:
+            summary[f"y_{k}"] = _stats(y_timings[k])
+    
     return summary
 
 
