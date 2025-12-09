@@ -350,6 +350,128 @@ def compare_performance(nx, ny, degree, use_gpu=False, n_runs=10):
     return result
 
 
+def compare_gpu_cpu(nx, ny, degree, n_runs=10):
+    """
+    Compare GPU vs CPU performance for the batched version.
+    """
+    if not _HAS_CUPY:
+        print("\n" + "="*80)
+        print("=== GPU vs CPU Comparison (Batched Version) ===")
+        print("="*80)
+        print("CuPy is not available. Skipping GPU vs CPU comparison.")
+        print("Install CuPy to enable GPU comparison (e.g., `pip install cupy-cuda12x`)")
+        print("="*80 + "\n")
+        return None
+    
+    print("\n" + "="*80)
+    print("=== GPU vs CPU Comparison (Batched Version) ===")
+    print("="*80)
+    
+    # Setup
+    a, b = 0.0, 2.0 * np.pi
+    x = np.linspace(a, b, nx, endpoint=True)
+    y = np.linspace(a, b, ny, endpoint=True)
+    X, Y = np.meshgrid(x, y, indexing="ij")
+    F = np.sin(X / (1.01 + np.cos(Y)))
+    
+    # Build CPU operator
+    print("Building CPU operator...")
+    op_cpu = bspf2d.from_grids(
+        x=x,
+        y=y,
+        degree_x=degree,
+        degree_y=degree,
+        n_basis_x=4 * degree,
+        n_basis_y=4 * degree,
+        use_clustering_x=True,
+        use_clustering_y=True,
+        correction="spectral",
+        use_gpu=False,
+    )
+    
+    # Build GPU operator
+    print("Building GPU operator...")
+    F_gpu = cp.asarray(F, dtype=cp.float64)
+    op_gpu = bspf2d.from_grids(
+        x=x,
+        y=y,
+        degree_x=degree,
+        degree_y=degree,
+        n_basis_x=4 * degree,
+        n_basis_y=4 * degree,
+        use_clustering_x=True,
+        use_clustering_y=True,
+        correction="spectral",
+        use_gpu=True,
+    )
+    
+    # Warmup
+    print("Warming up CPU...")
+    _ = op_cpu.differentiate_1_2(F, use_loop=False)
+    print("Warming up GPU...")
+    _ = op_gpu.differentiate_1_2(F_gpu, use_loop=False)
+    cp.cuda.Stream.null.synchronize()
+    
+    # Time CPU batched version
+    print(f"Timing CPU batched version ({n_runs} runs)...")
+    times_cpu = []
+    for _ in range(n_runs):
+        t0 = time.perf_counter()
+        _ = op_cpu.differentiate_1_2(F, use_loop=False)
+        t1 = time.perf_counter()
+        times_cpu.append(t1 - t0)
+    
+    # Time GPU batched version
+    print(f"Timing GPU batched version ({n_runs} runs)...")
+    times_gpu = []
+    for _ in range(n_runs):
+        cp.cuda.Stream.null.synchronize()
+        t0 = time.perf_counter()
+        _ = op_gpu.differentiate_1_2(F_gpu, use_loop=False)
+        cp.cuda.Stream.null.synchronize()
+        t1 = time.perf_counter()
+        times_gpu.append(t1 - t0)
+    
+    times_cpu = np.array(times_cpu)
+    times_gpu = np.array(times_gpu)
+    
+    # Statistics
+    mean_cpu = np.mean(times_cpu)
+    std_cpu = np.std(times_cpu)
+    min_cpu = np.min(times_cpu)
+    max_cpu = np.max(times_cpu)
+    
+    mean_gpu = np.mean(times_gpu)
+    std_gpu = np.std(times_gpu)
+    min_gpu = np.min(times_gpu)
+    max_gpu = np.max(times_gpu)
+    
+    speedup = mean_cpu / mean_gpu
+    
+    print(f"\nGrid: nx={nx}, ny={ny}, degree={degree}")
+    print(f"\n{'Version':<15s} {'Mean':>12s} {'Std':>12s} {'Min':>12s} {'Max':>12s}")
+    print("-" * 65)
+    print(f"{'CPU (Batched)':<15s} {mean_cpu:12.6f} {std_cpu:12.6f} {min_cpu:12.6f} {max_cpu:12.6f}")
+    print(f"{'GPU (Batched)':<15s} {mean_gpu:12.6f} {std_gpu:12.6f} {min_gpu:12.6f} {max_gpu:12.6f}")
+    print("-" * 65)
+    
+    if speedup > 1.0:
+        print(f"\n✓ GPU is {speedup:.2f}x faster than CPU (batched version)")
+    else:
+        print(f"\n⚠ CPU is {1.0/speedup:.2f}x faster than GPU (batched version)")
+        print("  (This may indicate GPU overhead or small problem size)")
+    
+    print("="*80 + "\n")
+    
+    return {
+        'mean_cpu': mean_cpu,
+        'std_cpu': std_cpu,
+        'mean_gpu': mean_gpu,
+        'std_gpu': std_gpu,
+        'speedup': speedup,
+    }
+
+
 def parse_args():
     p = argparse.ArgumentParser(
         description="Profile bspf2d.differentiate_1_2 using turbulence field test data",
@@ -364,6 +486,8 @@ def parse_args():
     p.add_argument("--runs", type=int, default=10, help="Number of timing runs")
     p.add_argument("--gpu", action="store_true", help="Use GPU (CuPy) if available")
     p.add_argument("--no-check", action="store_true", help="Skip correctness check")
+    p.add_argument("--no-gpu-cpu", action="store_true", 
+                   help="Skip GPU vs CPU comparison (requires CuPy)")
     p.add_argument("--shock", action="store_true", 
                    help="Enable circular shock wave (matching diff_2d.py)")
     return p.parse_args()
@@ -390,6 +514,15 @@ def main():
         use_gpu=args.gpu,
         n_runs=args.runs,
     )
+    
+    # Compare GPU vs CPU for batched version (if CuPy is available and not skipped)
+    if not args.no_gpu_cpu:
+        compare_gpu_cpu(
+            nx=args.nx,
+            ny=args.ny,
+            degree=args.degree,
+            n_runs=args.runs,
+        )
     
     # Then run detailed profiling (using simple test function for profiling, not turbulence)
     # Note: run_profile_2d uses a simple test function, not the turbulence field
