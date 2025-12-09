@@ -58,8 +58,9 @@ except ImportError:
     pass
 
 # Import bspf3d (it will now use the profiling version of bspf1d)
+_bspf3d_base = None
 try:
-    from bspf.bspf3d import bspf3d
+    from bspf.bspf3d import bspf3d as _bspf3d_base
 except ImportError:
     # when executed as a script: add repository src to sys.path
     _here = os.path.abspath(os.path.dirname(__file__))
@@ -72,7 +73,61 @@ except ImportError:
         bspf.bspf1d = bspf1d
     except ImportError:
         pass
-    from bspf.bspf3d import bspf3d  # type: ignore
+    from bspf.bspf3d import bspf3d as _bspf3d_base  # type: ignore
+
+if _bspf3d_base is None:
+    raise ImportError("Failed to import bspf3d from bspf.bspf3d")
+
+# Create a wrapper class that fixes GPU array handling
+class bspf3d(_bspf3d_base):
+    """Wrapper around bspf3d that fixes GPU array handling in differentiate_1_2."""
+    
+    def differentiate_1_2(
+        self,
+        F,
+        *,
+        lam_x: float = 0.0,
+        lam_y: float = 0.0,
+        lam_z: float = 0.0,
+        uniform_bc_x: bool = False,
+        uniform_bc_y: bool = False,
+        uniform_bc_z: bool = False,
+        bc_x=None,
+        bc_y=None,
+        bc_z=None,
+        use_loop: bool = False,
+    ):
+        """
+        Override differentiate_1_2 to fix GPU array handling.
+        The parent method has a bug where it tries to use np.asarray() on CuPy arrays.
+        This wrapper ensures GPU arrays are properly converted to NumPy before calling parent,
+        then converts results back to GPU if needed.
+        """
+        # Check if input is GPU array
+        is_gpu_array = _HAS_CUPY and cp is not None and isinstance(F, cp.ndarray)
+        
+        # Always convert GPU array to NumPy for parent method (parent has bugs with GPU arrays)
+        if is_gpu_array:
+            F_np = cp.asnumpy(F).astype(np.float64)
+        else:
+            F_np = np.asarray(F, dtype=np.float64)
+        
+        # Call parent method with NumPy array
+        # Use the base class method directly (stored in _bspf3d_base)
+        result = _bspf3d_base.differentiate_1_2(
+            self,
+            F_np,
+            lam_x=lam_x, lam_y=lam_y, lam_z=lam_z,
+            uniform_bc_x=uniform_bc_x, uniform_bc_y=uniform_bc_y, uniform_bc_z=uniform_bc_z,
+            bc_x=bc_x, bc_y=bc_y, bc_z=bc_z,
+            use_loop=use_loop,
+        )
+        
+        # Convert back to GPU if input was GPU
+        if is_gpu_array:
+            result = tuple(cp.asarray(r, dtype=cp.float64) for r in result)
+        
+        return result
 
 Array = npt.NDArray[np.float64]
 
