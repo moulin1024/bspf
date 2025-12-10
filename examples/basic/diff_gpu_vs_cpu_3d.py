@@ -124,89 +124,6 @@ def taylor_green_gradient_tensor(x, y, z, A=1.0, B=1.0, C=-2.0, a=1.0, b=1.0, c=
         'dw_dx': dw_dx, 'dw_dy': dw_dy, 'dw_dz': dw_dz,
     }
 
-def compute_dirichlet_bc_vectors(x, y, z, b3d):
-    """
-    Compute Dirichlet boundary condition vectors from analytical Taylor-Green vortex solution.
-    
-    For each direction, computes the BC vector by averaging over all boundary slices.
-    Since uniform_bc=True uses the same BC for all slices, we average the BC vectors
-    computed from all boundary slices to get a representative BC vector.
-    
-    Returns a dictionary with BC vectors for u, v, w in each direction.
-    """
-    # Create analytical solution arrays using original Taylor-Green definition
-    # Default: A=1, B=1, C=-2, a=b=c=1
-    A, B, C, a, b, c = 1.0, 1.0, -2.0, 1.0, 1.0, 1.0
-    X, Y, Z = np.meshgrid(x, y, z, indexing="xy")  # (ny, nx, nz)
-    to_nz_ny_nx = lambda A: np.moveaxis(A, 2, 0)
-    
-    u_analytical = to_nz_ny_nx(A * np.cos(a * X) * np.sin(b * Y) * np.sin(c * Z))  # (nz, ny, nx)
-    v_analytical = to_nz_ny_nx(B * np.sin(a * X) * np.cos(b * Y) * np.sin(c * Z))  # (nz, ny, nx)
-    w_analytical = to_nz_ny_nx(C * np.sin(a * X) * np.sin(b * Y) * np.cos(c * Z))  # (nz, ny, nx)
-    
-    # For x-direction: average BC vectors from all slices at x=0 and x=2π
-    nz, ny, nx = u_analytical.shape
-    bc_u_x_list = []
-    bc_v_x_list = []
-    bc_w_x_list = []
-    for k_z in range(nz):
-        # At x=0 boundary
-        u_slice = u_analytical[k_z, :, 0]  # (ny,)
-        bc_u_x_list.append(b3d.x_model.end.BND @ u_slice)
-        v_slice = v_analytical[k_z, :, 0]
-        bc_v_x_list.append(b3d.x_model.end.BND @ v_slice)
-        w_slice = w_analytical[k_z, :, 0]
-        bc_w_x_list.append(b3d.x_model.end.BND @ w_slice)
-    # Average over all slices
-    bc_u_x = np.mean(bc_u_x_list, axis=0)
-    bc_v_x = np.mean(bc_v_x_list, axis=0)
-    bc_w_x = np.mean(bc_w_x_list, axis=0)
-    
-    # For y-direction: average BC vectors from all slices at y=0 and y=2π
-    bc_u_y_list = []
-    bc_v_y_list = []
-    bc_w_y_list = []
-    for k_z in range(nz):
-        # At y=0 boundary
-        u_slice = u_analytical[k_z, 0, :]  # (nx,)
-        bc_u_y_list.append(b3d.y_model.end.BND @ u_slice)
-        v_slice = v_analytical[k_z, 0, :]
-        bc_v_y_list.append(b3d.y_model.end.BND @ v_slice)
-        w_slice = w_analytical[k_z, 0, :]
-        bc_w_y_list.append(b3d.y_model.end.BND @ w_slice)
-    # Average over all slices
-    bc_u_y = np.mean(bc_u_y_list, axis=0)
-    bc_v_y = np.mean(bc_v_y_list, axis=0)
-    bc_w_y = np.mean(bc_w_y_list, axis=0)
-    
-    # For z-direction: average BC vectors from all slices at z=0 and z=2π
-    bc_u_z_list = []
-    bc_v_z_list = []
-    bc_w_z_list = []
-    for k_y in range(ny):
-        # At z=0 boundary
-        u_slice = u_analytical[0, k_y, :]  # (nx,)
-        bc_u_z_list.append(b3d.z_model.end.BND @ u_slice)
-        v_slice = v_analytical[0, k_y, :]
-        bc_v_z_list.append(b3d.z_model.end.BND @ v_slice)
-        w_slice = w_analytical[0, k_y, :]
-        bc_w_z_list.append(b3d.z_model.end.BND @ w_slice)
-    # Average over all slices
-    bc_u_z = np.mean(bc_u_z_list, axis=0)
-    bc_v_z = np.mean(bc_v_z_list, axis=0)
-    bc_w_z = np.mean(bc_w_z_list, axis=0)
-    
-    return {
-        'u_x': bc_u_x,
-        'v_x': bc_v_x,
-        'w_x': bc_w_x,
-        'u_y': bc_u_y,
-        'v_y': bc_v_y,
-        'w_y': bc_w_y,
-        'u_z': bc_u_z,
-        'v_z': bc_v_z,
-        'w_z': bc_w_z,
-    }
 
 # ------------------------------- utils -------------------------------
 def sync_gpu():
@@ -273,121 +190,68 @@ def build_facade(nx, ny, nz, degx, degy, degz, ordx, ordy, ordz, use_gpu, domain
         use_gpu=use_gpu,
     ), x, y, z
 
-def prepare_plans_3(b3d, *, ox, oy, oz, lamx, lamy, lamz, neumann, uniform_bc, bc_dict=None):
+def prepare_plans_3(b3d, *, ox, oy, oz, lamx, lamy, lamz, neumann):
     """
     Prepare derivative plans for x, y, z directions.
     
-    Parameters
-    ----------
-    bc_dict : dict, optional
-        Dictionary with BC vectors for each component and direction.
-        Keys: 'u_x', 'v_x', 'w_x', 'u_y', 'v_y', 'w_y', 'u_z', 'v_z', 'w_z'
-        If uniform_bc=True and bc_dict is provided, creates separate plans for each component.
-        Otherwise creates a single plan per direction.
-    
     Returns
     -------
-    If bc_dict provided: dict with keys 'px_u', 'px_v', 'px_w', 'py_u', 'py_v', 'py_w', 'pz_u', 'pz_v', 'pz_w'
-    Otherwise: (px, py, pz, prep_time)
+    (px, py, pz, prep_time)
     """
     t0 = time.perf_counter()
     
-    if uniform_bc and bc_dict:
-        # Create separate plans for each component with their respective BC vectors
-        plans = {}
-        # X-direction plans
-        plans['px_u'] = b3d.make_plan_dx(order=ox, lam=lamx, neumann=neumann, uniform_bc=True, bc=bc_dict.get('u_x', 0.0))
-        plans['px_v'] = b3d.make_plan_dx(order=ox, lam=lamx, neumann=neumann, uniform_bc=True, bc=bc_dict.get('v_x', 0.0))
-        plans['px_w'] = b3d.make_plan_dx(order=ox, lam=lamx, neumann=neumann, uniform_bc=True, bc=bc_dict.get('w_x', 0.0))
-        # Y-direction plans
-        plans['py_u'] = b3d.make_plan_dy(order=oy, lam=lamy, neumann=neumann, uniform_bc=True, bc=bc_dict.get('u_y', 0.0))
-        plans['py_v'] = b3d.make_plan_dy(order=oy, lam=lamy, neumann=neumann, uniform_bc=True, bc=bc_dict.get('v_y', 0.0))
-        plans['py_w'] = b3d.make_plan_dy(order=oy, lam=lamy, neumann=neumann, uniform_bc=True, bc=bc_dict.get('w_y', 0.0))
-        # Z-direction plans
-        plans['pz_u'] = b3d.make_plan_dz(order=oz, lam=lamz, neumann=neumann, uniform_bc=True, bc=bc_dict.get('u_z', 0.0))
-        plans['pz_v'] = b3d.make_plan_dz(order=oz, lam=lamz, neumann=neumann, uniform_bc=True, bc=bc_dict.get('v_z', 0.0))
-        plans['pz_w'] = b3d.make_plan_dz(order=oz, lam=lamz, neumann=neumann, uniform_bc=True, bc=bc_dict.get('w_z', 0.0))
-        
-        if b3d.use_gpu:
-            sync_gpu()
-        return plans, time.perf_counter() - t0
-    else:
-        # Single plan per direction (shared by all components)
-        bc_x = bc_dict.get('u_x', 0.0) if (uniform_bc and bc_dict) else (0.0 if uniform_bc else None)
-        bc_y = bc_dict.get('u_y', 0.0) if (uniform_bc and bc_dict) else (0.0 if uniform_bc else None)
-        bc_z = bc_dict.get('u_z', 0.0) if (uniform_bc and bc_dict) else (0.0 if uniform_bc else None)
-        
-        px = b3d.make_plan_dx(order=ox, lam=lamx, neumann=neumann, uniform_bc=uniform_bc, bc=bc_x)
-        py = b3d.make_plan_dy(order=oy, lam=lamy, neumann=neumann, uniform_bc=uniform_bc, bc=bc_y)
-        pz = b3d.make_plan_dz(order=oz, lam=lamz, neumann=neumann, uniform_bc=uniform_bc, bc=bc_z)
-        
-        if b3d.use_gpu:
-            sync_gpu()
-        return px, py, pz, time.perf_counter() - t0
+    px = b3d.make_plan_dx(order=ox, lam=lamx, neumann=neumann)
+    py = b3d.make_plan_dy(order=oy, lam=lamy, neumann=neumann)
+    pz = b3d.make_plan_dz(order=oz, lam=lamz, neumann=neumann)
+    
+    if b3d.use_gpu:
+        sync_gpu()
+    return px, py, pz, time.perf_counter() - t0
 
-def compute_gradient_tensor(px_or_plans, py_or_none, pz_or_none, u, v, w, *, neumann, flux_dict, use_gpu):
+def compute_gradient_tensor(px, py, pz, u, v, w, *, neumann, flux_dict, use_gpu):
     """
     Compute the full gradient tensor for velocity field (u, v, w).
     
     Parameters
     ----------
-    px_or_plans : _AxisPlan3D or dict
-        Either a single x-direction plan, or a dict with component-specific plans
-        (keys: 'px_u', 'px_v', 'px_w', 'py_u', 'py_v', 'py_w', 'pz_u', 'pz_v', 'pz_w')
-    py_or_none : _AxisPlan3D or None
-        y-direction plan (None if px_or_plans is a dict)
-    pz_or_none : _AxisPlan3D or None
-        z-direction plan (None if px_or_plans is a dict)
+    px : _AxisPlan3D
+        x-direction plan
+    py : _AxisPlan3D
+        y-direction plan
+    pz : _AxisPlan3D
+        z-direction plan
     
     Returns
     -------
     Dictionary with keys: 'du_dx', 'du_dy', 'du_dz', 'dv_dx', 'dv_dy', 'dv_dz', 'dw_dx', 'dw_dy', 'dw_dz'
     """
-    # Check if we have component-specific plans
-    if isinstance(px_or_plans, dict):
-        plans = px_or_plans
-        # Use component-specific plans
-        du_dx = plans['px_u'].apply(u, flux=(0.0, 0.0))
-        du_dy = plans['py_u'].apply(u, flux=(0.0, 0.0))
-        du_dz = plans['pz_u'].apply(u, flux=(0.0, 0.0))
-        
-        dv_dx = plans['px_v'].apply(v, flux=(0.0, 0.0))
-        dv_dy = plans['py_v'].apply(v, flux=(0.0, 0.0))
-        dv_dz = plans['pz_v'].apply(v, flux=(0.0, 0.0))
-        
-        dw_dx = plans['px_w'].apply(w, flux=(0.0, 0.0))
-        dw_dy = plans['py_w'].apply(w, flux=(0.0, 0.0))
-        dw_dz = plans['pz_w'].apply(w, flux=(0.0, 0.0))
+    if neumann:
+        flux_u_x = flux_dict.get('u_x', (0.0, 0.0))
+        flux_u_y = flux_dict.get('u_y', (0.0, 0.0))
+        flux_u_z = flux_dict.get('u_z', (0.0, 0.0))
+        flux_v_x = flux_dict.get('v_x', (0.0, 0.0))
+        flux_v_y = flux_dict.get('v_y', (0.0, 0.0))
+        flux_v_z = flux_dict.get('v_z', (0.0, 0.0))
+        flux_w_x = flux_dict.get('w_x', (0.0, 0.0))
+        flux_w_y = flux_dict.get('w_y', (0.0, 0.0))
+        flux_w_z = flux_dict.get('w_z', (0.0, 0.0))
     else:
-        # Use shared plans
-        px, py, pz = px_or_plans, py_or_none, pz_or_none
-        if neumann:
-            flux_u_x = flux_dict.get('u_x', (0.0, 0.0))
-            flux_u_y = flux_dict.get('u_y', (0.0, 0.0))
-            flux_u_z = flux_dict.get('u_z', (0.0, 0.0))
-            flux_v_x = flux_dict.get('v_x', (0.0, 0.0))
-            flux_v_y = flux_dict.get('v_y', (0.0, 0.0))
-            flux_v_z = flux_dict.get('v_z', (0.0, 0.0))
-            flux_w_x = flux_dict.get('w_x', (0.0, 0.0))
-            flux_w_y = flux_dict.get('w_y', (0.0, 0.0))
-            flux_w_z = flux_dict.get('w_z', (0.0, 0.0))
-        else:
-            flux_u_x = flux_u_y = flux_u_z = (0.0, 0.0)
-            flux_v_x = flux_v_y = flux_v_z = (0.0, 0.0)
-            flux_w_x = flux_w_y = flux_w_z = (0.0, 0.0)
-        
-        # Compute all 9 derivatives
-        du_dx = px.apply(u, flux=flux_u_x)
-        du_dy = py.apply(u, flux=flux_u_y)
-        du_dz = pz.apply(u, flux=flux_u_z)
-        
-        dv_dx = px.apply(v, flux=flux_v_x)
-        dv_dy = py.apply(v, flux=flux_v_y)
-        dv_dz = pz.apply(v, flux=flux_v_z)
-        
-        dw_dx = px.apply(w, flux=flux_w_x)
-        dw_dy = py.apply(w, flux=flux_w_y)
-        dw_dz = pz.apply(w, flux=flux_w_z)
+        flux_u_x = flux_u_y = flux_u_z = (0.0, 0.0)
+        flux_v_x = flux_v_y = flux_v_z = (0.0, 0.0)
+        flux_w_x = flux_w_y = flux_w_z = (0.0, 0.0)
+    
+    # Compute all 9 derivatives
+    du_dx = px.apply(u, flux=flux_u_x)
+    du_dy = py.apply(u, flux=flux_u_y)
+    du_dz = pz.apply(u, flux=flux_u_z)
+    
+    dv_dx = px.apply(v, flux=flux_v_x)
+    dv_dy = py.apply(v, flux=flux_v_y)
+    dv_dz = pz.apply(v, flux=flux_v_z)
+    
+    dw_dx = px.apply(w, flux=flux_w_x)
+    dw_dy = py.apply(w, flux=flux_w_y)
+    dw_dz = pz.apply(w, flux=flux_w_z)
     
     return {
         'du_dx': du_dx, 'du_dy': du_dy, 'du_dz': du_dz,
@@ -395,20 +259,20 @@ def compute_gradient_tensor(px_or_plans, py_or_none, pz_or_none, u, v, w, *, neu
         'dw_dx': dw_dx, 'dw_dy': dw_dy, 'dw_dz': dw_dz,
     }
 
-def eval_gradient_tensor(px_or_plans, py_or_none, pz_or_none, u_list, v_list, w_list, *, neumann, flux_dict, use_gpu):
+def eval_gradient_tensor(px, py, pz, u_list, v_list, w_list, *, neumann, flux_dict, use_gpu):
     """
     Benchmark computing the gradient tensor for multiple velocity fields.
     Returns (elapsed_time, per_derivative_ms)
     """
     # warm-up
-    _ = compute_gradient_tensor(px_or_plans, py_or_none, pz_or_none, u_list[0], v_list[0], w_list[0],
+    _ = compute_gradient_tensor(px, py, pz, u_list[0], v_list[0], w_list[0],
                                 neumann=neumann, flux_dict=flux_dict, use_gpu=use_gpu)
     if use_gpu:
         sync_gpu()
 
     t0 = time.perf_counter()
     for u, v, w in zip(u_list, v_list, w_list):
-        _ = compute_gradient_tensor(px_or_plans, py_or_none, pz_or_none, u, v, w,
+        _ = compute_gradient_tensor(px, py, pz, u, v, w,
                                     neumann=neumann, flux_dict=flux_dict, use_gpu=use_gpu)
     if use_gpu:
         sync_gpu()
@@ -519,40 +383,25 @@ def main():
                                                 args.order_x, args.order_y, args.order_z,
                                                 use_gpu=False, domain=domain)
     
-    # For Dirichlet BC, use uniform_bc=False and manually enforce boundary values
-    # The BND @ FT2 will compute boundary conditions from function values,
-    # and we'll manually correct the boundary values in the results to match analytical solution
-    plans_result = prepare_plans_3(
+    # The BND @ FT2 will compute boundary conditions from function values
+    px_cpu, py_cpu, pz_cpu, prep_cpu = prepare_plans_3(
         b3d_cpu, ox=args.order_x, oy=args.order_y, oz=args.order_z,
         lamx=args.lam_x, lamy=args.lam_y, lamz=args.lam_z,
-        neumann=False, uniform_bc=False, bc_dict=None
+        neumann=False
     )
-    
-    # Handle both return formats: (plans_dict, prep_time) or (px, py, pz, prep_time)
-    if isinstance(plans_result[0], dict):
-        plans_cpu, prep_cpu = plans_result
-        px_cpu = py_cpu = pz_cpu = None  # Not used
-    else:
-        px_cpu, py_cpu, pz_cpu, prep_cpu = plans_result
-        plans_cpu = None
 
     u_list_cpu = [u_cpu] * args.reps
     v_list_cpu = [v_cpu] * args.reps
     w_list_cpu = [w_cpu] * args.reps
     
-    # Use plans dict if available, otherwise use individual plans
-    px_arg = plans_cpu if plans_cpu else px_cpu
-    py_arg = None if plans_cpu else py_cpu
-    pz_arg = None if plans_cpu else pz_cpu
-    
     eval_cpu, per_derivative_cpu = eval_gradient_tensor(
-        px_arg, py_arg, pz_arg, u_list_cpu, v_list_cpu, w_list_cpu,
+        px_cpu, py_cpu, pz_cpu, u_list_cpu, v_list_cpu, w_list_cpu,
         neumann=False, flux_dict={}, use_gpu=False
     )
 
     # Always compute CPU accuracy
     grad_tensor_cpu = compute_gradient_tensor(
-        px_arg, py_arg, pz_arg, u_cpu, v_cpu, w_cpu,
+        px_cpu, py_cpu, pz_cpu, u_cpu, v_cpu, w_cpu,
         neumann=False, flux_dict={}, use_gpu=False
     )
     metrics_cpu = {}
@@ -622,26 +471,11 @@ def main():
                                                 args.order_x, args.order_y, args.order_z,
                                                 use_gpu=True, domain=domain)
     
-    # Compute Dirichlet BC vectors from analytical solution using CPU model (BND is same structure)
-    # Then convert to GPU arrays
-    bc_dict_cpu = compute_dirichlet_bc_vectors(x, y, z, b3d_cpu)
-    bc_dict_gpu = {}
-    for key, bc_vec in bc_dict_cpu.items():
-        bc_dict_gpu[key] = cp.asarray(bc_vec, dtype=cp.float64)
-
-    plans_result_gpu = prepare_plans_3(
+    px_gpu, py_gpu, pz_gpu, prep_gpu = prepare_plans_3(
         b3d_gpu, ox=args.order_x, oy=args.order_y, oz=args.order_z,
         lamx=args.lam_x, lamy=args.lam_y, lamz=args.lam_z,
-        neumann=False, uniform_bc=True, bc_dict=bc_dict_gpu
+        neumann=False
     )
-    
-    # Handle both return formats
-    if isinstance(plans_result_gpu[0], dict):
-        plans_gpu, prep_gpu = plans_result_gpu
-        px_gpu = py_gpu = pz_gpu = None  # Not used
-    else:
-        px_gpu, py_gpu, pz_gpu, prep_gpu = plans_result_gpu
-        plans_gpu = None
 
     # Always build the velocity field directly on device to exclude transfers
     # Using original Taylor-Green: A=1, B=1, C=-2, a=b=c=1
@@ -660,19 +494,14 @@ def main():
     v_list_gpu = [vg] * args.reps
     w_list_gpu = [wg] * args.reps
 
-    # Use plans dict if available, otherwise use individual plans
-    px_arg_gpu = plans_gpu if plans_gpu else px_gpu
-    py_arg_gpu = None if plans_gpu else py_gpu
-    pz_arg_gpu = None if plans_gpu else pz_gpu
-
     eval_gpu, per_derivative_gpu = eval_gradient_tensor(
-        px_arg_gpu, py_arg_gpu, pz_arg_gpu, u_list_gpu, v_list_gpu, w_list_gpu,
+        px_gpu, py_gpu, pz_gpu, u_list_gpu, v_list_gpu, w_list_gpu,
         neumann=False, flux_dict={}, use_gpu=True
     )
 
     # Always compute GPU accuracy
     grad_tensor_gpu = compute_gradient_tensor(
-        px_arg_gpu, py_arg_gpu, pz_arg_gpu, u_list_gpu[0], v_list_gpu[0], w_list_gpu[0],
+        px_gpu, py_gpu, pz_gpu, u_list_gpu[0], v_list_gpu[0], w_list_gpu[0],
         neumann=False, flux_dict={}, use_gpu=True
     )
     # Convert to CPU for comparison

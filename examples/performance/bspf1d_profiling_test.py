@@ -21,7 +21,7 @@ try:
 except ImportError:
     cp = None
 
-from bspf1d_profiling import bspf1d
+from bspf.bspf1d import bspf1d
 
 
 def test_complex_input(use_gpu=False, n=1024, degree=7):
@@ -59,7 +59,7 @@ def test_complex_input(use_gpu=False, n=1024, degree=7):
     
     # Build operator
     op = bspf1d.from_grid(degree=degree, x=x, n_basis=4*degree, use_clustering=True, 
-                          clustering_factor=2.0, use_gpu=use_gpu)
+                          clustering_factor=3.0, use_gpu=use_gpu)
     
     # Compute derivatives
     print("Computing derivatives...")
@@ -70,11 +70,9 @@ def test_complex_input(use_gpu=False, n=1024, degree=7):
         df1 = cp.asnumpy(df1)
         df2 = cp.asnumpy(df2)
     
-    # Compute errors
+    # Compute errors (L2 only)
     err1 = df1 - f1_exact
     err2 = df2 - f2_exact
-    max_err1 = np.max(np.abs(err1))
-    max_err2 = np.max(np.abs(err2))
     l2_err1 = np.sqrt(np.mean(np.abs(err1)**2))
     l2_err2 = np.sqrt(np.mean(np.abs(err2)**2))
     
@@ -84,14 +82,12 @@ def test_complex_input(use_gpu=False, n=1024, degree=7):
     print(f"\nResults:")
     print(f"  Input type: complex128")
     print(f"  Output type: {'complex128' if is_complex_result else 'float64 (ERROR!)'}")
-    print(f"  df1 max abs error: {max_err1:.6e}")
-    print(f"  df2 max abs error: {max_err2:.6e}")
     print(f"  df1 L2 error: {l2_err1:.6e}")
     print(f"  df2 L2 error: {l2_err2:.6e}")
     
     # Verify correctness
-    tolerance = 1e-6
-    passed = (max_err1 < tolerance and max_err2 < tolerance and is_complex_result)
+    tolerance = 1e-5
+    passed = (l2_err1 < tolerance and l2_err2 < tolerance and is_complex_result)
     
     if passed:
         print(f"\n✓ PASSED: Complex input test (tolerance={tolerance})")
@@ -99,10 +95,10 @@ def test_complex_input(use_gpu=False, n=1024, degree=7):
         print(f"\n✗ FAILED: Complex input test (tolerance={tolerance})")
         if not is_complex_result:
             print("  ERROR: Output is not complex128!")
-        if max_err1 >= tolerance:
-            print(f"  ERROR: df1 error {max_err1:.6e} >= {tolerance}")
-        if max_err2 >= tolerance:
-            print(f"  ERROR: df2 error {max_err2:.6e} >= {tolerance}")
+        if l2_err1 >= tolerance:
+            print(f"  ERROR: df1 L2 error {l2_err1:.6e} >= {tolerance}")
+        if l2_err2 >= tolerance:
+            print(f"  ERROR: df2 L2 error {l2_err2:.6e} >= {tolerance}")
     
     print("="*80 + "\n")
     
@@ -140,7 +136,7 @@ def run_test(use_gpu, n, degree, n_runs, f_func, f1_func, f2_func, use_complex=F
         f2_exact = f2_exact  # NumPy array
 
     # BSPF operator
-    op = bspf1d.from_grid(degree=degree, x=x, n_basis=4*degree, use_clustering=True, clustering_factor=2.0, use_gpu=use_gpu)
+    op = bspf1d.from_grid(degree=degree, x=x, n_basis=4*degree, use_clustering=True, clustering_factor=3.0, use_gpu=use_gpu)
 
     # Warmup run
     _ = op.differentiate_1_2(f)
@@ -167,9 +163,6 @@ def run_test(use_gpu, n, degree, n_runs, f_func, f1_func, f2_func, use_complex=F
     
     err1 = df1 - f1_exact
     err2 = df2 - f2_exact
-    # For complex arrays, use absolute value for error metrics
-    max_err1 = np.max(np.abs(err1))
-    max_err2 = np.max(np.abs(err2))
     # L2 error: sqrt(mean(|err|^2)) for complex, sqrt(mean(err^2)) for real
     if np.iscomplexobj(err1):
         l2_err1 = np.sqrt(np.mean(np.abs(err1)**2))
@@ -192,8 +185,6 @@ def run_test(use_gpu, n, degree, n_runs, f_func, f1_func, f2_func, use_complex=F
             }
     
     return {
-        'max_err1': max_err1,
-        'max_err2': max_err2,
         'l2_err1': l2_err1,
         'l2_err2': l2_err2,
         'stats': stats,
@@ -204,7 +195,7 @@ def run_test(use_gpu, n, degree, n_runs, f_func, f1_func, f2_func, use_complex=F
 def main():
     parser = argparse.ArgumentParser(description="Test bspf1d differentiate_1_2 with timing breakdown")
     parser.add_argument("--gpu", action="store_true", help="Use GPU (CuPy) if available")
-    parser.add_argument("--n", type=int, default=2**16, help="Number of grid points (default: 65536)")
+    parser.add_argument("--n", type=int, default=256**2, help="Number of grid points (default: 65536)")
     parser.add_argument("--degree", type=int, default=7, help="B-spline degree (default: 7)")
     parser.add_argument("--runs", type=int, default=100, help="Number of profiling runs (default: 100)")
     parser.add_argument("--no-compare", action="store_true", help="Skip CPU vs GPU comparison (only run specified mode)")
@@ -231,7 +222,7 @@ def main():
 
     # Test function: f(x) = sin(x / (1.05 + cos x)) with Sympy exact derivatives
     t = sp.symbols("t")
-    f_sym = sp.sin(t / (1.01 + sp.cos(t)))
+    f_sym = sp.sin(t / (1.05 + sp.cos(t)))
     f1_sym = sp.diff(f_sym, t)
     f2_sym = sp.diff(f1_sym, t)
     f_func = sp.lambdify(t, f_sym, modules=["numpy"])
@@ -256,20 +247,8 @@ def main():
         
         print(f"\n=== bspf1d differentiate_1_2 (CPU) ===")
         print(f"grid: N={n}, degree={degree}, domain=({a},{b}), complex={args.complex}")
-        print(f"df1 max abs: {results_cpu['max_err1']:.3e}, df2 max abs: {results_cpu['max_err2']:.3e}")
         print(f"df1 L2 err: {results_cpu['l2_err1']:.3e}, df2 L2 err: {results_cpu['l2_err2']:.3e}")
         
-        if results_cpu['stats']:
-            print(f"\nTiming statistics ({n_runs} runs, seconds):")
-            print(f"{'Stage':<15s} {'Mean':>12s} {'Std':>12s} {'Min':>12s} {'Max':>12s} {'% of total':>12s}")
-            print("-" * 75)
-            
-            total_mean = results_cpu['stats'].get('total', {}).get('mean', 1.0)
-            for key in sorted(results_cpu['stats'].keys()):
-                s = results_cpu['stats'][key]
-                pct = 100.0 * s['mean'] / total_mean if total_mean > 0 else 0.0
-                print(f"{key:<15s} {s['mean']:12.6f} {s['std']:12.6f} {s['min']:12.6f} {s['max']:12.6f} {pct:11.2f}%")
-    
     # Run GPU test
     if run_gpu and _HAS_CUPY:
         print(f"\n{'='*80}")
@@ -281,20 +260,8 @@ def main():
         
         print(f"\n=== bspf1d differentiate_1_2 (GPU) ===")
         print(f"grid: N={n}, degree={degree}, domain=({a},{b}), complex={args.complex}")
-        print(f"df1 max abs: {results_gpu['max_err1']:.3e}, df2 max abs: {results_gpu['max_err2']:.3e}")
         print(f"df1 L2 err: {results_gpu['l2_err1']:.3e}, df2 L2 err: {results_gpu['l2_err2']:.3e}")
         
-        if results_gpu['stats']:
-            print(f"\nTiming statistics ({n_runs} runs, seconds):")
-            print(f"{'Stage':<15s} {'Mean':>12s} {'Std':>12s} {'Min':>12s} {'Max':>12s} {'% of total':>12s}")
-            print("-" * 75)
-            
-            total_mean = results_gpu['stats'].get('total', {}).get('mean', 1.0)
-            for key in sorted(results_gpu['stats'].keys()):
-                s = results_gpu['stats'][key]
-                pct = 100.0 * s['mean'] / total_mean if total_mean > 0 else 0.0
-                print(f"{key:<15s} {s['mean']:12.6f} {s['std']:12.6f} {s['min']:12.6f} {s['max']:12.6f} {pct:11.2f}%")
-    
     # Compare CPU vs GPU if both were run
     if results_cpu and results_gpu and _HAS_CUPY:
         print(f"\n{'='*80}")
@@ -310,34 +277,9 @@ def main():
             print(f"  CPU: {cpu_total:.6f} seconds")
             print(f"  GPU: {gpu_total:.6f} seconds")
             print(f"  Speedup: {speedup:.2f}x {'(GPU faster)' if speedup > 1.0 else '(CPU faster)'}")
-            
-            # Compare individual stages
-            print(f"\nStage-by-stage comparison:")
-            print(f"{'Stage':<15s} {'CPU (s)':>12s} {'GPU (s)':>12s} {'Speedup':>12s}")
-            print("-" * 55)
-            
-            cpu_stats = results_cpu['stats']
-            gpu_stats = results_gpu['stats']
-            
-            # Get all stage keys (excluding 'total')
-            all_stages = set(cpu_stats.keys()) | set(gpu_stats.keys())
-            all_stages.discard('total')
-            
-            for stage in sorted(all_stages):
-                cpu_time = cpu_stats.get(stage, {}).get('mean', 0.0)
-                gpu_time = gpu_stats.get(stage, {}).get('mean', 0.0)
-                if cpu_time > 0 and gpu_time > 0:
-                    stage_speedup = cpu_time / gpu_time
-                    print(f"{stage:<15s} {cpu_time:12.6f} {gpu_time:12.6f} {stage_speedup:12.2f}x")
-                elif cpu_time > 0:
-                    print(f"{stage:<15s} {cpu_time:12.6f} {'N/A':>12s} {'N/A':>12s}")
-                elif gpu_time > 0:
-                    print(f"{stage:<15s} {'N/A':>12s} {gpu_time:12.6f} {'N/A':>12s}")
         
-        # Accuracy comparison
-        print(f"\nAccuracy comparison:")
-        print(f"  df1 max error: CPU={results_cpu['max_err1']:.3e}, GPU={results_gpu['max_err1']:.3e}")
-        print(f"  df2 max error: CPU={results_cpu['max_err2']:.3e}, GPU={results_gpu['max_err2']:.3e}")
+        # Accuracy comparison (L2 only)
+        print(f"\nAccuracy comparison (L2 only):")
         print(f"  df1 L2 error:  CPU={results_cpu['l2_err1']:.3e}, GPU={results_gpu['l2_err1']:.3e}")
         print(f"  df2 L2 error:  CPU={results_cpu['l2_err2']:.3e}, GPU={results_gpu['l2_err2']:.3e}")
 

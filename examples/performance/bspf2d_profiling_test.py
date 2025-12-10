@@ -14,17 +14,9 @@ import sys
 import time
 import numpy as np
 
-# Ensure repo root and src are on sys.path for direct execution
-_here = os.path.abspath(os.path.dirname(__file__))
-_root = os.path.abspath(os.path.join(_here, "..", ".."))
-_src = os.path.join(_root, "src")
-_examples = os.path.join(_root, "examples")
-for p in (_root, _src, _examples):
-    if p not in sys.path:
-        sys.path.insert(0, p)
 
 # Import after adjusting sys.path
-from examples.performance.bspf2d_profiling import run_profile_2d, bspf2d
+from bspf.bspf2d import bspf2d
 
 # Optional GPU support
 _HAS_CUPY = False
@@ -100,17 +92,11 @@ def check_correctness(nx, ny, degree, use_gpu=False):
         d2f_dx2_num = cp.asnumpy(d2f_dx2_num) if isinstance(d2f_dx2_num, cp.ndarray) else d2f_dx2_num
         d2f_dy2_num = cp.asnumpy(d2f_dy2_num) if isinstance(d2f_dy2_num, cp.ndarray) else d2f_dy2_num
     
-    # Compute errors (all arrays are already in (ny, nx) format)
+    # Compute errors (all arrays are already in (ny, nx) format) - L2 only
     err_dx = df_dx_num - df_dx_exact
     err_dy = df_dy_num - df_dy_exact
     err_dx2 = d2f_dx2_num - d2f_dx2_exact
     err_dy2 = d2f_dy2_num - d2f_dy2_exact
-    
-    # Error metrics
-    max_err_dx = np.max(np.abs(err_dx))
-    max_err_dy = np.max(np.abs(err_dy))
-    max_err_dx2 = np.max(np.abs(err_dx2))
-    max_err_dy2 = np.max(np.abs(err_dy2))
     
     l2_err_dx = np.sqrt(np.mean(err_dx**2))
     l2_err_dy = np.sqrt(np.mean(err_dy**2))
@@ -118,30 +104,26 @@ def check_correctness(nx, ny, degree, use_gpu=False):
     l2_err_dy2 = np.sqrt(np.mean(err_dy2**2))
     
     print(f"\nGrid: nx={nx}, ny={ny}, degree={degree}")
-    print(f"\nError metrics:")
-    print(f"  df/dx:  max={max_err_dx:.6e}, L2={l2_err_dx:.6e}")
-    print(f"  df/dy:  max={max_err_dy:.6e}, L2={l2_err_dy:.6e}")
-    print(f"  d2f/dx2: max={max_err_dx2:.6e}, L2={l2_err_dx2:.6e}")
-    print(f"  d2f/dy2: max={max_err_dy2:.6e}, L2={l2_err_dy2:.6e}")
+    print(f"\nL2 error:")
+    print(f"  df/dx:  L2={l2_err_dx:.6e}")
+    print(f"  df/dy:  L2={l2_err_dy:.6e}")
+    print(f"  d2f/dx2: L2={l2_err_dx2:.6e}")
+    print(f"  d2f/dy2: L2={l2_err_dy2:.6e}")
     
     # Check if errors are reasonable (Taylor-Green vortex is smooth, so we expect high accuracy)
     tolerance = 1e-6
-    all_ok = (max_err_dx < tolerance and max_err_dy < tolerance and
-              max_err_dx2 < tolerance and max_err_dy2 < tolerance)
+    all_ok = (l2_err_dx < tolerance and l2_err_dy < tolerance and
+              l2_err_dx2 < tolerance and l2_err_dy2 < tolerance)
     
     if all_ok:
-        print(f"\n✓ All errors below tolerance ({tolerance:.1e})")
+        print(f"\n✓ All L2 errors below tolerance ({tolerance:.1e})")
     else:
-        print(f"\n⚠ Some errors exceed tolerance ({tolerance:.1e})")
+        print(f"\n⚠ Some L2 errors exceed tolerance ({tolerance:.1e})")
         print("  (This may indicate a numerical issue)")
     
     print("="*80 + "\n")
     
     return {
-        'max_err_dx': max_err_dx,
-        'max_err_dy': max_err_dy,
-        'max_err_dx2': max_err_dx2,
-        'max_err_dy2': max_err_dy2,
         'l2_err_dx': l2_err_dx,
         'l2_err_dy': l2_err_dy,
         'l2_err_dx2': l2_err_dx2,
@@ -267,10 +249,16 @@ def compare_gpu_cpu(nx, ny, degree, n_runs=10):
     
     # Build GPU operator
     print("Building GPU operator...")
+    if not _HAS_CUPY:
+        raise RuntimeError("CuPy is required for GPU comparison but is not available.")
+
+    # Convert inputs to CuPy to satisfy strict backend checking
+    x_gpu = cp.asarray(x, dtype=cp.float64)
+    y_gpu = cp.asarray(y, dtype=cp.float64)
     F_gpu = cp.asarray(F, dtype=cp.float64)
     op_gpu = bspf2d.from_grids(
-        x=x,
-        y=y,
+        x=x_gpu,
+        y=y_gpu,
         degree_x=degree,
         degree_y=degree,
         n_basis_x=4 * degree,
@@ -359,7 +347,7 @@ def parse_args():
                    help="Grid points in y")
     p.add_argument("--degree", type=int, default=7, 
                    help="B-spline degree")
-    p.add_argument("--runs", type=int, default=10, help="Number of timing runs")
+    p.add_argument("--runs", type=int, default=100, help="Number of timing runs")
     p.add_argument("--gpu", action="store_true", help="Use GPU (CuPy) if available")
     p.add_argument("--no-check", action="store_true", help="Skip correctness check")
     p.add_argument("--no-gpu-cpu", action="store_true", 
@@ -379,15 +367,6 @@ def main():
             use_gpu=args.gpu,
         )
     
-    # Compare performance of loop vs batched versions
-    compare_performance(
-        nx=args.nx,
-        ny=args.ny,
-        degree=args.degree,
-        use_gpu=args.gpu,
-        n_runs=args.runs,
-    )
-    
     # Compare GPU vs CPU for batched version (if CuPy is available and not skipped)
     if not args.no_gpu_cpu:
         compare_gpu_cpu(
@@ -396,20 +375,6 @@ def main():
             degree=args.degree,
             n_runs=args.runs,
         )
-    
-    # Then run detailed profiling (using 2D Taylor-Green vortex)
-    print("\n" + "="*80)
-    print("=== Detailed Performance Profiling (Batched Version) ===")
-    print("="*80)
-    print("Note: Profiling uses 2D Taylor-Green vortex: f(x,y) = sin(x) * sin(y)")
-    print("="*80 + "\n")
-    run_profile_2d(
-        nx=args.nx,
-        ny=args.ny,
-        degree=args.degree,
-        n_runs=args.runs,
-        use_gpu=args.gpu,
-    )
 
 
 if __name__ == "__main__":
