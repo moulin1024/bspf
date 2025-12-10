@@ -364,7 +364,8 @@ plt.xlabel('x')
 plt.ylabel('y')
 plt.colorbar()
 plt.tight_layout()
-plt.show()
+# plt.show()
+plt.savefig('bec_bspf_2d.png', dpi=150, bbox_inches='tight')
 
 # # ===========================
 # # 2. real-time 演化：在这个涡旋晶格上演化，涡旋长期存在
