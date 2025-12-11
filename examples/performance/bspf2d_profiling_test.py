@@ -389,9 +389,9 @@ def parse_args():
         description="Profile bspf2d.differentiate_1_2 using 2D Taylor-Green vortex test data",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
-    p.add_argument("--nx", type=int, default=128, 
+    p.add_argument("--nx", type=int, default=512, 
                    help="Grid points in x")
-    p.add_argument("--ny", type=int, default=128, 
+    p.add_argument("--ny", type=int, default=512, 
                    help="Grid points in y")
     p.add_argument("--degree", type=int, default=7, 
                    help="B-spline degree")
