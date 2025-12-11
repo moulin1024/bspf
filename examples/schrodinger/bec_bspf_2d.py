@@ -1,7 +1,17 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import time
+import argparse
 from bspf import bspf2d
+
+# Optional GPU support
+_HAS_CUPY = False
+try:
+    import cupy as cp
+    _HAS_CUPY = True
+except ImportError:
+    cp = None
+
 try:
     from tqdm import tqdm
     HAS_TQDM = True
@@ -22,6 +32,28 @@ except ImportError:
             return self
         def __exit__(self, *args):
             pass
+
+# ===========================
+# Parse command-line arguments
+# ===========================
+parser = argparse.ArgumentParser(description='BEC 2D simulation with BSPF')
+parser.add_argument('--gpu', action='store_true', help='Use GPU (CuPy) if available')
+args = parser.parse_args()
+
+# Determine if we should use GPU
+use_gpu = args.gpu and _HAS_CUPY
+if args.gpu and not _HAS_CUPY:
+    print("Warning: --gpu specified but CuPy is not available. Using CPU.")
+    print("Install CuPy to enable GPU (e.g., `pip install cupy-cuda12x`)")
+    use_gpu = False
+
+# Backend selection
+if use_gpu:
+    xp = cp
+    print("Using GPU (CuPy) backend")
+else:
+    xp = np
+    print("Using CPU (NumPy) backend")
 
 # ===========================
 # 参数设置
@@ -53,9 +85,16 @@ np.random.seed(0)
 # ===========================
 # 网格与势
 # ===========================
-x = (np.arange(nx) - nx // 2) * dx
-y = (np.arange(ny) - ny // 2) * dy
-X, Y = np.meshgrid(x, y, indexing='ij')
+# Create grids on CPU first (for meshgrid), then convert to GPU if needed
+x_np = (np.arange(nx) - nx // 2) * dx
+y_np = (np.arange(ny) - ny // 2) * dy
+X_np, Y_np = np.meshgrid(x_np, y_np, indexing='ij')
+
+# Convert to backend arrays
+x = xp.asarray(x_np, dtype=xp.float64)
+y = xp.asarray(y_np, dtype=xp.float64)
+X = xp.asarray(X_np, dtype=xp.float64)
+Y = xp.asarray(Y_np, dtype=xp.float64)
 
 # 谐振 trap 势
 V_trap = 0.5 * omega_trap**2 * (X**2 + Y**2)
@@ -64,9 +103,15 @@ V_trap = 0.5 * omega_trap**2 * (X**2 + Y**2)
 # 初始条件：trap 内随机小扰动
 # ===========================
 sigma = Lx / 5.0
-psi = np.exp(-(X**2 + Y**2) / (2 * sigma**2))
-psi = psi * (1.0 + 0.1 * (np.random.rand(nx, ny) - 0.5))
-psi = psi.astype(np.complex128)
+# Generate random numbers - always on CPU first for reproducibility
+rand_array = np.random.rand(nx, ny)
+psi = xp.exp(-(X**2 + Y**2) / (2 * sigma**2))
+if use_gpu:
+    rand_array_gpu = xp.asarray(rand_array, dtype=xp.float64)
+    psi = psi * (1.0 + 0.1 * (rand_array_gpu - 0.5))
+else:
+    psi = psi * (1.0 + 0.1 * (rand_array - 0.5))
+psi = psi.astype(xp.complex128)
 
 # ===========================
 # 计时统计
@@ -92,7 +137,7 @@ timing_counts = {
 
 # 计算初始粒子数
 t_norm_start = time.perf_counter()
-N_target = np.sum(np.abs(psi)**2) * dx * dy
+N_target = float(xp.sum(xp.abs(psi)**2) * dx * dy)
 t_norm_end = time.perf_counter()
 timing_stats['norm'] += (t_norm_end - t_norm_start)
 timing_counts['norm'] += 1
@@ -101,13 +146,23 @@ timing_counts['norm'] += 1
 # 创建 BSPF 算子
 # ===========================
 print("Creating BSPF operator...")
+# Convert grid arrays to NumPy for bspf2d.from_grids (it handles GPU internally)
+# bspf2d.from_grids expects NumPy arrays for grid setup
+if use_gpu:
+    x_grid = cp.asnumpy(x) if isinstance(x, cp.ndarray) else x
+    y_grid = cp.asnumpy(y) if isinstance(y, cp.ndarray) else y
+else:
+    x_grid = np.asarray(x, dtype=np.float64)
+    y_grid = np.asarray(y, dtype=np.float64)
+
 bspf_op = bspf2d.from_grids(
-    x=x, y=y,
+    x=x_grid, y=y_grid,
     degree_x=degree,
     degree_y=degree,
     use_clustering_x=True,
     use_clustering_y=True,
-    correction='spectral'
+    correction='spectral',
+    use_gpu=use_gpu
 )
 
 def print_timing_stats():
@@ -169,8 +224,8 @@ def compute_rhs_imag_inline(psi_in):
     
     # Compute all derivatives together using differentiate_1_2 (more efficient)
     t_lap_start = time.perf_counter()
-    psi_real = np.real(psi_in)
-    psi_imag = np.imag(psi_in)
+    psi_real = xp.real(psi_in)
+    psi_imag = xp.imag(psi_in)
     
     # Use differentiate_1_2 to compute all derivatives at once
     dpsi_dx_real, dpsi_dy_real, d2psi_dx2_real, d2psi_dy2_real = bspf_op.differentiate_1_2(psi_real)
@@ -193,7 +248,7 @@ def compute_rhs_imag_inline(psi_in):
     
     # Combine to get H_psi (only the combination step, not including laplacian/Lz)
     t_H_start = time.perf_counter()
-    Hpsi = -0.5 * lap + V_trap * psi_in + g * np.abs(psi_in)**2 * psi_in - Omega * Lzpsi
+    Hpsi = -0.5 * lap + V_trap * psi_in + g * xp.abs(psi_in)**2 * psi_in - Omega * Lzpsi
     t_H_end = time.perf_counter()
     timing_stats['H_psi'] += (t_H_end - t_H_start)
     timing_counts['H_psi'] += 1
@@ -249,10 +304,13 @@ with tqdm(total=tau_max, desc="Imaginary-time", unit="tau",
         psi_2nd = psi + dt_imag * ((7.0/24.0) * k1 + (1.0/4.0) * k2 + (1.0/3.0) * k3 + (1.0/8.0) * k4)
         
         # Error estimate: difference between 3rd and 2nd order solutions
-        error = np.abs(psi_3rd - psi_2nd)
+        # Synchronize GPU before error computation if using GPU
+        if use_gpu:
+            cp.cuda.Stream.null.synchronize()
+        error = xp.abs(psi_3rd - psi_2nd)
         # Scale by tolerance: error_scale = error / (rtol * |psi| + atol)
-        scale = rtol * np.abs(psi_3rd) + atol
-        error_norm = np.sqrt(np.mean((error / scale)**2))
+        scale = rtol * xp.abs(psi_3rd) + atol
+        error_norm = float(xp.sqrt(xp.mean((error / scale)**2)))
         
         # Accept or reject step
         if error_norm <= 1.0:
@@ -269,8 +327,8 @@ with tqdm(total=tau_max, desc="Imaginary-time", unit="tau",
             
             # Normalization
             t_norm_start = time.perf_counter()
-            N_now = np.sum(np.abs(psi)**2) * dx * dy
-            psi *= np.sqrt(N_target / (N_now + 1e-16))
+            N_now = float(xp.sum(xp.abs(psi)**2) * dx * dy)
+            psi *= xp.sqrt(N_target / (N_now + 1e-16))
             
             # Enforce Dirichlet BCs after normalization
             psi[0, :] = 0.0      # left boundary
@@ -288,7 +346,7 @@ with tqdm(total=tau_max, desc="Imaginary-time", unit="tau",
         if error_norm > 0:
             # Optimal timestep scaling factor
             factor = safety * (1.0 / error_norm) ** (1.0 / 3.0)  # 3rd order method
-            dt_imag = np.clip(factor * dt_imag, dt_min, dt_max)
+            dt_imag = float(np.clip(factor * dt_imag, dt_min, dt_max))  # Use np.clip for scalar
         else:
             # If error is zero, increase timestep
             dt_imag = min(dt_imag * 1.5, dt_max)
@@ -340,25 +398,37 @@ with tqdm(total=tau_max, desc="Imaginary-time", unit="tau",
 
 # Plot final imaginary-time state
 print("Plotting final imaginary-time state...")
-N_final_imag = np.sum(np.abs(psi)**2) * dx * dy
-density_imag = np.abs(psi)**2
-real_part_imag = np.real(psi)
-imag_part_imag = np.imag(psi)
+# Convert GPU arrays to NumPy for plotting
+if use_gpu:
+    # Synchronize GPU before transferring
+    cp.cuda.Stream.null.synchronize()
+    psi_plot = cp.asnumpy(psi)
+    x_plot = cp.asnumpy(x)
+    y_plot = cp.asnumpy(y)
+else:
+    psi_plot = psi
+    x_plot = x
+    y_plot = y
+
+N_final_imag = np.sum(np.abs(psi_plot)**2) * dx * dy
+density_imag = np.abs(psi_plot)**2
+real_part_imag = np.real(psi_plot)
+imag_part_imag = np.imag(psi_plot)
 plt.figure(figsize=(15, 4))
 plt.subplot(1, 3, 1)
-plt.imshow(density_imag.T, origin='lower', extent=[x[0], x[-1], y[0], y[-1]], cmap='RdBu')
+plt.imshow(density_imag.T, origin='lower', extent=[x_plot[0], x_plot[-1], y_plot[0], y_plot[-1]], cmap='RdBu')
 plt.title(f'Density (tau={tau:.4f}, step={step}, N={N_final_imag:.4e})')
 plt.xlabel('x')
 plt.ylabel('y')
 plt.colorbar()
 plt.subplot(1, 3, 2)
-plt.imshow(real_part_imag.T, origin='lower', extent=[x[0], x[-1], y[0], y[-1]], cmap='RdBu')
+plt.imshow(real_part_imag.T, origin='lower', extent=[x_plot[0], x_plot[-1], y_plot[0], y_plot[-1]], cmap='RdBu')
 plt.title('Real Part')
 plt.xlabel('x')
 plt.ylabel('y')
 plt.colorbar()
 plt.subplot(1, 3, 3)
-plt.imshow(imag_part_imag.T, origin='lower', extent=[x[0], x[-1], y[0], y[-1]], cmap='RdBu')
+plt.imshow(imag_part_imag.T, origin='lower', extent=[x_plot[0], x_plot[-1], y_plot[0], y_plot[-1]], cmap='RdBu')
 plt.title('Imaginary Part')
 plt.xlabel('x')
 plt.ylabel('y')
