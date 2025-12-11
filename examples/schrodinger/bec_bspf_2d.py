@@ -58,19 +58,19 @@ else:
 # ===========================
 # 参数设置
 # ===========================
-nx, ny = 128, 128          # 网格点数
+nx, ny = 512, 512          # 网格点数
 Lx, Ly = 20.0, 20.0        # 物理尺寸
 dx, dy = Lx / nx, Ly / ny
 
-g = 10.0                    # 非线性系数
+g = 20.0                    # 非线性系数
 omega_trap = 1.0           # trap 频率（无量纲）
-Omega = 0.9                # 旋转角速度（0 < Omega < omega_trap，一般）
+Omega = 0.95                # 旋转角速度（0 < Omega < omega_trap，一般）
 dt_imag = 0.001           # initial imaginary-time 步长
-tau_max = 6              # maximum imaginary-time to evolve
+tau_max = 5              # maximum imaginary-time to evolve
 dt_real = 0.001            # real-time 步长
 n_real_steps = 5000        # real-time 总步数
 output_every = 1000         # 每隔多少步画一次图
-degree = 5                 # B-spline 阶数
+degree = 7                 # B-spline 阶数
 
 # Adaptive timestep parameters
 rtol = 1e-6                # relative tolerance
@@ -146,11 +146,10 @@ timing_counts['norm'] += 1
 # 创建 BSPF 算子
 # ===========================
 print("Creating BSPF operator...")
-# Convert grid arrays to NumPy for bspf2d.from_grids (it handles GPU internally)
-# bspf2d.from_grids expects NumPy arrays for grid setup
+# Pass CuPy grids when use_gpu=True (bspf2d requires CuPy inputs in GPU mode)
 if use_gpu:
-    x_grid = cp.asnumpy(x) if isinstance(x, cp.ndarray) else x
-    y_grid = cp.asnumpy(y) if isinstance(y, cp.ndarray) else y
+    x_grid = x if isinstance(x, cp.ndarray) else cp.asarray(x, dtype=cp.float64)
+    y_grid = y if isinstance(y, cp.ndarray) else cp.asarray(y, dtype=cp.float64)
 else:
     x_grid = np.asarray(x, dtype=np.float64)
     y_grid = np.asarray(y, dtype=np.float64)

@@ -1142,100 +1142,73 @@ class bspf1d:
         f_spline : Array
             Spline approximation, shape (n, batch)
         """
-        # Fast path: CPU + real input (most common case)
+        # CPU path (supports real and complex)
         if not self.use_gpu:
-            # Detect if input is complex
-            is_complex = np.iscomplexobj(f)
-            if is_complex:
-                f = np.asarray(f, dtype=np.complex128)
-            else:
-                f = np.asarray(f, dtype=np.float64)
+            f = np.asarray(f)
             if f.ndim != 2:
                 raise ValueError("f must be 2D with shape (n, batch)")
             n, batch = f.shape
             if n != self.grid.n:
                 raise ValueError(f"First dimension of f ({n}) must match grid size ({self.grid.n})")
+
+            is_complex = np.iscomplexobj(f)
+            dtype = np.complex128 if is_complex else np.float64
+            f = f.astype(dtype, copy=False)
+
+            BW = self._BW_f.astype(dtype, copy=False)
+            BND = self._BND_f.astype(dtype, copy=False)
+            BT0 = self._BT0_f.astype(dtype, copy=False)
+            B1T = self._B1T_f.astype(dtype, copy=False)
+            B2T = self._B2T_f.astype(dtype, copy=False)
             
-            # Build RHS for all batches at once
-            # BW @ f: (n_b, n) @ (n, batch) = (n_b, batch)
-            rhs_top = 2.0 * (self._BW_f @ f)  # (n_b, batch)
-            # BND @ f: (m, n) @ (n, batch) = (m, batch)
-            dY = self._BND_f @ f  # (m, batch)
-            
-            n_b = self._BW_f.shape[0]
-            m = self._BND_f.shape[0]
+            rhs_top = 2.0 * (BW @ f)
+            dY = BND @ f
             
             if neumann_bc is not None:
                 if self.order < 1:
                     raise ValueError("Neumann BC requires self.order ≥ 1.")
                 left_flux, right_flux = neumann_bc
                 if left_flux is not None:
-                    if np.ndim(left_flux) == 0:
-                        dY[1, :] = complex(left_flux) if is_complex else float(left_flux)
-                    else:
-                        dY[1, :] = np.asarray(left_flux, dtype=np.complex128 if is_complex else np.float64)
+                    dY[1, :] = np.asarray(left_flux, dtype=dtype)
                 if right_flux is not None:
-                    if np.ndim(right_flux) == 0:
-                        dY[self.order + 1, :] = complex(right_flux) if is_complex else float(right_flux)
-                    else:
-                        dY[self.order + 1, :] = np.asarray(right_flux, dtype=np.complex128 if is_complex else np.float64)
+                    dY[self.order + 1, :] = np.asarray(right_flux, dtype=dtype)
             
-            # Stack RHS: (n_b + m, batch)
-            rhs = np.vstack([rhs_top, dY])
+            rhs = np.vstack([rhs_top, dY]).astype(dtype, copy=False)
             
-            # Solve KKT system for all batches
             lu, piv = self._kkt_lu(lam)
-            # If RHS is complex, convert LU factors to complex
-            if is_complex and not np.iscomplexobj(rhs):
-                # Convert real LU to complex (zero imaginary part)
-                lu_complex = lu.astype(np.complex128)
-                sol = sla.lu_solve((lu_complex, piv), rhs, overwrite_b=False)
-            else:
-                sol = sla.lu_solve((lu, piv), rhs, overwrite_b=False)
-            P = sol[:n_b, :]  # (n_b, batch)
+            sol = sla.lu_solve((lu.astype(dtype, copy=False), piv), rhs, overwrite_b=False)
+            n_b = BW.shape[0]
+            P = sol[:n_b, :]
             
-            # Evaluate splines for all batches
-            f_spline = self._BT0_f @ P  # (n, n_b) @ (n_b, batch) = (n, batch)
-            df1_spline = self._B1T_f @ P  # (n, n_b) @ (n_b, batch) = (n, batch)
-            df2_spline = self._B2T_f @ P  # (n, n_b) @ (n_b, batch) = (n, batch)
+            f_spline = BT0 @ P
+            df1_spline = B1T @ P
+            df2_spline = B2T @ P
             
-            # FFT correction for all batches
-            residual = f - f_spline  # (n, batch)
+            residual = f - f_spline
             if is_complex:
-                # For complex, use full FFT
                 R = np.fft.fft(residual, axis=0)
-                omega = 2.0 * np.pi * np.fft.fftfreq(self.grid.n, d=self.grid.dx)
-                corr1 = np.fft.ifft(R * (1j * omega)[:, None], axis=0)
-                corr2 = np.fft.ifft(R * (1j * omega)[:, None]**2, axis=0)
+                omega_full = 2.0 * np.pi * np.fft.fftfreq(self.grid.n, d=self.grid.dx)
+                corr1 = np.fft.ifft(R * (1j * omega_full)[:, None], n=self.grid.n, axis=0)
+                corr2 = np.fft.ifft(R * (1j * omega_full)[:, None]**2, n=self.grid.n, axis=0)
+                out_dtype = np.complex128
             else:
-                # For real, use rfft
                 R = np.fft.rfft(residual, axis=0)
-                # Broadcast omega: (n//2+1,) -> (n//2+1, 1) for broadcasting with (n//2+1, batch)
                 corr1 = np.fft.irfft(R * self._iomega[:, None], n=self.grid.n, axis=0)
                 corr2 = np.fft.irfft(R * self._iomega2[:, None], n=self.grid.n, axis=0)
+                out_dtype = np.float64
             
-            out_dtype = np.complex128 if is_complex else np.float64
-            df1 = (df1_spline + corr1).astype(out_dtype)
-            df2 = (df2_spline + corr2).astype(out_dtype)
+            df1 = (df1_spline + corr1).astype(out_dtype, copy=False)
+            df2 = (df2_spline + corr2).astype(out_dtype, copy=False)
+            f_spline = f_spline.astype(out_dtype, copy=False)
             
-            return df1, df2, f_spline.astype(out_dtype)
+            return df1, df2, f_spline
         
-        # GPU path (similar structure but using GPU backend)
+        # GPU path (supports real and complex)
         bk = self._bk
         xp, la, fft = bk.xp, bk.la, bk.fft
         
         input_was_numpy = isinstance(f, np.ndarray) or (_HAS_CUPY and not isinstance(f, cp.ndarray))
-        
-        # Detect if input is complex
-        if _HAS_CUPY and isinstance(f, cp.ndarray):
-            is_complex = cp.iscomplexobj(f)
-        else:
-            is_complex = np.iscomplexobj(f)
-        
-        if is_complex:
-            f_x = xp.asarray(f, dtype=xp.complex128)
-        else:
-            f_x = xp.asarray(f, dtype=xp.float64)
+        f_x = xp.asarray(f)
         
         if f_x.ndim != 2:
             raise ValueError("f must be 2D with shape (n, batch)")
@@ -1243,20 +1216,16 @@ class bspf1d:
         if n != self.grid.n:
             raise ValueError(f"First dimension of f ({n}) must match grid size ({self.grid.n})")
         
-        BW = xp.asarray(self.BW)
-        BND = xp.asarray(self.end.BND)
-        BT0 = xp.asarray(self.basis.BT0)
-        B1T = xp.asarray(self.basis.BkT(1))
-        B2T = xp.asarray(self.basis.BkT(2))
+        is_complex = cp.iscomplexobj(f_x) if _HAS_CUPY and isinstance(f_x, cp.ndarray) else np.iscomplexobj(f_x)
+        dtype = xp.complex128 if is_complex else xp.float64
+        f_x = f_x.astype(dtype)
         
-        # Use full FFT frequencies for complex, rFFT frequencies for real
-        if is_complex:
-            if bk.is_gpu and _HAS_CUPY:
-                om = xp.asarray(2.0 * cp.pi * cp.fft.fftfreq(self.grid.n, d=self.grid.dx))
-            else:
-                om = xp.asarray(2.0 * np.pi * np.fft.fftfreq(self.grid.n, d=self.grid.dx))
-        else:
-            om = xp.asarray(self.grid.omega)
+        BW = xp.asarray(self.BW).astype(dtype)
+        BND = xp.asarray(self.end.BND).astype(dtype)
+        BT0 = xp.asarray(self.basis.BT0).astype(dtype)
+        B1T = xp.asarray(self.basis.BkT(1)).astype(dtype)
+        B2T = xp.asarray(self.basis.BkT(2)).astype(dtype)
+        om_real = xp.asarray(self.grid.omega)
         
         # Build RHS for all batches
         rhs_top = 2.0 * (BW @ f_x)  # (n_b, batch)
@@ -1267,37 +1236,22 @@ class bspf1d:
                 raise ValueError("Neumann BC requires self.order ≥ 1.")
             left_flux, right_flux = neumann_bc
             if left_flux is not None:
-                lf = xp.asarray(left_flux, dtype=xp.complex128 if is_complex else xp.float64)
-                if lf.ndim == 0:
-                    dY[1, :] = complex(lf) if is_complex else float(lf)
-                else:
-                    dY[1, :] = lf
+                lf = xp.asarray(left_flux, dtype=dtype)
+                dY[1, :] = lf if lf.ndim > 0 else float(lf)
             if right_flux is not None:
-                rf = xp.asarray(right_flux, dtype=xp.complex128 if is_complex else xp.float64)
-                if rf.ndim == 0:
-                    dY[self.order + 1, :] = complex(rf) if is_complex else float(rf)
-                else:
-                    dY[self.order + 1, :] = rf
+                rf = xp.asarray(right_flux, dtype=dtype)
+                dY[self.order + 1, :] = rf if rf.ndim > 0 else float(rf)
         
-        rhs = xp.vstack([rhs_top, dY])
+        rhs = xp.vstack([rhs_top, dY]).astype(dtype)
         
         # Solve KKT system
         lu_cpu, piv_cpu = self._kkt_lu(lam)
         if bk.is_gpu:
-            # Convert LU factors to GPU arrays
-            lu_gpu = xp.asarray(lu_cpu)
+            lu_gpu = xp.asarray(lu_cpu).astype(dtype, copy=False)
             piv_gpu = xp.asarray(piv_cpu)
-            # If RHS is complex, convert LU factors to complex as well
-            if is_complex and _HAS_CUPY and not cp.iscomplexobj(lu_gpu):
-                lu_gpu = lu_gpu.astype(xp.complex128)
             SOL = la.lu_solve((lu_gpu, piv_gpu), rhs)
         else:
-            # If RHS is complex, convert LU factors to complex
-            if is_complex and not np.iscomplexobj(rhs):
-                lu_complex = lu_cpu.astype(np.complex128)
-                SOL = la.lu_solve((lu_complex, piv_cpu), bk.to_host(rhs))
-            else:
-                SOL = la.lu_solve((lu_cpu, piv_cpu), bk.to_host(rhs))
+            SOL = la.lu_solve((lu_cpu.astype(dtype, copy=False), piv_cpu), bk.to_host(rhs))
             SOL = xp.asarray(SOL)
         
         n_b = self.basis.B0.shape[0]
@@ -1310,22 +1264,26 @@ class bspf1d:
         
         # FFT correction
         residual = f_x - f_spline
+        om_real = xp.asarray(self.grid.omega)
         if is_complex:
             R = fft.fft(residual, axis=0)
-            corr1 = fft.ifft(R * (1j * om)[:, None], axis=0)
-            corr2 = fft.ifft(R * (1j * om)[:, None]**2, axis=0)
+            omega_full = 2.0 * xp.pi * fft.fftfreq(self.grid.n, d=self.grid.dx)
+            corr1 = fft.ifft(R * (1j * omega_full)[:, None], n=self.grid.n, axis=0)
+            corr2 = fft.ifft(R * (1j * omega_full)[:, None]**2, n=self.grid.n, axis=0)
+            out_dtype = xp.complex128
         else:
             R = fft.rfft(residual, axis=0)
-            corr1 = fft.irfft(R * (1j * om)[:, None], n=self.grid.n, axis=0)
-            corr2 = fft.irfft(R * (1j * om)[:, None]**2, n=self.grid.n, axis=0)
+            corr1 = fft.irfft(R * (1j * om_real)[:, None], n=self.grid.n, axis=0)
+            corr2 = fft.irfft(R * (1j * om_real)[:, None]**2, n=self.grid.n, axis=0)
+            out_dtype = xp.float64
         
-        df1 = df1_spline + corr1
-        df2 = df2_spline + corr2
+        df1 = (df1_spline + corr1).astype(out_dtype, copy=False)
+        df2 = (df2_spline + corr2).astype(out_dtype, copy=False)
+        f_spline = f_spline.astype(out_dtype, copy=False)
         
-        out_dtype = xp.complex128 if is_complex else xp.float64
-        return (bk.ensure_like_input(df1, input_was_numpy).astype(out_dtype),
-                bk.ensure_like_input(df2, input_was_numpy).astype(out_dtype),
-                bk.ensure_like_input(f_spline, input_was_numpy).astype(out_dtype))
+        return (bk.ensure_like_input(df1, input_was_numpy),
+                bk.ensure_like_input(df2, input_was_numpy),
+                bk.ensure_like_input(f_spline, input_was_numpy))
 
     def definite_integral(self, f: Array, a: Optional[float] = None, b: Optional[float] = None, lam: float = 0.0) -> float:
         """

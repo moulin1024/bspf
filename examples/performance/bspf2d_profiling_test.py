@@ -14,6 +14,13 @@ import sys
 import time
 import numpy as np
 
+# Ensure local src is preferred over installed package
+_here = os.path.abspath(os.path.dirname(__file__))
+_root = os.path.abspath(os.path.join(_here, "..", ".."))
+_src = os.path.join(_root, "src")
+if _src not in sys.path:
+    sys.path.insert(0, _src)
+
 
 # Import after adjusting sys.path
 from bspf.bspf2d import bspf2d
@@ -27,7 +34,7 @@ except ImportError:
     cp = None
 
 
-def check_correctness(nx, ny, degree, use_gpu=False):
+def check_correctness(nx, ny, degree, use_gpu=False, use_complex=False):
     """
     Check correctness of differentiate_1_2 against exact 2D Taylor-Green vortex derivatives.
     
@@ -51,20 +58,46 @@ def check_correctness(nx, ny, degree, use_gpu=False):
     
     # 2D Taylor-Green vortex scalar field: f(x,y) = sin(x) * sin(y)
     print(f"Generating 2D Taylor-Green vortex field: {nx}x{ny} grid...")
-    F = np.sin(X) * np.sin(Y)  # (ny, nx)
+    F_real = np.sin(X) * np.sin(Y)  # (ny, nx)
+    if use_complex:
+        shift = np.pi / 4.0
+        F_imag = np.sin(X + shift) * np.sin(Y + shift)
+        F = F_real + 1j * F_imag
+    else:
+        F = F_real
     
     # Exact derivatives
     # With indexing="xy": X[i,j] = x[j] (x varies along axis 1), Y[i,j] = y[i] (y varies along axis 0)
-    df_dx_exact = np.cos(X) * np.sin(Y)  # (ny, nx) - derivative w.r.t. x (varies along axis 1)
-    df_dy_exact = np.sin(X) * np.cos(Y)  # (ny, nx) - derivative w.r.t. y (varies along axis 0)
-    d2f_dx2_exact = -np.sin(X) * np.sin(Y)  # (ny, nx)
-    d2f_dy2_exact = -np.sin(X) * np.sin(Y)  # (ny, nx)
+    df_dx_real = np.cos(X) * np.sin(Y)
+    df_dy_real = np.sin(X) * np.cos(Y)
+    d2f_dx2_real = -np.sin(X) * np.sin(Y)
+    d2f_dy2_real = -np.sin(X) * np.sin(Y)
+    if use_complex:
+        shift = np.pi / 4.0
+        df_dx_imag = np.cos(X + shift) * np.sin(Y + shift)
+        df_dy_imag = np.sin(X + shift) * np.cos(Y + shift)
+        d2f_dx2_imag = -np.sin(X + shift) * np.sin(Y + shift)
+        d2f_dy2_imag = -np.sin(X + shift) * np.sin(Y + shift)
+        df_dx_exact = df_dx_real + 1j * df_dx_imag
+        df_dy_exact = df_dy_real + 1j * df_dy_imag
+        d2f_dx2_exact = d2f_dx2_real + 1j * d2f_dx2_imag
+        d2f_dy2_exact = d2f_dy2_real + 1j * d2f_dy2_imag
+    else:
+        df_dx_exact = df_dx_real
+        df_dy_exact = df_dy_real
+        d2f_dx2_exact = d2f_dx2_real
+        d2f_dy2_exact = d2f_dy2_real
     
     # Build operator (matching diff_2d.py configuration)
-    print(f"Building BSPF2D operator: degree={degree}, clustering=True, use_gpu={use_gpu}...")
+    print(f"Building BSPF2D operator: degree={degree}, clustering=True, use_gpu={use_gpu}, complex={use_complex}...")
+    if use_gpu and _HAS_CUPY:
+        x_backend = cp.asarray(x, dtype=cp.float64)
+        y_backend = cp.asarray(y, dtype=cp.float64)
+    else:
+        x_backend, y_backend = x, y
     op = bspf2d.from_grids(
-        x=x,
-        y=y,
+        x=x_backend,
+        y=y_backend,
         degree_x=degree,
         degree_y=degree,
         n_basis_x=4 * degree,
@@ -77,7 +110,8 @@ def check_correctness(nx, ny, degree, use_gpu=False):
     
     # Convert F to GPU array if needed
     if use_gpu and _HAS_CUPY:
-        F_gpu = cp.asarray(F, dtype=cp.float64)
+        dtype = cp.complex128 if use_complex else cp.float64
+        F_gpu = cp.asarray(F, dtype=dtype)
     else:
         F_gpu = F
     
@@ -98,12 +132,13 @@ def check_correctness(nx, ny, degree, use_gpu=False):
     err_dx2 = d2f_dx2_num - d2f_dx2_exact
     err_dy2 = d2f_dy2_num - d2f_dy2_exact
     
-    l2_err_dx = np.sqrt(np.mean(err_dx**2))
-    l2_err_dy = np.sqrt(np.mean(err_dy**2))
-    l2_err_dx2 = np.sqrt(np.mean(err_dx2**2))
-    l2_err_dy2 = np.sqrt(np.mean(err_dy2**2))
+    abs_fn = np.abs if not use_gpu else np.abs  # both NumPy/CuPy
+    l2_err_dx = np.sqrt(np.mean(abs_fn(err_dx)**2))
+    l2_err_dy = np.sqrt(np.mean(abs_fn(err_dy)**2))
+    l2_err_dx2 = np.sqrt(np.mean(abs_fn(err_dx2)**2))
+    l2_err_dy2 = np.sqrt(np.mean(abs_fn(err_dy2)**2))
     
-    print(f"\nGrid: nx={nx}, ny={ny}, degree={degree}")
+    print(f"\nGrid: nx={nx}, ny={ny}, degree={degree}, complex={use_complex}")
     print(f"\nL2 error:")
     print(f"  df/dx:  L2={l2_err_dx:.6e}")
     print(f"  df/dy:  L2={l2_err_dy:.6e}")
@@ -131,7 +166,7 @@ def check_correctness(nx, ny, degree, use_gpu=False):
     }
 
 
-def compare_performance(nx, ny, degree, use_gpu=False, n_runs=10):
+def compare_performance(nx, ny, degree, use_gpu=False, n_runs=10, use_complex=False):
     """
     Benchmark performance of differentiate_1_2.
     """
@@ -144,11 +179,18 @@ def compare_performance(nx, ny, degree, use_gpu=False, n_runs=10):
     x = np.linspace(a, b, nx, endpoint=True)
     y = np.linspace(a, b, ny, endpoint=True)
     X, Y = np.meshgrid(x, y, indexing="xy")  # X varies along axis 1, Y along axis 0
-    F = np.sin(X) * np.sin(Y)
+    F_real = np.sin(X) * np.sin(Y)
+    if use_complex:
+        shift = np.pi / 4.0
+        F_imag = np.sin(X + shift) * np.sin(Y + shift)
+        F = F_real + 1j * F_imag
+    else:
+        F = F_real
     
     # Convert to GPU array if needed
     if use_gpu and _HAS_CUPY:
-        F_gpu = cp.asarray(F, dtype=cp.float64)
+        dtype = cp.complex128 if use_complex else cp.float64
+        F_gpu = cp.asarray(F, dtype=dtype)
     else:
         F_gpu = F
     
@@ -194,7 +236,7 @@ def compare_performance(nx, ny, degree, use_gpu=False, n_runs=10):
     min_time = np.min(times)
     max_time = np.max(times)
     
-    print(f"\nGrid: nx={nx}, ny={ny}, degree={degree}, use_gpu={use_gpu}")
+    print(f"\nGrid: nx={nx}, ny={ny}, degree={degree}, use_gpu={use_gpu}, complex={use_complex}")
     print(f"\n{'Metric':<15s} {'Mean':>12s} {'Std':>12s} {'Min':>12s} {'Max':>12s}")
     print("-" * 65)
     print(f"{'Time (s)':<15s} {mean_time:12.6f} {std_time:12.6f} {min_time:12.6f} {max_time:12.6f}")
@@ -208,7 +250,7 @@ def compare_performance(nx, ny, degree, use_gpu=False, n_runs=10):
     }
 
 
-def compare_gpu_cpu(nx, ny, degree, n_runs=10):
+def compare_gpu_cpu(nx, ny, degree, n_runs=10, use_complex=False):
     """
     Compare GPU vs CPU performance.
     """
@@ -230,7 +272,13 @@ def compare_gpu_cpu(nx, ny, degree, n_runs=10):
     x = np.linspace(a, b, nx, endpoint=True)
     y = np.linspace(a, b, ny, endpoint=True)
     X, Y = np.meshgrid(x, y, indexing="xy")  # X varies along axis 1, Y along axis 0
-    F = np.sin(X) * np.sin(Y)
+    F_real = np.sin(X) * np.sin(Y)
+    if use_complex:
+        shift = np.pi / 4.0
+        F_imag = np.sin(X + shift) * np.sin(Y + shift)
+        F = F_real + 1j * F_imag
+    else:
+        F = F_real
     
     # Build CPU operator
     print("Building CPU operator...")
@@ -255,7 +303,7 @@ def compare_gpu_cpu(nx, ny, degree, n_runs=10):
     # Convert inputs to CuPy to satisfy strict backend checking
     x_gpu = cp.asarray(x, dtype=cp.float64)
     y_gpu = cp.asarray(y, dtype=cp.float64)
-    F_gpu = cp.asarray(F, dtype=cp.float64)
+    F_gpu = cp.asarray(F, dtype=cp.complex128 if use_complex else cp.float64)
     op_gpu = bspf2d.from_grids(
         x=x_gpu,
         y=y_gpu,
@@ -312,7 +360,7 @@ def compare_gpu_cpu(nx, ny, degree, n_runs=10):
     
     speedup = mean_cpu / mean_gpu
     
-    print(f"\nGrid: nx={nx}, ny={ny}, degree={degree}")
+    print(f"\nGrid: nx={nx}, ny={ny}, degree={degree}, complex={use_complex}")
     print(f"\n{'Version':<15s} {'Mean':>12s} {'Std':>12s} {'Min':>12s} {'Max':>12s}")
     print("-" * 65)
     print(f"{'CPU':<15s} {mean_cpu:12.6f} {std_cpu:12.6f} {min_cpu:12.6f} {max_cpu:12.6f}")
@@ -341,14 +389,15 @@ def parse_args():
         description="Profile bspf2d.differentiate_1_2 using 2D Taylor-Green vortex test data",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
-    p.add_argument("--nx", type=int, default=512, 
+    p.add_argument("--nx", type=int, default=128, 
                    help="Grid points in x")
-    p.add_argument("--ny", type=int, default=512, 
+    p.add_argument("--ny", type=int, default=128, 
                    help="Grid points in y")
     p.add_argument("--degree", type=int, default=7, 
                    help="B-spline degree")
     p.add_argument("--runs", type=int, default=100, help="Number of timing runs")
     p.add_argument("--gpu", action="store_true", help="Use GPU (CuPy) if available")
+    p.add_argument("--complex", action="store_true", help="Use complex input field")
     p.add_argument("--no-check", action="store_true", help="Skip correctness check")
     p.add_argument("--no-gpu-cpu", action="store_true", 
                    help="Skip GPU vs CPU comparison (requires CuPy)")
@@ -365,6 +414,7 @@ def main():
             ny=args.ny,
             degree=args.degree,
             use_gpu=args.gpu,
+            use_complex=args.complex,
         )
     
     # Compare GPU vs CPU for batched version (if CuPy is available and not skipped)
@@ -374,6 +424,7 @@ def main():
             ny=args.ny,
             degree=args.degree,
             n_runs=args.runs,
+            use_complex=args.complex,
         )
 
 

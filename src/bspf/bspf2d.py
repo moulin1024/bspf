@@ -784,24 +784,27 @@ class bspf2d:
             Second derivative in y-direction: ∂²F/∂y², shape (ny, nx)
         """
         self._check_shape(F)
-        
-        # Batched implementation (optimal for both CPU and GPU)
-        # For x-direction: differentiate along columns (axis=1)
-        # Transpose F to (nx, ny) so rows become columns, then use batched differentiate_1_2
-        F_T = F.T  # (nx, ny) - transpose so columns become rows
+
+        is_gpu = _HAS_CUPY and isinstance(F, cp.ndarray)
+        xp = cp if is_gpu else np
+        is_complex = (cp.iscomplexobj(F) if is_gpu else np.iscomplexobj(F))
+        dtype = xp.complex128 if is_complex else xp.float64
+        F_cast = xp.asarray(F, dtype=dtype)
+
+        # X-direction: differentiate along columns (axis=1)
+        F_T = F_cast.T  # (nx, ny)
         dF_dx_T, d2F_dx2_T, _ = self.x_model.differentiate_1_2_batched(F_T, lam=lam_x)
-        dF_dx = dF_dx_T.T  # (ny, nx) - transpose back
-        d2F_dx2 = d2F_dx2_T.T  # (ny, nx) - transpose back
-        
-        # For y-direction: differentiate along rows (axis=0)
-        # F is (ny, nx), use batched differentiate_1_2 along axis=0
-        dF_dy, d2F_dy2, _ = self.y_model.differentiate_1_2_batched(F, lam=lam_y)
-        
+        dF_dx = dF_dx_T.T
+        d2F_dx2 = d2F_dx2_T.T
+
+        # Y-direction: differentiate along rows (axis=0)
+        dF_dy, d2F_dy2, _ = self.y_model.differentiate_1_2_batched(F_cast, lam=lam_y)
+
         return (
-            dF_dx.astype(np.float64),
-            dF_dy.astype(np.float64),
-            d2F_dx2.astype(np.float64),
-            d2F_dy2.astype(np.float64),
+            dF_dx.astype(dtype),
+            dF_dy.astype(dtype),
+            d2F_dx2.astype(dtype),
+            d2F_dy2.astype(dtype),
         )
 
     # ---- Neumann-enforced variants ----
