@@ -64,9 +64,10 @@ dx, dy = Lx / nx, Ly / ny
 
 g = 20.0                    # 非线性系数
 omega_trap = 1.0           # trap 频率（无量纲）
-Omega = 0.95                # 旋转角速度（0 < Omega < omega_trap，一般）
+Omega_target = 0.95         # 目标旋转角速度（0 < Omega < omega_trap，一般）
+tau_ramp = 9.0             # 在前 tau_ramp 内线性 ramp 到 Omega_target (0 = no ramp)
 dt_imag = 0.001           # initial imaginary-time 步长
-tau_max = 5              # maximum imaginary-time to evolve
+tau_max = 10             # maximum imaginary-time to evolve
 dt_real = 0.001            # real-time 步长
 n_real_steps = 5000        # real-time 总步数
 output_every = 1000         # 每隔多少步画一次图
@@ -217,7 +218,7 @@ psi[:, 0] = 0.0      # bottom boundary
 psi[:, -1] = 0.0     # top boundary
 
 # Helper function to compute RHS (inline, for reuse in RK23 stages)
-def compute_rhs_imag_inline(psi_in):
+def compute_rhs_imag_inline(psi_in, Omega_val):
     # Enforce BCs before differentiation
     psi_in[0, :] = 0.0; psi_in[-1, :] = 0.0; psi_in[:, 0] = 0.0; psi_in[:, -1] = 0.0
     
@@ -238,7 +239,7 @@ def compute_rhs_imag_inline(psi_in):
     
     # Combine to get H_psi (only the combination step, not including laplacian/Lz)
     t_H_start = time.perf_counter()
-    Hpsi = -0.5 * lap + V_trap * psi_in + g * xp.abs(psi_in)**2 * psi_in - Omega * Lzpsi
+    Hpsi = -0.5 * lap + V_trap * psi_in + g * xp.abs(psi_in)**2 * psi_in - Omega_val * Lzpsi
     t_H_end = time.perf_counter()
     timing_stats['H_psi'] += (t_H_end - t_H_start)
     timing_counts['H_psi'] += 1
@@ -268,30 +269,39 @@ with tqdm(total=tau_max, desc="Imaginary-time", unit="tau",
         
         # RK23 stages (Bogacki-Shampine method)
         t_rk23_start = time.perf_counter()
+
+        # Actual step size for this iteration (clip so we don't overshoot tau_max)
+        dt_step = min(dt_imag, tau_max - tau)
         
+        # Ramp rotation: Omega from 0 -> Omega_target over tau_ramp (if tau_ramp > 0)
+        if tau_ramp > 0:
+            Omega_curr = Omega_target * min(1.0, tau / tau_ramp)
+        else:
+            Omega_curr = Omega_target
+
         # Stage 1: k1 = rhs(psi)
-        k1 = compute_rhs_imag_inline(psi.copy())
+        k1 = compute_rhs_imag_inline(psi.copy(), Omega_curr)
         
         # Stage 2: k2 = rhs(psi + 0.5*dt*k1)
-        psi_stage2 = psi + 0.5 * dt_imag * k1
+        psi_stage2 = psi + 0.5 * dt_step * k1
         psi_stage2[0, :] = 0.0; psi_stage2[-1, :] = 0.0; psi_stage2[:, 0] = 0.0; psi_stage2[:, -1] = 0.0
-        k2 = compute_rhs_imag_inline(psi_stage2)
+        k2 = compute_rhs_imag_inline(psi_stage2, Omega_curr)
         
         # Stage 3: k3 = rhs(psi + 0.75*dt*k2)
-        psi_stage3 = psi + 0.75 * dt_imag * k2
+        psi_stage3 = psi + 0.75 * dt_step * k2
         psi_stage3[0, :] = 0.0; psi_stage3[-1, :] = 0.0; psi_stage3[:, 0] = 0.0; psi_stage3[:, -1] = 0.0
-        k3 = compute_rhs_imag_inline(psi_stage3)
+        k3 = compute_rhs_imag_inline(psi_stage3, Omega_curr)
         
         # Stage 4: k4 = rhs(psi + (2/9)*dt*k1 + (1/3)*dt*k2 + (4/9)*dt*k3)
-        psi_stage4 = psi + (2.0/9.0) * dt_imag * k1 + (1.0/3.0) * dt_imag * k2 + (4.0/9.0) * dt_imag * k3
+        psi_stage4 = psi + (2.0/9.0) * dt_step * k1 + (1.0/3.0) * dt_step * k2 + (4.0/9.0) * dt_step * k3
         psi_stage4[0, :] = 0.0; psi_stage4[-1, :] = 0.0; psi_stage4[:, 0] = 0.0; psi_stage4[:, -1] = 0.0
-        k4 = compute_rhs_imag_inline(psi_stage4)
+        k4 = compute_rhs_imag_inline(psi_stage4, Omega_curr)
         
         # 3rd order solution (Bogacki-Shampine)
-        psi_3rd = psi + dt_imag * ((2.0/9.0) * k1 + (1.0/3.0) * k2 + (4.0/9.0) * k3)
+        psi_3rd = psi + dt_step * ((2.0/9.0) * k1 + (1.0/3.0) * k2 + (4.0/9.0) * k3)
         
         # 2nd order embedded solution (for error estimation)
-        psi_2nd = psi + dt_imag * ((7.0/24.0) * k1 + (1.0/4.0) * k2 + (1.0/3.0) * k3 + (1.0/8.0) * k4)
+        psi_2nd = psi + dt_step * ((7.0/24.0) * k1 + (1.0/4.0) * k2 + (1.0/3.0) * k3 + (1.0/8.0) * k4)
         
         # Error estimate: difference between 3rd and 2nd order solutions
         # Synchronize GPU before error computation if using GPU
@@ -334,9 +344,9 @@ with tqdm(total=tau_max, desc="Imaginary-time", unit="tau",
         
         # Adjust timestep for next iteration
         if error_norm > 0:
-            # Optimal timestep scaling factor
+            # Optimal timestep scaling factor (based on attempted dt_step)
             factor = safety * (1.0 / error_norm) ** (1.0 / 3.0)  # 3rd order method
-            dt_imag = float(np.clip(factor * dt_imag, dt_min, dt_max))  # Use np.clip for scalar
+            dt_imag = float(np.clip(factor * dt_step, dt_min, dt_max))  # Use np.clip for scalar
         else:
             # If error is zero, increase timestep
             dt_imag = min(dt_imag * 1.5, dt_max)
@@ -361,7 +371,8 @@ with tqdm(total=tau_max, desc="Imaginary-time", unit="tau",
         if n_accepted > 0:
             pbar.set_postfix(
                 step=step,
-                dt=f"{dt_imag:.2e}",
+                dt=f"{dt_step:.2e}",
+                Omega=f"{Omega_curr:.3f}",
                 N=f"{N_now:.4e}",
                 err=f"{error_norm:.2e}",
                 acc=n_accepted,
@@ -370,7 +381,8 @@ with tqdm(total=tau_max, desc="Imaginary-time", unit="tau",
         else:
             pbar.set_postfix(
                 step=step,
-                dt=f"{dt_imag:.2e}",
+                dt=f"{dt_step:.2e}",
+                Omega=f"{Omega_curr:.3f}",
                 err=f"{error_norm:.2e}",
                 acc=n_accepted,
                 rej=n_rejected
