@@ -221,25 +221,16 @@ def compute_rhs_imag_inline(psi_in):
     # Enforce BCs before differentiation
     psi_in[0, :] = 0.0; psi_in[-1, :] = 0.0; psi_in[:, 0] = 0.0; psi_in[:, -1] = 0.0
     
-    # Compute all derivatives together using differentiate_1_2 (more efficient)
+    # Compute all derivatives together using complex-aware differentiate_1_2
     t_lap_start = time.perf_counter()
-    psi_real = xp.real(psi_in)
-    psi_imag = xp.imag(psi_in)
-    
-    # Use differentiate_1_2 to compute all derivatives at once
-    dpsi_dx_real, dpsi_dy_real, d2psi_dx2_real, d2psi_dy2_real = bspf_op.differentiate_1_2(psi_real)
-    dpsi_dx_imag, dpsi_dy_imag, d2psi_dx2_imag, d2psi_dy2_imag = bspf_op.differentiate_1_2(psi_imag)
-    
-    # Compute Laplacian from second derivatives
-    lap = (d2psi_dx2_real + 1j * d2psi_dx2_imag) + (d2psi_dy2_real + 1j * d2psi_dy2_imag)
+    dpsi_dx, dpsi_dy, d2psi_dx2, d2psi_dy2 = bspf_op.differentiate_1_2(psi_in)
+    lap = d2psi_dx2 + d2psi_dy2
     t_lap_end = time.perf_counter()
     timing_stats['laplacian'] += (t_lap_end - t_lap_start)
     timing_counts['laplacian'] += 1
     
-    # Compute Lz_psi using first derivatives (already computed above)
+    # Compute Lz_psi using first derivatives
     t_Lz_start = time.perf_counter()
-    dpsi_dx = dpsi_dx_real + 1j * dpsi_dx_imag
-    dpsi_dy = dpsi_dy_real + 1j * dpsi_dy_imag
     Lzpsi = -1j * (X * dpsi_dy - Y * dpsi_dx)
     t_Lz_end = time.perf_counter()
     timing_stats['Lz_psi'] += (t_Lz_end - t_Lz_start)
