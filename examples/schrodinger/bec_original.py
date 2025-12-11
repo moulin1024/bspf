@@ -72,7 +72,7 @@ def laplacian(psi, dx, dy):
     Boundary points are set to 0, interior uses standard finite differences.
     """
     lap = np.zeros_like(psi, dtype=np.complex128)
-    
+
     # Ensure Dirichlet BCs are satisfied
     psi = apply_dirichlet_bc(psi)
     
@@ -82,7 +82,7 @@ def laplacian(psi, dx, dy):
         (psi[2:, 1:-1] - 2.0 * psi[1:-1, 1:-1] + psi[:-2, 1:-1]) / dx**2 +
         (psi[1:-1, 2:] - 2.0 * psi[1:-1, 1:-1] + psi[1:-1, :-2]) / dy**2
     )
-    
+
     # Boundary points: use one-sided differences with boundary value = 0
     # Left boundary (i=0): use forward difference, left neighbor is 0
     lap[0, 1:-1] = (
@@ -104,7 +104,7 @@ def laplacian(psi, dx, dy):
         (psi[2:, -1] - 2.0 * psi[1:-1, -1] + psi[:-2, -1]) / dx**2 +
         (0.0 - 2.0 * psi[1:-1, -1] + psi[1:-1, -2]) / dy**2
     )
-    
+
     # Corner points: both neighbors in one direction are 0
     lap[0, 0] = (psi[1, 0] - 2.0 * psi[0, 0] + 0.0) / dx**2 + (psi[0, 1] - 2.0 * psi[0, 0] + 0.0) / dy**2
     lap[0, -1] = (psi[1, -1] - 2.0 * psi[0, -1] + 0.0) / dx**2 + (0.0 - 2.0 * psi[0, -1] + psi[0, -2]) / dy**2
@@ -113,7 +113,7 @@ def laplacian(psi, dx, dy):
     
     # Enforce Dirichlet BCs on the result (boundary Laplacian is also 0)
     lap = apply_dirichlet_bc(lap)
-    
+
     return lap
 
 # ===========================
@@ -125,14 +125,14 @@ def Lz_psi(psi):
     """
     # Ensure Dirichlet BCs are satisfied
     psi = apply_dirichlet_bc(psi.copy())
-    
+
     dpsi_dx = np.zeros_like(psi, dtype=np.complex128)
     dpsi_dy = np.zeros_like(psi, dtype=np.complex128)
-    
+
     # Center difference for interior points
     dpsi_dx[1:-1, :] = (psi[2:, :] - psi[:-2, :]) / (2 * dx)
     dpsi_dy[:, 1:-1] = (psi[:, 2:] - psi[:, :-2]) / (2 * dy)
-    
+
     # Boundary points: derivatives are 0 (since psi = 0 at boundaries)
     # For boundary points, we can use one-sided differences or set to 0
     # Setting to 0 is consistent with Dirichlet BCs
@@ -140,7 +140,7 @@ def Lz_psi(psi):
     dpsi_dx[-1, :] = 0.0
     dpsi_dy[:, 0] = 0.0
     dpsi_dy[:, -1] = 0.0
-    
+
     # Lz ψ = -i (x ∂yψ - y ∂xψ)
     Lzpsi = -1j * (X * dpsi_dy - Y * dpsi_dx)
     

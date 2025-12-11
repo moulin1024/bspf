@@ -8,14 +8,14 @@ nx, ny = 256, 256          # 网格点数
 Lx, Ly = 20.0, 20.0        # 物理尺寸 [-Lx/2, Lx/2] × [-Ly/2, Ly/2]
 dx, dy = Lx / nx, Ly / ny
 
-g = 800.0                  # 非线性强度（可以调大一些看更多涡旋）
+g = 200.0                  # 非线性强度（可以调大一些看更多涡旋）
 omega_trap = 1.0           # trap 频率
 Omega_target = 0.9         # 目标旋转频率
-tau_max = 6.0              # imaginary time 总长度
-tau_ramp = 3.0             # 在前 tau_ramp 内把 Omega 从 0 ramp 到 Omega_target
+tau_max = 10.0              # imaginary time 总长度
+tau_ramp = 8.0             # 在前 tau_ramp 内把 Omega 从 0 ramp 到 Omega_target
 dt_imag = 1e-3             # imaginary time 步长
 n_steps = int(tau_max / dt_imag)
-output_every = 1000        # 每隔多少步画一次图（可改小看看演化过程）
+output_every = 100        # 每隔多少步画一次图（可改小看看演化过程）
 
 np.random.seed(0)
 
@@ -204,7 +204,6 @@ for n in range(1, n_steps + 1):
 
     if n % output_every == 0 or n == 1:
         print(f"step {n}/{n_steps}, tau = {tau:.3f}, Omega = {Omega:.3f}, N = {N_now:.4e}")
-        plot_state(psi, title=f"Imag-time τ={tau:.3f}")
 
 print("Imaginary-time evolution finished.")
 print(f"Final τ = {tau:.3f}, Omega = {Omega:.3f}, N = {norm(psi):.4e}")
