@@ -1,9 +1,139 @@
-"""Backend selection and explicit host/device conversion helpers.
+"""! @file backend.py
+@brief Backend selection and explicit host/device conversion helpers.
 
-This module currently re-exports the legacy implementation while the package
-is being split into focused modules.
+This module centralizes optional CuPy support and the strict conversion rules
+between CPU and GPU arrays.
 """
 
-from bspf1d import _Backend
+from __future__ import annotations
 
-__all__ = ["_Backend"]
+import os
+
+import numpy as np
+from scipy import linalg as sla
+
+# Set CUDA_PATH for NVHPC SDK before importing CuPy so CuPy's JIT machinery can
+# find the CUDA toolkit headers when that toolchain layout is present.
+if "CUDA_PATH" not in os.environ:
+    nvhpc_cuda_path = "/opt/nvidia/hpc_sdk/Linux_x86_64/24.9/cuda/12.6"
+    if os.path.exists(nvhpc_cuda_path):
+        os.environ["CUDA_PATH"] = nvhpc_cuda_path
+        os.environ["CUDA_HOME"] = nvhpc_cuda_path
+
+_HAS_CUPY = False
+try:
+    import cupy as cp
+    import cupyx.scipy.interpolate as cp_interp
+    import cupyx.scipy.linalg as cpla
+
+    _HAS_CUPY = True
+except Exception:
+    cp = None
+    cpla = None
+    cp_interp = None
+
+
+class _Backend:
+    """! @brief Switch between NumPy/SciPy and CuPy/CuPyX cleanly.
+
+    @param use_gpu If ``True``, require the CuPy stack and expose GPU-backed
+        array, FFT, and linear-algebra modules. Otherwise use NumPy/SciPy.
+    """
+
+    __slots__ = ("xp", "la", "fft", "is_gpu")
+
+    def __init__(self, use_gpu: bool):
+        if use_gpu:
+            if not _HAS_CUPY:
+                raise RuntimeError(
+                    "use_gpu=True but CuPy is not available. "
+                    "Install cupy (e.g. `pip install cupy-cuda12x`) or set use_gpu=False."
+                )
+            self.xp = cp
+            self.la = cpla
+            self.fft = cp.fft
+            self.is_gpu = True
+        else:
+            self.xp = np
+            self.la = sla
+            self.fft = np.fft
+            self.is_gpu = False
+
+    def to_device(self, a):
+        """! @brief Explicitly move an array-like object onto the GPU.
+
+        @param a Input array-like object.
+        @return CuPy array when GPU mode is active.
+        @throws ValueError If a CuPy array is supplied while running in CPU mode.
+        """
+        if self.is_gpu:
+            if _HAS_CUPY and isinstance(a, cp.ndarray):
+                return a
+            return cp.asarray(a, dtype=cp.float64)
+        # In CPU mode, normalize inputs to NumPy and reject accidental CuPy use
+        # so device transfers always remain explicit.
+        if _HAS_CUPY and isinstance(a, cp.ndarray):
+            raise ValueError(
+                "Cannot use CuPy array in CPU mode. "
+                "Use to_host() to convert CuPy array to NumPy, or set use_gpu=True."
+            )
+        return np.asarray(a, dtype=np.float64)
+
+    def to_host(self, a):
+        """! @brief Explicitly move an array-like object onto the CPU.
+
+        @param a Input array-like object.
+        @return NumPy array or the original CPU-backed object.
+        @throws ValueError If the array/backend combination is inconsistent.
+        """
+        if self.is_gpu:
+            if _HAS_CUPY and isinstance(a, cp.ndarray):
+                return cp.asnumpy(a)
+            raise ValueError(
+                "Inconsistency detected: use_gpu=True but array is NumPy. "
+                "Arrays must match the use_gpu setting. Use to_device() for explicit conversion."
+            )
+        if _HAS_CUPY and isinstance(a, cp.ndarray):
+            raise ValueError(
+                "Inconsistency detected: use_gpu=False but array is CuPy. "
+                "Arrays must match the use_gpu setting. Use to_host() for explicit conversion."
+            )
+        return a
+
+    def ensure_like_input(self, out, input_was_numpy: bool):
+        """! @brief Enforce the package rule that GPU mode must stay on-device.
+
+        @param out Computed output array.
+        @param input_was_numpy Whether the original user input came from NumPy.
+        @return ``out`` unchanged when the device contract is satisfied.
+        @throws ValueError If GPU output would need to be implicitly converted.
+        """
+        if self.is_gpu and input_was_numpy:
+            raise ValueError(
+                "Cannot convert GPU results back to NumPy. "
+                "When use_gpu=True, provide CuPy arrays as input to avoid GPU↔CPU conversions. "
+                "Either: (1) convert input to CuPy array before calling, or (2) use use_gpu=False."
+            )
+        return out
+
+    def validate_device(self, a, name: str = "array"):
+        """! @brief Validate that an array matches the configured backend.
+
+        @param a Array object to validate.
+        @param name Human-readable name included in error messages.
+        @throws ValueError If the array does not match the configured device.
+        """
+        if self.is_gpu:
+            if _HAS_CUPY and not isinstance(a, cp.ndarray):
+                raise ValueError(
+                    f"Inconsistency detected: use_gpu=True but {name} is not a CuPy array. "
+                    f"Arrays must match the use_gpu setting. Use to_device() for explicit conversion."
+                )
+        elif _HAS_CUPY and isinstance(a, cp.ndarray):
+            raise ValueError(
+                f"Inconsistency detected: use_gpu=False but {name} is a CuPy array. "
+                f"Arrays must match the use_gpu setting. Use to_host() for explicit conversion."
+            )
+
+
+__all__ = ["_Backend", "_HAS_CUPY", "cp", "cpla", "cp_interp"]

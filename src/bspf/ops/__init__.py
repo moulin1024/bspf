@@ -1,4 +1,5 @@
-"""Numerical operation families for BSPF.
+"""! @file ops/__init__.py
+@brief Namespace package for extracted numerical operation families.
 
 These modules will eventually host extracted differentiation, integration, and
 interpolation workflows.

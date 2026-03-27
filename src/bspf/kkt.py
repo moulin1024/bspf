@@ -1,7 +1,8 @@
-"""KKT assembly and solve helpers.
+"""! @file kkt.py
+@brief Placeholder for the future KKT assembly and solve helpers.
 
-This file is a placeholder for the extracted solver layer. The actual solve
-still lives inside the legacy operator implementation.
+The actual KKT build/factor/solve path still lives in the legacy operator
+implementation. This file exists to reserve the module boundary for Phase 3.
 """
 
 __all__: list[str] = []

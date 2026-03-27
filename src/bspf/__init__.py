@@ -1,9 +1,12 @@
-"""Public package API for BSPF.
+"""! @file __init__.py
+@brief Public package exports for the BSPF package.
 
-The numerical implementation is still delegated to the legacy root-level
-``bspf1d.py`` module while the package is migrated into smaller modules.
+This module exposes the stable user-facing API while the internal codebase is
+being migrated away from the legacy monolithic implementation.
 """
 
+# Re-export the canonical grid type and the current operator wrappers so users
+# can import from ``bspf`` directly instead of depending on file layout.
 from .grid import Grid1D
 from .operators import BSPF1D, PiecewiseBSPF1D, bspf1d
 
