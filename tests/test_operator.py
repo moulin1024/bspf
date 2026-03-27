@@ -83,3 +83,24 @@ def test_piecewise_wrapper_matches_legacy():
     np.testing.assert_allclose(new_d1, old_d1)
     np.testing.assert_allclose(new_d2, old_d2)
     np.testing.assert_allclose(new_fs, old_fs)
+
+
+def test_piecewise_segments_use_package_operator_and_expected_ranges():
+    """! @brief Piecewise segmentation should build package operators on expected slices."""
+    x = np.linspace(0.0, 1.0, 21)
+    pw = PiecewiseBSPF1D(degree=3, x=x, breakpoints=[0.3, 0.7], min_points_per_seg=4)
+
+    assert len(pw.segments) == 3
+    assert [seg["i0"] for seg in pw.segments] == [0, 6, 14]
+    assert [seg["i1"] for seg in pw.segments] == [5, 13, 20]
+    assert all(isinstance(seg["op"], BSPF1D) for seg in pw.segments)
+
+
+def test_piecewise_skips_segments_shorter_than_threshold():
+    """! @brief Segments shorter than the minimum size should be omitted."""
+    x = np.linspace(0.0, 1.0, 21)
+    pw = PiecewiseBSPF1D(degree=3, x=x, breakpoints=[0.05, 0.5], min_points_per_seg=5)
+
+    assert len(pw.segments) == 2
+    assert [seg["i0"] for seg in pw.segments] == [1, 10]
+    assert [seg["i1"] for seg in pw.segments] == [9, 20]
