@@ -1,0 +1,415 @@
+import uuid
+import numpy as np
+import matplotlib.pyplot as plt
+import time
+from scipy.integrate import solve_ivp
+from bspf1d import bspf1d
+
+# Import Chebyshev utilities
+import sys
+import os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
+
+from chebyshev import chebyshev_derivative_from_values, _construct_chebyshev_nodes
+# ----------------------------
+# Exact / manufactured solution
+# ----------------------------
+def smooth_step_solution(x, t, nu, alpha=0.4, beta=0.6, gamma=1.0*np.pi):
+    """
+    Analytical solution for a smooth step-like shock wave.
+    Returns u(x,t) evaluated on (x,t). Handles scalar or array t.
+    """
+    if np.isscalar(t):
+        t = np.array([t])
+    eta = (alpha/nu) * (x - beta*t.reshape(-1, 1) - gamma)
+    u = (alpha + beta + (beta - alpha) * np.exp(eta)) / (1 + np.exp(eta))
+    return u.squeeze()
+
+# ----------------------------
+# IVP RHS with boundary control
+# ----------------------------
+def burgers_rhs_ivp(t, u, bspf_op, nu, u_bc_func):
+    """
+    RHS for solve_ivp (RK45) with exact Dirichlet BCs enforced.
+
+    Steps:
+      1) Overwrite boundary values of the working copy with exact BCs at time t.
+      2) Compute spatial derivatives using BSPF on this corrected vector.
+      3) Set du/dt = 0 at boundaries so they remain fixed during integration.
+    """
+    u_ext = u.copy()
+    bc = u_bc_func(t)
+    u_ext[0]  = bc[0]
+    u_ext[-1] = bc[-1]
+    # from filter import apply_filter_dct
+    # u_ext = apply_filter_dct(u_ext)
+    du_dx, d2u_dx2, _ = bspf_op.differentiate_1_2(u_ext)
+    rhs = nu * d2u_dx2 - u_ext * du_dx
+
+    rhs[0] = 0.0
+    rhs[-1] = 0.0
+    return rhs
+
+# ----------------------------
+# Solver using solve_ivp (RK45)
+# ----------------------------
+def solve_burgers_equation(nu=0.01, nx=101, nt=1001, Border=5, L=1.0, T=1.0,method="RK45",
+                           rtol=1e-8, atol=1e-8, max_step=None):
+    """
+    Solve the 1D Burgers' equation u_t + u u_x = nu u_xx on [0,L]x[0,T]
+    with spatial derivatives from BSPF and RK45 time stepping.
+    Boundary values are pinned to the exact smooth-step solution.
+    """
+    # grids
+    x = np.linspace(0, L, nx)
+    t = np.linspace(0, T, nt)
+    dx = L / (nx - 1)
+
+    dt = t[1] - t[0]
+
+    # BSPF operator
+    bspf_op = bspf1d.from_grid(
+        degree=Border,
+        order=Border,
+        n_basis=4*Border,
+        num_boundary_points=Border,
+        use_clustering=True,
+        clustering_factor=2.0,
+        x=x
+        )
+
+    # exact solution on the output time grid (for ICs/boundaries/plots)
+    u_exact = np.zeros((nt, nx))
+    for i, ti in enumerate(t):
+        u_exact[i, :] = smooth_step_solution(x, ti, nu)
+
+    u0 = u_exact[0, :].copy()
+    u_bc_func = lambda ti: smooth_step_solution(x, ti, nu)
+
+    # integrate
+    start_time = time.time()
+    sol = solve_ivp(
+        fun=lambda ti, ui: burgers_rhs_ivp(ti, ui, bspf_op, nu, u_bc_func),
+        t_span=(0.0, T),
+        y0=u0,
+        method=method,
+        rtol=rtol,
+        atol=atol,
+        t_eval=t  # This ensures evaluation at your predefined time points
+    )
+    time_integration_time = time.time() - start_time
+
+    if not sol.success:
+        raise RuntimeError(f"solve_ivp failed: {sol.message}")
+
+    U = sol.y.T
+
+    # # Re-pin boundaries exactly at output times (nice for comparisons)
+    # U[:, 0] = u_exact[:, 0]
+    # U[:, -1] = u_exact[:, -1]
+
+    return x, t, U, u_exact, time_integration_time
+
+# ----------------------------
+# Plotting utilities
+# ----------------------------
+def plot_results(x, t, U, u_exact, nu, plot_times=None):
+    """
+    Plot numerical vs exact and pointwise error at a few times.
+    """
+    if plot_times is None:
+        plot_times = np.linspace(0, t[-1], 3)
+
+    plt.rcParams.update({
+        'font.size': 20
+    })
+
+    t_idx = [np.abs(t - pt).argmin() for pt in plot_times]
+
+    fig = plt.figure(figsize=(16, 6))
+
+    # left: solution comparison
+    plt.subplot(1, 2, 1)
+    for i in t_idx:
+        label = f'Sim. ({t[i]:.1f} s)'
+        plt.plot(x, U[i, :], '-', label=label, markersize=4)
+    # reset color cycle, then plot exact with markers
+    plt.gca().set_prop_cycle(None)
+    for i in t_idx:
+        label = f'Exact ({t[i]:.1f} s)'
+        plt.plot(x, u_exact[i, :], 'o', label=label, markersize=4)
+    plt.xlabel('$x$')
+    plt.ylabel('$u(x,t)$')
+    plt.grid(True)
+    plt.legend(loc='lower left')
+
+    # right: error curves
+    plt.subplot(1, 2, 2)
+    for i in t_idx:
+        label = f't = {t[i]:.1f} s'
+        plt.semilogy(x, np.abs(U[i, :] - u_exact[i, :]), '-', label=label, markersize=4)
+    plt.xlabel('$x$')
+    plt.ylabel('|Error|')
+    plt.grid(True)
+    plt.legend(loc='best')
+
+    plt.tight_layout()
+    return fig
+
+# ----------------------------
+# Chebyshev Burgers solver
+# ----------------------------
+def burgers_rhs_chebyshev_ivp(t, u, x_cheb, domain, nu, u_bc_func):
+    """
+    RHS for solve_ivp using Chebyshev spectral differentiation.
+    
+    Steps:
+      1) Overwrite boundary values with exact BCs at time t.
+      2) Compute spatial derivatives using Chebyshev method.
+      3) Set du/dt = 0 at boundaries so they remain fixed.
+    """
+    u_ext = u.copy()
+    bc = u_bc_func(t)
+    u_ext[0] = bc[0]
+    u_ext[-1] = bc[-1]
+    
+    # Compute first and second derivatives using Chebyshev
+    du_dx = chebyshev_derivative_from_values(u_ext, x_cheb, domain=domain)
+    d2u_dx2 = chebyshev_derivative_from_values(du_dx, x_cheb, domain=domain)
+    
+    # Burgers' equation RHS: u_t = nu*u_xx - u*u_x
+    rhs = nu * d2u_dx2 - u_ext * du_dx
+    
+    # Set RHS to zero at boundaries
+    rhs[0] = 0.0
+    rhs[-1] = 0.0
+    return rhs
+
+
+def solve_burgers_chebyshev(nu=0.01, nx=101, nt=1001, L=1.0, T=1.0, method="RK45",
+                            rtol=1e-8, atol=1e-8):
+    """
+    Solve the 1D Burgers' equation using Chebyshev spectral methods.
+    """
+    # Chebyshev nodes (nx-1 is the polynomial degree)
+    domain = (0.0, L)
+    x_cheb, _ = _construct_chebyshev_nodes(nx - 1, domain=domain)
+    
+    # Time grid
+    t = np.linspace(0, T, nt)
+    
+    # Exact solution on the output time grid
+    u_exact = np.zeros((nt, nx))
+    for i, ti in enumerate(t):
+        u_exact[i, :] = smooth_step_solution(x_cheb, ti, nu)
+    
+    u0 = u_exact[0, :].copy()
+    u_bc_func = lambda ti: smooth_step_solution(x_cheb, ti, nu)
+    
+    # Integrate
+    start_time = time.time()
+    sol = solve_ivp(
+        fun=lambda ti, ui: burgers_rhs_chebyshev_ivp(ti, ui, x_cheb, domain, nu, u_bc_func),
+        t_span=(0.0, T),
+        y0=u0,
+        method=method,
+        rtol=rtol,
+        atol=atol,
+        t_eval=t
+    )
+    time_integration_time = time.time() - start_time
+    
+    if not sol.success:
+        raise RuntimeError(f"solve_ivp failed: {sol.message}")
+    
+    U = sol.y.T
+    return x_cheb, t, U, u_exact, time_integration_time
+
+
+def mesh_convergence_study_chebyshev(mesh_sizes, nu=0.01, t_span=(0, 2.0), nt=1001, 
+                                     method="BDF", metric="Linf_space_time", L=None):
+    """
+    Run convergence study for Burgers' equation using Chebyshev spectral methods.
+    
+    Parameters:
+    -----------
+    mesh_sizes : array-like
+        Grid sizes (number of Chebyshev nodes = mesh_size + 1)
+    nu : float
+        Viscosity parameter
+    t_span : tuple
+        Time span (t0, t_final)
+    nt : int
+        Number of output time points
+    method : str
+        Time stepping method ("RK45", "BDF", etc.)
+    metric : str
+        Error metric ("Linf_space_time" or "Linf_final")
+    L : float, optional
+        Domain length (default: 2.0 * np.pi)
+        
+    Returns:
+    --------
+    linf_errors : ndarray
+        L∞ errors for each mesh size
+    timings : ndarray
+        Wall-clock times for each mesh size
+    """
+    mesh_sizes = np.asarray(mesh_sizes)
+    linf_errors = np.zeros(len(mesh_sizes))
+    timings = np.zeros(len(mesh_sizes))
+    
+    T = t_span[1] - t_span[0]
+    if L is None:
+        L = 2.0 * np.pi  # Default domain length
+    
+    for i, nx in enumerate(mesh_sizes):
+        print(f"Chebyshev N={nx:4d}...", end=" ", flush=True)
+        
+        try:
+            x, t, U, u_exact, time_integration_time = solve_burgers_chebyshev(
+                nu=nu,
+                nx=nx + 1,  # nx+1 Chebyshev nodes for degree nx
+                nt=nt,
+                L=L,
+                T=T,
+                method=method,
+                rtol=1e-12 if method == "BDF" else 2e-11,
+                atol=1e-12 if method == "BDF" else 2e-11
+            )
+            
+            if metric == "Linf_space_time":
+                # L∞ error over space-time
+                error = np.abs(U - u_exact)
+                linf_errors[i] = np.max(error)
+            elif metric == "Linf_final":
+                # L∞ error at final time only
+                error = np.abs(U[-1, :] - u_exact[-1, :])
+                linf_errors[i] = np.max(error)
+            else:
+                raise ValueError(f"Unknown metric: {metric}")
+            
+            timings[i] = time_integration_time
+            print(f"L∞ error = {linf_errors[i]:.3e}, time = {timings[i]:.2f} s")
+            
+        except Exception as e:
+            print(f"Failed: {e}")
+            linf_errors[i] = np.nan
+            timings[i] = np.nan
+    
+    return linf_errors, timings
+
+
+# ----------------------------
+# Convergence study (optional)
+# ----------------------------
+def compute_convergence_study(nu=0.01, mesh_sizes=None, Border=8, L=2.0*np.pi, T=2.0,method="BDF", rtol=1e-12, atol=1e-12):
+    """
+    Run multiple meshes and return L∞ errors at final time and timing.
+    """
+    if mesh_sizes is None:
+        mesh_sizes = np.array([100, 200, 300, 400, 500, 600, 700, 800, 900, 1000])
+
+    linf_errors = np.zeros(len(mesh_sizes))
+    time_measure = np.zeros(len(mesh_sizes))
+
+    for i, nx in enumerate(mesh_sizes):
+        nt = int(2.0 * nx)  # reasonable number of output times for RK45
+
+        x, t, U, u_exact, time_integration_time = solve_burgers_equation(
+            nu=nu,
+            nx=nx + 1,
+            nt=nt,
+            Border=Border,
+            L=L,
+            T=T,
+            method=method,
+            rtol=rtol,
+            atol=atol
+        )
+
+        # L∞ error at final time
+        error = np.abs(U[-1, :] - u_exact[-1, :])
+        linf_errors[i] = np.max(error)
+        time_measure[i] = time_integration_time
+        print(f"N={nx:4d} -> L∞ error = {linf_errors[i]:.3e}, time = {time_measure[i]:.2f} s, t_points = {t.shape[0]}")
+
+    return mesh_sizes, linf_errors, time_measure
+
+# ----------------------------
+# Main
+# ----------------------------
+if __name__ == "__main__":
+    nu = 0.01
+    Border = 8
+    L = 2.0 * np.pi
+    T = 2.0
+    
+    # # # -------- Optional: Convergence study ----------
+    mesh_sizes = np.arange(100, 1001, 100)#np.array([200, 400, 800, 1600])
+    print("Running BSPF+RK45...")
+    mesh_sizes, linf_errors_RK45, time_measure_RK45 = compute_convergence_study(
+        nu=nu, mesh_sizes=mesh_sizes, Border=Border, L=L, T=2.0,method="RK45", rtol=2e-11, atol=2e-11
+    )
+
+
+    print("Running Chebyshev+BDF...")
+    linf_errors_chebyshev, timings_chebyshev = mesh_convergence_study_chebyshev(
+        mesh_sizes, nu=nu, t_span=(0, 2.0), nt=1001, method="BDF", metric="Linf_space_time"
+    )
+
+
+    mesh_sizes_short = [100, 200, 300]
+    print("Running Chebyshev+RK45...")
+    linf_errors_cheb_RK45, time_measure_cheb_RK45 = mesh_convergence_study_chebyshev(
+        mesh_sizes_short, nu=nu, t_span=(0, 2.0), nt=1001, method="RK45", metric="Linf_space_time"
+    )
+    # ----------------------------
+    np.savez(
+        f'bspf1d_benchmark_nu{nu}.npz',
+        linf_errors_chebyshev_BDF=linf_errors_chebyshev,
+        timings_chebyshev_BDF=timings_chebyshev,
+        linf_errors_BSPF_RK45=linf_errors_RK45,
+        time_measure_BSPF_RK45=time_measure_RK45,
+        linf_errors_Chebyshev_RK45=linf_errors_cheb_RK45,
+        time_measure_Chebyshev_RK45=time_measure_cheb_RK45
+    )
+
+    default_colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']
+
+    plt.figure(figsize=(16, 6))
+
+    # Set up global plotting parameters
+    plt.rcParams.update({
+        'axes.labelsize': 20,
+        'axes.titlesize': 20,
+        'xtick.labelsize': 20,
+        'ytick.labelsize': 20,
+        'legend.fontsize': 16,
+        'figure.titlesize': 24,
+        'axes.grid': True,
+        'grid.alpha': 0.5
+    })
+
+    plt.subplot(1, 2, 1)
+    plt.loglog(mesh_sizes, linf_errors_chebyshev, 'o--', label='Chebyshev+BDF', linewidth=1.5, markersize=8, color=default_colors[1])
+    plt.loglog(mesh_sizes, linf_errors_RK45, 's-', label='BSPF+RK45', linewidth=1.5, markersize=8, color=default_colors[0])
+    plt.loglog(mesh_sizes_short, linf_errors_cheb_RK45, 's-', label='Chebyshev+RK45', linewidth=1.5, markersize=8, color=default_colors[1])
+    plt.xlabel('$N$')
+    plt.ylabel('$\|Error\|_\infty$')
+    plt.title('(a)', loc='left', x = -0.1, fontsize=24)
+    plt.grid(True, which='both')
+    plt.legend(loc='best')
+
+    plt.subplot(1, 2, 2)
+    plt.loglog(mesh_sizes, timings_chebyshev, 'o-', label='Chebyshev+BDF', linewidth=2, markersize=8, color=default_colors[1])
+    plt.loglog(mesh_sizes, time_measure_RK45, 's-', label='BSPF+RK45', linewidth=2, markersize=8, color=default_colors[0])
+    plt.loglog(mesh_sizes_short, time_measure_cheb_RK45, 'o-', label='Chebyshev+RK45', linewidth=2, markersize=8, color=default_colors[1])
+    plt.xlabel('$N$')
+    plt.ylabel('Wall time [s]')
+    plt.title('(b)', loc='left', x = -0.1, fontsize=24)
+    plt.grid(True, which='both')
+    plt.legend(loc='best')
+    plt.ylim(1e-1, 2*1e1)
+    plt.tight_layout()
+    plt.savefig(f'figs/fig4.pdf', dpi=300, bbox_inches='tight')
