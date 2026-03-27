@@ -25,6 +25,10 @@ def test_package_operator_is_not_legacy_subclass():
     """! @brief The package operator should no longer inherit from the legacy class."""
     assert BSPF1D is not LegacyBSPF1D
     assert not issubclass(BSPF1D, LegacyBSPF1D)
+    assert BSPF1D.differentiate is not LegacyBSPF1D.differentiate
+    assert BSPF1D.fit_spline is not LegacyBSPF1D.fit_spline
+    assert BSPF1D.differentiate.__module__ == "bspf.ops.differentiation"
+    assert BSPF1D.fit_spline.__module__ == "bspf.ops.interpolation"
 
 
 def test_fit_and_differentiate_match_legacy():

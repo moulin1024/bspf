@@ -13,8 +13,6 @@ from typing import Callable, Dict, Optional, Tuple
 
 import numpy as np
 
-from bspf1d import bspf1d as _LegacyBSPF1D
-
 from ..backend import _Backend, _HAS_CUPY, cp
 from ..basis import BSplineBasis1D
 from ..boundary import EndpointOps1D
@@ -22,6 +20,14 @@ from ..correction import ResidualCorrection
 from ..grid import Grid1D
 from ..kkt import KKTLUCache
 from ..knots import _Knot
+from ..ops.differentiation import (
+    differentiate,
+    differentiate_1_2,
+    differentiate_1_2_3,
+    differentiate_1_2_batched,
+)
+from ..ops.integration import antiderivative, definite_integral
+from ..ops.interpolation import enforced_zero_flux, fit_spline, interpolate, interpolate_split_mesh
 from ..types import Array
 
 
@@ -225,18 +231,17 @@ class BSPF1D:
         return self._cached_arrays[key]
 
 
-# Bind the legacy operation implementations onto the package-owned class while
-# the operation families are extracted into dedicated modules in Phase 5.
-BSPF1D.differentiate = _LegacyBSPF1D.differentiate
-BSPF1D.differentiate_1_2 = _LegacyBSPF1D.differentiate_1_2
-BSPF1D.differentiate_1_2_3 = _LegacyBSPF1D.differentiate_1_2_3
-BSPF1D.differentiate_1_2_batched = _LegacyBSPF1D.differentiate_1_2_batched
-BSPF1D.definite_integral = _LegacyBSPF1D.definite_integral
-BSPF1D.antiderivative = _LegacyBSPF1D.antiderivative
-BSPF1D.enforced_zero_flux = _LegacyBSPF1D.enforced_zero_flux
-BSPF1D.interpolate = _LegacyBSPF1D.interpolate
-BSPF1D.fit_spline = _LegacyBSPF1D.fit_spline
-BSPF1D.interpolate_split_mesh = _LegacyBSPF1D.interpolate_split_mesh
+# Bind the package-owned operation-family functions onto the operator class.
+BSPF1D.differentiate = differentiate
+BSPF1D.differentiate_1_2 = differentiate_1_2
+BSPF1D.differentiate_1_2_3 = differentiate_1_2_3
+BSPF1D.differentiate_1_2_batched = differentiate_1_2_batched
+BSPF1D.definite_integral = definite_integral
+BSPF1D.antiderivative = antiderivative
+BSPF1D.enforced_zero_flux = enforced_zero_flux
+BSPF1D.interpolate = interpolate
+BSPF1D.fit_spline = fit_spline
+BSPF1D.interpolate_split_mesh = interpolate_split_mesh
 
 # Preserve the original lowercase class name so older call sites continue to
 # work while the package API is introduced.
