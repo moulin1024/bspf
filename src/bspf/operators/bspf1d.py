@@ -13,7 +13,7 @@ from typing import Callable, Dict, Optional, Tuple
 
 import numpy as np
 
-from ..backend import _Backend, _HAS_CUPY, cp
+from ..backend import _Backend, _HAS_CUPY, cp, is_cupy_array, normalize_backend_array
 from ..basis import BSplineBasis1D
 from ..boundary import EndpointOps1D
 from ..correction import ResidualCorrection
@@ -64,10 +64,12 @@ class BSPF1D:
         self.order = self.degree - 1 if order is None else int(order)
         self.num_bd = self.degree if num_boundary_points is None else int(num_boundary_points)
 
-        if _HAS_CUPY and isinstance(knots, cp.ndarray):
-            self.knots = cp.asarray(knots, dtype=cp.float64)
-        else:
-            self.knots = np.asarray(knots, dtype=np.float64)
+        self.knots = normalize_backend_array(
+            knots,
+            use_gpu=self.use_gpu,
+            dtype=np.float64,
+            name="BSPF1D knots",
+        )
 
         # Compose the package-owned foundational objects extracted in earlier
         # phases instead of inheriting construction from the legacy monolith.
@@ -163,16 +165,7 @@ class BSPF1D:
         @param use_gpu Whether to create a GPU-backed operator.
         @return Configured ``BSPF1D`` instance.
         """
-        if use_gpu and _HAS_CUPY:
-            if not isinstance(x, cp.ndarray):
-                x = cp.asarray(x, dtype=cp.float64)
-        else:
-            if _HAS_CUPY and isinstance(x, cp.ndarray):
-                raise ValueError(
-                    "Cannot use CuPy array when use_gpu=False. "
-                    "Either: (1) convert input to NumPy array, or (2) set use_gpu=True."
-                )
-            x = np.asarray(x, dtype=np.float64)
+        x = normalize_backend_array(x, use_gpu=use_gpu, dtype=np.float64, name="BSPF1D x")
 
         grid = Grid1D(x, use_gpu=use_gpu)
         k = _Knot.resolve(
@@ -185,16 +178,10 @@ class BSPF1D:
             clustering_factor=clustering_factor,
         )
 
-        if use_gpu and _HAS_CUPY:
-            if not isinstance(k, cp.ndarray):
-                k = cp.asarray(k, dtype=cp.float64)
-        else:
-            if _HAS_CUPY and isinstance(k, cp.ndarray):
-                raise ValueError(
-                    "Cannot use CuPy knots when use_gpu=False. "
-                    "This indicates an internal inconsistency."
-                )
-            k = np.asarray(k, dtype=np.float64)
+        if use_gpu and _HAS_CUPY and not is_cupy_array(k):
+            k = cp.asarray(k, dtype=cp.float64)
+        elif not use_gpu:
+            k = normalize_backend_array(k, use_gpu=False, dtype=np.float64, name="BSPF1D resolved knots")
 
         return cls(
             grid=grid,

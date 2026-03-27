@@ -9,7 +9,7 @@ import math
 import numpy as np
 from scipy import linalg as sla
 
-from .backend import _HAS_CUPY, cp
+from .backend import _HAS_CUPY, cp, is_cupy_array
 from .basis import BSplineBasis1D
 from .types import Array
 
@@ -30,7 +30,7 @@ class EndpointOps1D:
 
         # Use the same backend as the basis matrices so all assembled operators
         # remain on one device without implicit data movement.
-        if self.use_gpu and _HAS_CUPY and isinstance(basis.B0, cp.ndarray):
+        if self.use_gpu and _HAS_CUPY and is_cupy_array(basis.B0):
             xp = cp
             la_solve = cp.linalg.solve
         else:

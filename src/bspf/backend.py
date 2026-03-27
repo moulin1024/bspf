@@ -33,6 +33,69 @@ except Exception:
     cp_interp = None
 
 
+def is_cupy_array(a) -> bool:
+    """! @brief Return whether an object is a CuPy array.
+
+    @param a Object to inspect.
+    @return ``True`` when CuPy is available and ``a`` is a CuPy array.
+    """
+    return bool(_HAS_CUPY and isinstance(a, cp.ndarray))
+
+
+def validate_backend_array(a, *, use_gpu: bool, name: str = "array") -> None:
+    """! @brief Validate that an array matches the requested backend.
+
+    @param a Array-like object to validate.
+    @param use_gpu Whether GPU storage is required.
+    @param name Human-readable name used in error messages.
+    @throws RuntimeError If GPU mode is requested but CuPy is unavailable.
+    @throws ValueError If the array type does not match the requested backend.
+    """
+    if use_gpu:
+        if not _HAS_CUPY:
+            raise RuntimeError(
+                f"{name} requested GPU mode but CuPy is not available. "
+                "Install cupy or set use_gpu=False."
+            )
+        if not is_cupy_array(a):
+            raise ValueError(
+                f"Cannot use NumPy array in {name} when use_gpu=True. "
+                "Either: (1) convert input to CuPy array, or (2) set use_gpu=False."
+            )
+        return
+
+    if is_cupy_array(a):
+        raise ValueError(
+            f"Cannot use CuPy array in {name} when use_gpu=False. "
+            "Either: (1) convert input to NumPy array, or (2) set use_gpu=True."
+        )
+
+
+def normalize_backend_array(a, *, use_gpu: bool, dtype=np.float64, name: str = "array"):
+    """! @brief Convert an array-like object onto the requested backend explicitly.
+
+    @param a Input array-like object.
+    @param use_gpu Whether the output should live on the GPU.
+    @param dtype Target dtype used during conversion.
+    @param name Human-readable name used in error messages.
+    @return NumPy or CuPy array on the requested backend.
+    @throws RuntimeError If GPU mode is requested but CuPy is unavailable.
+    """
+    if use_gpu:
+        if not _HAS_CUPY:
+            raise RuntimeError(
+                f"{name} requested GPU mode but CuPy is not available. "
+                "Install cupy or set use_gpu=False."
+            )
+        return cp.asarray(a, dtype=dtype)
+    if is_cupy_array(a):
+        raise ValueError(
+            f"Cannot use CuPy array in {name} when use_gpu=False. "
+            "Either: (1) convert input to NumPy array, or (2) set use_gpu=True."
+        )
+    return np.asarray(a, dtype=dtype)
+
+
 class _Backend:
     """! @brief Switch between NumPy/SciPy and CuPy/CuPyX cleanly.
 
@@ -67,17 +130,10 @@ class _Backend:
         @throws ValueError If a CuPy array is supplied while running in CPU mode.
         """
         if self.is_gpu:
-            if _HAS_CUPY and isinstance(a, cp.ndarray):
-                return a
-            return cp.asarray(a, dtype=cp.float64)
+            return normalize_backend_array(a, use_gpu=True, dtype=cp.float64, name="array")
         # In CPU mode, normalize inputs to NumPy and reject accidental CuPy use
         # so device transfers always remain explicit.
-        if _HAS_CUPY and isinstance(a, cp.ndarray):
-            raise ValueError(
-                "Cannot use CuPy array in CPU mode. "
-                "Use to_host() to convert CuPy array to NumPy, or set use_gpu=True."
-            )
-        return np.asarray(a, dtype=np.float64)
+        return normalize_backend_array(a, use_gpu=False, dtype=np.float64, name="array")
 
     def to_host(self, a):
         """! @brief Explicitly move an array-like object onto the CPU.
@@ -87,13 +143,13 @@ class _Backend:
         @throws ValueError If the array/backend combination is inconsistent.
         """
         if self.is_gpu:
-            if _HAS_CUPY and isinstance(a, cp.ndarray):
+            if is_cupy_array(a):
                 return cp.asnumpy(a)
             raise ValueError(
                 "Inconsistency detected: use_gpu=True but array is NumPy. "
                 "Arrays must match the use_gpu setting. Use to_device() for explicit conversion."
             )
-        if _HAS_CUPY and isinstance(a, cp.ndarray):
+        if is_cupy_array(a):
             raise ValueError(
                 "Inconsistency detected: use_gpu=False but array is CuPy. "
                 "Arrays must match the use_gpu setting. Use to_host() for explicit conversion."
@@ -123,17 +179,24 @@ class _Backend:
         @param name Human-readable name included in error messages.
         @throws ValueError If the array does not match the configured device.
         """
-        if self.is_gpu:
-            if _HAS_CUPY and not isinstance(a, cp.ndarray):
-                raise ValueError(
-                    f"Inconsistency detected: use_gpu=True but {name} is not a CuPy array. "
-                    f"Arrays must match the use_gpu setting. Use to_device() for explicit conversion."
-                )
-        elif _HAS_CUPY and isinstance(a, cp.ndarray):
+        if self.is_gpu and not is_cupy_array(a):
+            raise ValueError(
+                f"Inconsistency detected: use_gpu=True but {name} is not a CuPy array. "
+                f"Arrays must match the use_gpu setting. Use to_device() for explicit conversion."
+            )
+        if not self.is_gpu and is_cupy_array(a):
             raise ValueError(
                 f"Inconsistency detected: use_gpu=False but {name} is a CuPy array. "
                 f"Arrays must match the use_gpu setting. Use to_host() for explicit conversion."
             )
 
-
-__all__ = ["_Backend", "_HAS_CUPY", "cp", "cpla", "cp_interp"]
+__all__ = [
+    "_Backend",
+    "_HAS_CUPY",
+    "cp",
+    "cpla",
+    "cp_interp",
+    "is_cupy_array",
+    "normalize_backend_array",
+    "validate_backend_array",
+]

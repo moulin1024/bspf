@@ -9,7 +9,7 @@ from typing import Dict, Tuple
 import numpy as np
 from scipy.interpolate import BSpline
 
-from .backend import _HAS_CUPY, cp, cp_interp
+from .backend import _HAS_CUPY, cp, cp_interp, is_cupy_array, normalize_backend_array
 from .grid import Grid1D
 from .types import Array
 
@@ -29,10 +29,12 @@ class BSplineBasis1D:
 
         # Keep the knot vector on the same backend as the operator so later
         # basis evaluations do not trigger implicit host/device conversions.
-        if use_gpu and _HAS_CUPY:
-            self.knots: Array = cp.asarray(knots, dtype=cp.float64)
-        else:
-            self.knots = np.asarray(knots, dtype=np.float64)
+        self.knots: Array = normalize_backend_array(
+            knots,
+            use_gpu=use_gpu,
+            dtype=np.float64,
+            name="BSplineBasis1D knots",
+        )
 
         self.grid = grid
 
@@ -105,7 +107,7 @@ class BSplineBasis1D:
         else:
             xp = np
             result = xp.empty((n_basis, len(x)), dtype=xp.float64)
-            if _HAS_CUPY and isinstance(x, cp.ndarray):
+            if is_cupy_array(x):
                 raise ValueError(
                     "Cannot convert CuPy array to NumPy in CPU mode. "
                     "When use_gpu=False, provide NumPy arrays. "

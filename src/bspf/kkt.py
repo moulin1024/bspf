@@ -9,7 +9,7 @@ from typing import Dict, Tuple
 import numpy as np
 from scipy import linalg as sla
 
-from .backend import _HAS_CUPY, cp, cpla
+from .backend import _HAS_CUPY, cp, cpla, is_cupy_array
 from .types import Array
 
 
@@ -22,7 +22,7 @@ def assemble_kkt_matrix(Q: Array, C: Array, lam: float, *, use_gpu: bool = False
     @param use_gpu Whether to assemble the system on the GPU.
     @return Assembled KKT matrix.
     """
-    if use_gpu and _HAS_CUPY and isinstance(Q, cp.ndarray):
+    if use_gpu and _HAS_CUPY and is_cupy_array(Q):
         xp = cp
     else:
         xp = np
@@ -65,10 +65,10 @@ class KKTLUCache:
 
         KKT = assemble_kkt_matrix(self.Q, self.C, lam, use_gpu=self.use_gpu)
 
-        if self.use_gpu and _HAS_CUPY and isinstance(KKT, cp.ndarray):
+        if self.use_gpu and _HAS_CUPY and is_cupy_array(KKT):
             lu, piv = cpla.lu_factor(KKT)
         else:
-            if _HAS_CUPY and isinstance(KKT, cp.ndarray):
+            if is_cupy_array(KKT):
                 raise ValueError(
                     "Cannot convert CuPy array to NumPy in CPU mode. "
                     "When use_gpu=False, internal arrays should be NumPy."
@@ -88,11 +88,11 @@ class KKTLUCache:
         """
         lu, piv = self.factorize(lam)
 
-        if self.use_gpu and _HAS_CUPY and isinstance(lu, cp.ndarray):
-            rhs_dev = rhs if isinstance(rhs, cp.ndarray) else cp.asarray(rhs)
+        if self.use_gpu and _HAS_CUPY and is_cupy_array(lu):
+            rhs_dev = rhs if is_cupy_array(rhs) else cp.asarray(rhs)
             return cpla.lu_solve((lu, piv), rhs_dev, overwrite_b=overwrite_b)
 
-        if _HAS_CUPY and isinstance(rhs, cp.ndarray):
+        if is_cupy_array(rhs):
             raise ValueError(
                 "Cannot solve a CPU KKT system with a CuPy right-hand side. "
                 "Convert the RHS to NumPy or enable GPU mode."

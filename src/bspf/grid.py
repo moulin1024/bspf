@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from .backend import _HAS_CUPY, cp
+from .backend import _HAS_CUPY, cp, is_cupy_array, normalize_backend_array, validate_backend_array
 from .types import Array
 
 
@@ -21,22 +21,9 @@ class Grid1D:
     def __init__(self, x: Array, *, atol: float = 1e-13, use_gpu: bool = False):
         # Detect the array backend from the input so we can enforce that the
         # caller's ``use_gpu`` flag matches the actual storage location.
-        is_gpu_array = _HAS_CUPY and isinstance(x, cp.ndarray)
-
-        if is_gpu_array:
-            if not use_gpu:
-                raise ValueError(
-                    "Cannot use CuPy array in Grid1D when use_gpu=False. "
-                    "Either: (1) convert input to NumPy array, or (2) set use_gpu=True."
-                )
-            x = cp.asarray(x, dtype=cp.float64)
-        else:
-            if use_gpu:
-                raise ValueError(
-                    "Cannot use NumPy array in Grid1D when use_gpu=True. "
-                    "Either: (1) convert input to CuPy array, or (2) set use_gpu=False."
-                )
-            x = np.asarray(x, dtype=np.float64)
+        is_gpu_array = is_cupy_array(x)
+        validate_backend_array(x, use_gpu=use_gpu, name="Grid1D")
+        x = normalize_backend_array(x, use_gpu=use_gpu, dtype=np.float64, name="Grid1D")
 
         if x.size < 2:
             raise ValueError("x must have at least 2 points.")
