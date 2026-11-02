@@ -1,0 +1,72 @@
+[
+  {
+    "n": 48,
+    "operation": "d0",
+    "seconds": 0.0010405916643018525
+  },
+  {
+    "n": 48,
+    "operation": "d1",
+    "seconds": 0.0010075416648760438
+  },
+  {
+    "n": 48,
+    "operation": "d2",
+    "seconds": 0.0010814138688147068
+  },
+  {
+    "n": 48,
+    "operation": "laplacian",
+    "seconds": 0.003163905596981446
+  },
+  {
+    "n": 48,
+    "operation": "interpolate",
+    "seconds": 0.0029666222670736413
+  },
+  {
+    "n": 48,
+    "operation": "interpolate_grid",
+    "seconds": 0.002959838866566618
+  },
+  {
+    "n": 48,
+    "operation": "integrate",
+    "seconds": 0.0007754278020001947
+  },
+  {
+    "n": 96,
+    "operation": "d0",
+    "seconds": 0.008821897200929622
+  },
+  {
+    "n": 96,
+    "operation": "d1",
+    "seconds": 0.009060569468419998
+  },
+  {
+    "n": 96,
+    "operation": "d2",
+    "seconds": 0.008975569465352844
+  },
+  {
+    "n": 96,
+    "operation": "laplacian",
+    "seconds": 0.027914200001396237
+  },
+  {
+    "n": 96,
+    "operation": "interpolate",
+    "seconds": 0.03315980553549404
+  },
+  {
+    "n": 96,
+    "operation": "interpolate_grid",
+    "seconds": 0.02988302499676744
+  },
+  {
+    "n": 96,
+    "operation": "integrate",
+    "seconds": 0.005985255531656245
+  }
+]

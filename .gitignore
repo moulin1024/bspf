@@ -1,0 +1,8 @@
+/build*/
+__pycache__/
+.pytest_cache/
+*.py[cod]
+*.so
+*.dylib
+*.pyd
+.DS_Store

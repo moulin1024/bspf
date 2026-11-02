@@ -1,0 +1,176 @@
+[
+ {
+  "case": "1D N=64 x4096",
+  "operation": "d/dx",
+  "bspf_cpp_s": 0.002118471027188207,
+  "pybspf_s": 0.0028560677028508508
+ },
+ {
+  "case": "1D N=64 x4096",
+  "operation": "interpolate 200 pts",
+  "bspf_cpp_s": 0.008135215484799119,
+  "pybspf_s": 0.005425801437922928
+ },
+ {
+  "case": "1D N=64 x4096",
+  "operation": "integrate",
+  "bspf_cpp_s": 0.0017568834648500342,
+  "pybspf_s": 0.002264212402224075
+ },
+ {
+  "case": "1D N=256 x1024",
+  "operation": "d/dx",
+  "bspf_cpp_s": 0.0023899039683783485,
+  "pybspf_s": 0.003303119789052289
+ },
+ {
+  "case": "1D N=256 x1024",
+  "operation": "interpolate 200 pts",
+  "bspf_cpp_s": 0.005443449218546448,
+  "pybspf_s": 0.0051885312495869584
+ },
+ {
+  "case": "1D N=256 x1024",
+  "operation": "integrate",
+  "bspf_cpp_s": 0.0018373162461102766,
+  "pybspf_s": 0.0024816669924803136
+ },
+ {
+  "case": "1D N=1024 x256",
+  "operation": "d/dx",
+  "bspf_cpp_s": 0.0026828704449144425,
+  "pybspf_s": 0.003894561843935662
+ },
+ {
+  "case": "1D N=1024 x256",
+  "operation": "interpolate 200 pts",
+  "bspf_cpp_s": 0.005494553391145018,
+  "pybspf_s": 0.005071660797511868
+ },
+ {
+  "case": "1D N=1024 x256",
+  "operation": "integrate",
+  "bspf_cpp_s": 0.0018987579767326679,
+  "pybspf_s": 0.003228312171813741
+ },
+ {
+  "case": "2D 128x128",
+  "operation": "d/dx (outer axis)",
+  "bspf_cpp_s": 0.00012884961962811303,
+  "pybspf_s": 0.0005203879394457545
+ },
+ {
+  "case": "2D 128x128",
+  "operation": "d/d(last axis)",
+  "bspf_cpp_s": 0.00013621043895284402,
+  "pybspf_s": 0.0005400607500405386
+ },
+ {
+  "case": "2D 128x128",
+  "operation": "laplacian",
+  "bspf_cpp_s": 0.0003072578945193527,
+  "pybspf_s": 0.0008466103515729628
+ },
+ {
+  "case": "2D 128x128",
+  "operation": "interpolate (0.75 n)^d",
+  "bspf_cpp_s": 0.0004869797363653561,
+  "pybspf_s": 0.0011854718436552503
+ },
+ {
+  "case": "2D 128x128",
+  "operation": "integrate box",
+  "bspf_cpp_s": 0.00015782505272454728,
+  "pybspf_s": 0.0004328033447222879
+ },
+ {
+  "case": "2D 256x256",
+  "operation": "d/dx (outer axis)",
+  "bspf_cpp_s": 0.0006002804356057823,
+  "pybspf_s": 0.0013395390626556036
+ },
+ {
+  "case": "2D 256x256",
+  "operation": "d/d(last axis)",
+  "bspf_cpp_s": 0.0006072428378729455,
+  "pybspf_s": 0.0013899013672471483
+ },
+ {
+  "case": "2D 256x256",
+  "operation": "laplacian",
+  "bspf_cpp_s": 0.001245428710944907,
+  "pybspf_s": 0.0021760288086625224
+ },
+ {
+  "case": "2D 256x256",
+  "operation": "interpolate (0.75 n)^d",
+  "bspf_cpp_s": 0.002742204757851141,
+  "pybspf_s": 0.003972682617131795
+ },
+ {
+  "case": "2D 256x256",
+  "operation": "integrate box",
+  "bspf_cpp_s": 0.000593714843773796,
+  "pybspf_s": 0.0010285091972264127
+ },
+ {
+  "case": "3D 48x48x48",
+  "operation": "d/dx (outer axis)",
+  "bspf_cpp_s": 0.0011921235350200732,
+  "pybspf_s": 0.0019799256172063906
+ },
+ {
+  "case": "3D 48x48x48",
+  "operation": "d/d(last axis)",
+  "bspf_cpp_s": 0.0010719646816141903,
+  "pybspf_s": 0.0019467259101020318
+ },
+ {
+  "case": "3D 48x48x48",
+  "operation": "laplacian",
+  "bspf_cpp_s": 0.0035882942734133394,
+  "pybspf_s": 0.00368010189049528
+ },
+ {
+  "case": "3D 48x48x48",
+  "operation": "interpolate (0.75 n)^d",
+  "bspf_cpp_s": 0.0037181031875661574,
+  "pybspf_s": 0.005740814453019993
+ },
+ {
+  "case": "3D 48x48x48",
+  "operation": "integrate box",
+  "bspf_cpp_s": 0.0010820186366800044,
+  "pybspf_s": 0.002204408042871364
+ },
+ {
+  "case": "3D 96x96x96",
+  "operation": "d/dx (outer axis)",
+  "bspf_cpp_s": 0.008904989578695677,
+  "pybspf_s": 0.011868878906170721
+ },
+ {
+  "case": "3D 96x96x96",
+  "operation": "d/d(last axis)",
+  "bspf_cpp_s": 0.00884860678070254,
+  "pybspf_s": 0.011792608092946466
+ },
+ {
+  "case": "3D 96x96x96",
+  "operation": "laplacian",
+  "bspf_cpp_s": 0.036339143251097994,
+  "pybspf_s": 0.023298138061363716
+ },
+ {
+  "case": "3D 96x96x96",
+  "operation": "interpolate (0.75 n)^d",
+  "bspf_cpp_s": 0.03556046875019092,
+  "pybspf_s": 0.027731492187740514
+ },
+ {
+  "case": "3D 96x96x96",
+  "operation": "integrate box",
+  "bspf_cpp_s": 0.00931160806248954,
+  "pybspf_s": 0.008768386719566479
+ }
+]
