@@ -8,6 +8,7 @@
 #include <utility>
 #include <vector>
 
+#include "bspf/galerkin.hpp"
 #include "bspf/line.hpp"
 #include "bspf/op.hpp"
 
@@ -50,6 +51,15 @@ public:
     Field partial(const FieldView& f, const std::vector<int>& orders) const;
     // Sum direct second partials into one output allocation.
     Field laplacian(const FieldView& f) const;
+    // Energy-stable (Galerkin) Laplacian with Dirichlet walls. Interior values
+    //     sum_a W_a (x)_{b != a} E_b u  -  (x)_b E_b w
+    // where w holds `wall_values` on the walls and zeros inside: the walls' values
+    // of the result (e.g. the boundary data's time derivative in u_t = Lap u),
+    // which enter the interior through the Galerkin mass. The result's walls are
+    // `wall_values` (zero when omitted). Its homogeneous spectrum is real and
+    // negative for any endpoint jets. Cost O(N log N + N r) per line.
+    Field weak_laplacian(const FieldView& f, const FieldView* wall_values = nullptr) const;
+    const GalerkinLine& galerkin(int axis) const;  // cached per axis
     // Values (or per-axis derivatives) on the tensor mesh coordinates[0] x coordinates[1] x ...
     Field interpolate(const FieldView& f, const std::vector<Vector>& coordinates,
                       const std::vector<int>& derivatives = {}) const;

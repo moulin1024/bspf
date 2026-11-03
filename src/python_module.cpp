@@ -12,6 +12,7 @@
 #include <stdexcept>
 
 #include "bspf/bspline.hpp"
+#include "bspf/galerkin.hpp"
 #include "bspf/grid.hpp"
 
 namespace nb = nanobind;
@@ -183,6 +184,18 @@ NB_MODULE(_core, m) {
                  }
                  return to_numpy(std::move(out));
              }, "f"_a, "coordinates"_a, "derivatives"_a = std::vector<int>{})
+        .def("weak_laplacian", [](const Grid& g, const InArray& f, const std::optional<InArray>& wall_values) {
+                 Field out;
+                 std::optional<FieldView> walls;
+                 if (wall_values) walls = view(*wall_values);
+                 {
+                     nb::gil_scoped_release release;
+                     out = g.weak_laplacian(view(f), walls ? &*walls : nullptr);
+                 }
+                 return to_numpy(std::move(out));
+             }, "f"_a, "wall_values"_a = nb::none(),
+             "Energy-stable Galerkin Laplacian with Dirichlet walls; wall_values are the result's wall values")
+        .def("galerkin", &Grid::galerkin, "axis"_a, nb::rv_policy::reference_internal)
         .def("integrate", [](const Grid& g, const InArray& f,
                              const std::optional<std::vector<std::pair<double, double>>>& bounds) {
                  Field out;
@@ -192,6 +205,24 @@ NB_MODULE(_core, m) {
                  }
                  return to_numpy(std::move(out));
              }, "f"_a, "bounds"_a = nb::none());
+
+    nb::class_<bspf::GalerkinLine>(m, "GalerkinLine",
+                                   "Energy-stable (Galerkin) second derivative on a Line's BSPF trial space")
+        .def("__init__", [](bspf::GalerkinLine* self, const Line& line, double mass_tolerance, double operator_tolerance) {
+                 bspf::GalerkinOptions o;
+                 o.mass_tolerance = mass_tolerance;
+                 o.operator_tolerance = operator_tolerance;
+                 new (self) bspf::GalerkinLine(line, o);
+             }, "line"_a, nb::kw_only(), "mass_tolerance"_a = 1e-12, "operator_tolerance"_a = 1e-14)
+        .def_prop_ro("operator_rank", &bspf::GalerkinLine::operator_rank)
+        .def_prop_ro("fit_amplification", &bspf::GalerkinLine::fit_amplification)
+        .def("exact_second_derivative", [](const bspf::GalerkinLine& g, const Matrix& u) { return g.exact_second_derivative(u); }, "u"_a)
+        .def_prop_ro("size", &bspf::GalerkinLine::size)
+        .def_prop_ro("mass_rank", &bspf::GalerkinLine::mass_rank)
+        .def("mass", [](const bspf::GalerkinLine& g, const Matrix& u) { return g.mass(u); }, "u"_a)
+        .def("stiffness", [](const bspf::GalerkinLine& g, const Matrix& u) { return g.stiffness(u); }, "u"_a)
+        .def("second_derivative", [](const bspf::GalerkinLine& g, const Matrix& u) { return g.second_derivative(u); }, "u"_a)
+        .def("extension", [](const bspf::GalerkinLine& g, const Matrix& u) { return g.extension(u); }, "u"_a);
 
     m.def("open_knots", &bspf::open_knots, "a"_a, "b"_a, "degree"_a, "n_basis"_a, "clustering"_a = 0.0);
     m.def("endpoint_scaled_knots", &bspf::endpoint_scaled_knots, "a"_a, "b"_a, "degree"_a, "n_basis"_a, "spacing"_a);

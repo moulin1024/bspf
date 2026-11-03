@@ -61,14 +61,21 @@ grid.partial(u, (1, 0)); grid.laplacian(u); grid.gradient(u)
 grid.interpolate(u, (xs, ys)); grid.integrate(u, bounds=[(0, 0.5), (0, 1)])
 ```
 
+For time-dependent problems with Dirichlet walls, `grid.weak_laplacian(u,
+wall_values)` is the energy-stable (Galerkin) Laplacian on the same BSPF trial
+space: its spectrum is real for any endpoint jets, so wave schemes stay stable.
+`wall_values` are the result's values on the walls (for example the boundary
+data's time derivative); see DESIGN.md.
+
 Jets are ordered left `f, f', ..., f^(q-1)`, then right. Evaluation points and
 integration bounds outside the grid raise `ValueError` when the op is built.
 
 ## Tests and benchmarks
 
-The accepted implementation passes 149 Python tests (including parity with
+The accepted implementation passes 183 Python tests (including parity with
 pybspf and 40-digit accuracy checks) and the C++ checks. The tests also cover
-large batches, explicit jets, read-only inputs and concurrent calls.
+large batches, explicit jets, read-only inputs, concurrent calls and the
+energy-stable Galerkin Laplacian (exact products, real spectrum, wave energy).
 
 
 ```sh

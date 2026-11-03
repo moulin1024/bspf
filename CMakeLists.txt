@@ -17,7 +17,7 @@ find_package(Eigen3 REQUIRED NO_MODULE)
 find_path(FFTW3_INCLUDE_DIR fftw3.h REQUIRED)
 find_library(FFTW3_LIBRARY fftw3 REQUIRED)
 
-add_library(bspf STATIC src/bspline.cpp src/endpoints.cpp src/fft.cpp src/line.cpp src/op.cpp src/grid.cpp)
+add_library(bspf STATIC src/bspline.cpp src/endpoints.cpp src/fft.cpp src/line.cpp src/op.cpp src/grid.cpp src/galerkin.cpp)
 target_include_directories(bspf PUBLIC include ${FFTW3_INCLUDE_DIR})
 target_link_libraries(bspf PUBLIC Eigen3::Eigen ${FFTW3_LIBRARY})
 target_compile_options(bspf PRIVATE -Wall -Wextra)

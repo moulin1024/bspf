@@ -16,10 +16,10 @@ from __future__ import annotations
 
 import numpy as np
 
-from ._core import Line, Op, basis_matrix, endpoint_scaled_knots, open_knots
+from ._core import GalerkinLine, Line, Op, basis_matrix, endpoint_scaled_knots, open_knots
 from ._core import Grid as _Grid
 
-__all__ = ["Grid", "Line", "Op", "basis_matrix", "endpoint_scaled_knots", "open_knots"]
+__all__ = ["GalerkinLine", "Grid", "Line", "Op", "basis_matrix", "endpoint_scaled_knots", "open_knots"]
 
 
 class Grid(_Grid):

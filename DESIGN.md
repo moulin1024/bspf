@@ -166,6 +166,46 @@ Regression coverage includes read-only inputs and jets, repeated slabs with a
 short final block, derivatives, primitives, spline-only evaluation, point
 evaluation, quadrature, endpoint jets, and simultaneous calls sharing one op.
 
+### Energy-stable (Galerkin) Laplacian (2026-11-03)
+
+The collocation `derivative(2)` clamped at Dirichlet walls has complex
+eigenvalues for most endpoint jets (all Chebyshev settings, FD degree >= 7): fine
+for diffusion, unstable for waves. `GalerkinLine` / `Grid.weak_laplacian` use the
+weak form on the same trial space instead. The trial functions are the BSPF
+cardinal functions, with `M = int phi_i phi_j` and `K = int phi_i' phi_j'`. The
+interior operator `W = -M_II^{-1} K_II` is similar to a symmetric
+negative-definite matrix, so its spectrum is real for any jets.
+
+* Exact products, matrix-free (setup only): quadrature of the trial field,
+  `K u = Phi^T W Phi u` with `Phi u = B_P c + T r`. That is 16 Gauss points per
+  sample cell; cells holding a knot are split there. The trigonometric part at
+  each Gauss offset is a circulant map, one FFT pair. The trial functions are
+  bounded (|phi_i| <= 2), so all intermediates are O(1).
+* Interior mass `dx (I + U S U^T)`, with low rank r found by a randomized
+  eigensolver. Woodbury solves cost O(N r).
+* Applied form: `W = (D_strong)_I + P Q^T`, rank s found by a randomized SVD
+  driven by fast products with W and W^T. The strong operator is the base
+  because it is already accurate on smooth non-periodic fields. A periodic base
+  would have to cancel O(N^2) wrap Gibbs values, which costs accuracy at large N.
+* Dirichlet walls enter through `E u = u_I + M_II^{-1} M_IB u_B` (rank 2):
+  `u_tt,II = sum_a W_a (x)_{b!=a} E_b u - (x)_b E_b w_walls`.
+* Optional CBLAS (Accelerate on macOS) for the correction's GEMMs.
+
+Measured on Apple M-series, one thread: throughput is 0.8-1.05x the strong
+Laplacian with Chebyshev q3 jets and 1.2-1.4x with FD default. Setup takes
+16-600 ms for N = 128-4096. The applied spectrum is exactly real, and the lowest
+eigenvalues are accurate to 1e-11 at N = 1024. On the 2D wave benchmark,
+Chebyshev q4 reaches 5e-10 on 97 x 145.
+
+Limit: the fit F amplifies rounding on rough samples by `max|F| ~
+(N / n_basis)^(q-1)` (`GalerkinLine.fit_amplification`). This only matters at
+setup, which probes with random vectors. The quadrature form pays it once
+(eps |F|), the earlier split-integral form paid it twice. The randomized solvers
+truncate at `4 eps max|F|` instead of fitting noise. With high-order jets at
+very large N (FD degree 6 or Chebyshev q4 at N >= 2048, max|F| >= 5e7) the weak
+operator is limited to about 1e-6..1e-5 relative; q <= 3 (or FD default up to
+N ~ 2048) stays at the strong operator's accuracy.
+
 ### Execution
 
 Ops are immutable and safe to share across threads. FFTW plans are cached per

@@ -11,6 +11,8 @@
 
 namespace bspf {
 
+using Index = Eigen::Index;
+
 Eigen::Index element_count(const Shape& shape) {
     Eigen::Index count = 1;
     for (Eigen::Index s : shape) count *= s;
@@ -63,6 +65,7 @@ struct Grid::Cache {
     using Key = std::tuple<int, int, int, std::vector<double>>;
     std::map<Key, std::shared_ptr<const Op>> others;
     static constexpr size_t capacity = 64;
+    std::map<int, std::unique_ptr<GalerkinLine>> galerkin;
 };
 
 namespace {
@@ -165,6 +168,145 @@ Field Grid::laplacian(const FieldView& f) const {
     out.data.resize(static_cast<size_t>(element_count(f.shape)));
     for (int axis = 0; axis < dimension(); ++axis)
         apply_along(derivative(axis, 2), f, out.data.data(), axis, nullptr, axis != 0);
+    return out;
+}
+
+const GalerkinLine& Grid::galerkin(int axis) const {
+    const Line& l = line(axis);
+    return *cached(cache_->mutex, cache_->galerkin, axis, [&] { return std::make_unique<GalerkinLine>(l); });
+}
+
+namespace {
+
+// Applies the Galerkin second derivative W along `axis` of a C-ordered field
+// into `out` (that axis of length N - 2), assigning or accumulating. Lines are
+// gathered 128 at a time; the kernel's (N, b) result is read at rows 1..N-2.
+void second_derivative_into(const GalerkinLine& g, const FieldView& in, int axis, double* out, bool accumulate) {
+    using Rows = Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>;
+    using Stride = Eigen::OuterStride<>;
+    constexpr Index block = 128;
+    const Index n = in.shape[axis];
+    Index before = 1, after = 1;
+    for (int i = 0; i < axis; ++i) before *= in.shape[i];
+    for (size_t i = axis + 1; i < in.shape.size(); ++i) after *= in.shape[i];
+    Matrix u, y;
+    if (after == 1) {  // contiguous lines, n apart
+        for (Index l0 = 0; l0 < before; l0 += block) {
+            const Index b = std::min(block, before - l0);
+            u = Eigen::Map<const Matrix>(in.data + l0 * n, n, b);
+            g.second_derivative_into(u, y);
+            Eigen::Map<Matrix> dest(out + l0 * (n - 2), n - 2, b);
+            if (accumulate) dest += y.middleRows(1, n - 2);
+            else dest = y.middleRows(1, n - 2);
+        }
+        return;
+    }
+    for (Index l = 0; l < before; ++l)  // interleaved lines within each slab
+        for (Index t0 = 0; t0 < after; t0 += block) {
+            const Index b = std::min(block, after - t0);
+            u = Eigen::Map<const Rows, 0, Stride>(in.data + l * n * after + t0, n, b, Stride(after));
+            g.second_derivative_into(u, y);
+            Eigen::Map<Rows, 0, Stride> dest(out + l * (n - 2) * after + t0, n - 2, b, Stride(after));
+            if (accumulate) dest += y.middleRows(1, n - 2);
+            else dest = y.middleRows(1, n - 2);
+        }
+}
+
+// E along `axis`: out_i = in_{i+1} + e(i, 0) in_0 + e(i, 1) in_{N-1}, one fused
+// pass that is contiguous over lines (no gather).
+Field extend_along(const FieldView& in, int axis, const Matrix& e) {
+    const Index n = in.shape[axis];
+    Index before = 1, after = 1;
+    for (int i = 0; i < axis; ++i) before *= in.shape[i];
+    for (size_t i = axis + 1; i < in.shape.size(); ++i) after *= in.shape[i];
+    Field out;
+    out.shape = in.shape;
+    out.shape[axis] = n - 2;
+    out.data.resize(static_cast<size_t>(element_count(out.shape)));
+    const double* e0 = e.col(0).data();
+    const double* e1 = e.col(1).data();
+    for (Index l = 0; l < before; ++l) {
+        const double* src = in.data + l * n * after;
+        double* dst = out.data.data() + l * (n - 2) * after;
+        if (after == 1) {
+            const double first = src[0], last = src[n - 1];
+            for (Index i = 0; i < n - 2; ++i) dst[i] = src[i + 1] + e0[i] * first + e1[i] * last;
+            continue;
+        }
+        const double* first = src;
+        const double* last = src + (n - 1) * after;
+        for (Index i = 0; i < n - 2; ++i) {
+            const double a = e0[i], b = e1[i];
+            const double* row = src + (i + 1) * after;
+            double* o = dst + i * after;
+            for (Index t = 0; t < after; ++t) o[t] = row[t] + a * first[t] + b * last[t];
+        }
+    }
+    return out;
+}
+
+}  // namespace
+
+Field Grid::weak_laplacian(const FieldView& f, const FieldView* wall_values) const {
+    check(f);
+    if (wall_values && wall_values->shape != f.shape) throw std::invalid_argument("wall_values must have the field's shape");
+    const int dim = dimension();
+    for (int a = 0; a < dim; ++a) galerkin(a);  // build outside the loops
+    auto E = [&](const FieldView& v, int a) { return extend_along(v, a, galerkin(a).wall_extension()); };
+    // Interior result: sum over axes a of W_a (x)_{b != a} E_b u. The cheap E's
+    // (copies plus rank-2 wall terms) go first, so each W_a writes straight into
+    // one interior accumulator.
+    Field interior_field;
+    interior_field.shape = f.shape;
+    for (int a = 0; a < dim; ++a) interior_field.shape[a] -= 2;
+    interior_field.data.resize(static_cast<size_t>(element_count(interior_field.shape)));
+    std::optional<Field> interior(std::move(interior_field));
+    for (int a = 0; a < dim; ++a) {
+        std::optional<Field> extended;
+        for (int b = 0; b < dim; ++b)
+            if (b != a) extended = E(extended ? extended->view() : f, b);
+        second_derivative_into(galerkin(a), extended ? extended->view() : f, a, interior->data.data(), a != 0);
+    }
+    // Interior runs: for every interior index of the leading spatial axes, the
+    // last spatial axis's interior (times the batch size) is contiguous in both
+    // the full field and the interior block.
+    const Index batch = element_count(f.shape) / element_count(shape());
+    auto for_interior_runs = [&](auto&& fn) {
+        const Index run = (f.shape[dim - 1] - 2) * batch;
+        std::vector<Index> idx(dim > 1 ? dim - 1 : 0, 1);  // interior indices of axes 0..dim-2
+        Index count = 1;
+        for (int a = 0; a + 1 < dim; ++a) count *= f.shape[a] - 2;
+        for (Index c = 0; c < count; ++c) {
+            Index full = 0, inner = 0, rem = c;
+            for (int a = dim - 2; a >= 0; --a) {
+                const Index i = rem % (f.shape[a] - 2) + 1;
+                rem /= f.shape[a] - 2;
+                Index fs = batch, is = batch;
+                for (int b2 = a + 1; b2 < dim; ++b2) { fs *= f.shape[b2]; is *= f.shape[b2] - 2; }
+                full += i * fs;
+                inner += (i - 1) * is;
+            }
+            fn(full + batch, inner, run);  // + batch: skip the last axis's first wall
+        }
+    };
+    Field out;
+    out.shape = f.shape;
+    if (wall_values) {
+        // Mass coupling to the walls' values of the result (interior zeroed).
+        out.data.assign(wall_values->data, wall_values->data + element_count(f.shape));
+        Field walls;
+        walls.shape = f.shape;
+        walls.data = out.data;
+        for_interior_runs([&](Index full, Index, Index run) { std::fill_n(walls.data.begin() + full, run, 0.0); });
+        Field coupling = E(walls.view(), 0);
+        for (int b = 1; b < dim; ++b) coupling = E(coupling.view(), b);
+        for (size_t i = 0; i < coupling.data.size(); ++i) interior->data[i] -= coupling.data[i];
+    } else {
+        out.data.assign(static_cast<size_t>(element_count(f.shape)), 0.0);
+    }
+    for_interior_runs([&](Index full, Index inner, Index run) {
+        std::copy_n(interior->data.begin() + inner, run, out.data.begin() + full);
+    });
     return out;
 }
 
