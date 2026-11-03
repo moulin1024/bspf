@@ -1,21 +1,26 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """2D heat equation u_t = kappa (u_xx + u_yy) on a rectangle with Dirichlet walls.
 
-Method of lines: the BSPF Laplacian (Grid.laplacian) in space, classical RK4
-in time. The exact solution is a decaying separable mode whose wavenumbers do
-not fit the box,
+Method of lines with the energy-stable (Galerkin) BSPF Laplacian
+Grid.weak_laplacian in space and classical RK4 in time. The exact solution is a
+decaying separable mode whose wavenumbers do not fit the box,
     u = exp(-kappa (kx^2 + ky^2) t) cos(kx x + px) cos(ky y + py),
-so the boundary data are nonzero, time dependent and not periodic. Boundary
-samples follow the Dirichlet data: their RK4 right-hand side is the exact
-g'(t), and they are reset to g after every step.
+so the boundary data are nonzero, time dependent and not periodic. Wall
+samples follow the Dirichlet data g. The right-hand side is
+kappa weak_laplacian(u, g_t / kappa): the walls' rates enter the interior
+through the Galerkin mass. Walls are reset to g after every step.
 
-Endpoint jets use local Chebyshev fits (the settings of the 3D benchmark):
-they carry the spectral accuracy up to the walls. With the default 5-point
-finite-difference jets the error at 65 x 97 is 7.5e-8 instead of 4e-13.
+Weak form: M u_t = -kappa K u on the BSPF trial space, with M = int phi_i phi_j
+and K = int phi_i' phi_j'. The interior operator -M_II^{-1} K_II is similar to
+a symmetric negative-definite matrix, so the discrete energy u^T M u decays
+monotonically for any endpoint jets. Endpoint jets are local Chebyshev fits with
+constraint order 6. Higher orders amplify the setup's rounding (see
+GalerkinLine.fit_amplification), lower ones cost accuracy.
 
 The step is dt = cfl * 2.78 / (kappa (rho_x + rho_y)), with rho the spectral
-radius of each axis's clamped second-derivative block (RK4's stability limit on
-the negative real axis is 2.78; the BSPF blocks have real parts <= -pi^2/L^2).
+radius of each axis's weak operator (matrix-free power iteration). RK4's
+stability limit on the negative real axis is 2.78; the weak operators' spectra
+are real and at most -pi^2 / L^2.
 
     python examples/pde/heat_2d.py [--n 65] [--plot out.png]
 """
@@ -31,17 +36,21 @@ KX, KY = 3.1, 4.3        # not multiples of pi / L: non-periodic, nonzero walls
 PX, PY = 0.4, -0.7
 LX, LY = 1.0, 1.5
 T_FINAL = 1.0
-OPTIONS = dict(degree=9, n_basis=18, lam=1e-6, endpoint_method="chebyshev",
-               boundary_points=16, chebyshev_modes=12, chebyshev_alpha=1e-12)
+OPTIONS = dict(degree=9, n_basis=18, lam=1e-6, endpoint_method="chebyshev", boundary_points=16,
+               chebyshev_modes=12, chebyshev_alpha=1e-12, constraint_order=6)
 
 
-def exact(x, y, t):
-    X, Y = np.meshgrid(x, y, indexing="ij")
+# The exact solution at points (X, Y): full meshes or just the wall points.
+def value(X, Y, t):
     return np.exp(-KAPPA * (KX**2 + KY**2) * t) * np.cos(KX * X + PX) * np.cos(KY * Y + PY)
 
 
-def exact_rate(x, y, t):
-    return -KAPPA * (KX**2 + KY**2) * exact(x, y, t)
+def rate(X, Y, t):  # u_t
+    return -KAPPA * (KX**2 + KY**2) * value(X, Y, t)
+
+
+def exact(x, y, t):
+    return value(*np.meshgrid(x, y, indexing="ij"), t)
 
 
 def boundary_mask(shape):
@@ -50,12 +59,17 @@ def boundary_mask(shape):
     return mask
 
 
-def clamped_radius(line):
-    """Spectral radius of the interior (Dirichlet-clamped) block of d^2/dx^2."""
-    d2 = line.derivative(2).matrix[1:-1, 1:-1]
-    eigenvalues = np.linalg.eigvals(d2)
-    assert eigenvalues.real.max() < 0, "unstable clamped operator"
-    return float(np.abs(eigenvalues).max())
+def spectral_radius(galerkin, iterations=200):
+    """Largest |lambda| of the interior weak operator by power iteration (matrix-free)."""
+    n = galerkin.size
+    v = np.random.default_rng(0).standard_normal(n - 2)
+    radius = 0.0
+    for _ in range(iterations):
+        full = np.zeros((n, 1))
+        full[1:-1, 0] = v / np.linalg.norm(v)
+        v = galerkin.second_derivative(full)[:, 0]
+        radius = np.linalg.norm(v)
+    return radius
 
 
 def solve(nx, ny, cfl=0.7, history=None, options=None):
@@ -64,16 +78,18 @@ def solve(nx, ny, cfl=0.7, history=None, options=None):
     x, y = np.linspace(0, LX, nx), np.linspace(0, LY, ny)
     grid = bspf.Grid.uniform((x, y), **options)
     on_wall = boundary_mask((nx, ny))
-    rho = clamped_radius(grid.line(0)) + clamped_radius(grid.line(1))
+    X, Y = np.meshgrid(x, y, indexing="ij")
+    Xw, Yw = X[on_wall], Y[on_wall]  # wall data is only ever needed there
+    walls = np.zeros((nx, ny))
+    rho = spectral_radius(grid.galerkin(0)) + spectral_radius(grid.galerkin(1))
     steps = int(np.ceil(T_FINAL / (cfl * 2.78 / (KAPPA * rho))))
     dt = T_FINAL / steps
 
     def rhs(u, t):
-        du = KAPPA * grid.laplacian(u)
-        du[on_wall] = exact_rate(x, y, t)[on_wall]  # walls follow g(t)
-        return du
+        walls[on_wall] = rate(Xw, Yw, t) / KAPPA
+        return KAPPA * grid.weak_laplacian(u, walls)  # the result's walls are g_t
 
-    u = exact(x, y, 0.0)
+    u = value(X, Y, 0.0)
     for step in range(steps):
         t = step * dt
         k1 = rhs(u, t)
@@ -81,7 +97,7 @@ def solve(nx, ny, cfl=0.7, history=None, options=None):
         k3 = rhs(u + 0.5 * dt * k2, t + 0.5 * dt)
         k4 = rhs(u + dt * k3, t + dt)
         u = u + dt / 6 * (k1 + 2 * k2 + 2 * k3 + k4)
-        u[on_wall] = exact(x, y, t + dt)[on_wall]
+        u[on_wall] = value(Xw, Yw, t + dt)
         if history is not None and (step + 1) % max(1, steps // 20) == 0:
             reference = exact(x, y, t + dt)
             history.append((t + dt, np.max(np.abs(u - reference)) / np.max(np.abs(reference))))
@@ -102,7 +118,7 @@ def main():
     reference = exact(x, y, T_FINAL)
     error = np.max(np.abs(u - reference)) / np.max(np.abs(reference))
     print(f"grid {args.n} x {ny} on [0, {LX}] x [0, {LY}], kappa = {KAPPA}, T = {T_FINAL}")
-    print(f"  {steps} RK4 steps in {elapsed:.2f} s ({4 * steps / elapsed:.0f} Laplacians/s)")
+    print(f"  {steps} RK4 steps in {elapsed:.2f} s ({4 * steps / elapsed:.0f} weak Laplacians/s)")
     print(f"  amplitude decayed to {np.exp(-KAPPA * (KX**2 + KY**2) * T_FINAL):.3f}")
     print(f"  relative max error at T: {error:.3e}")
 
