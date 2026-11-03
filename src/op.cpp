@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <cstdlib>
 #include <stdexcept>
+#include <string>
 
 #include "line_data.hpp"
 
@@ -62,9 +63,10 @@ void Op::compute(Block& x, Block& y, const Block* jets, Workspace& ws, ComplexBl
         ws.g.topRows(q).noalias() = d.blocks.left * x.topRows(p);
         ws.g.bottomRows(q).noalias() = d.blocks.right * x.bottomRows(p);
     }
+    if (!jets && !q) ws.g.resize(0, b);
     const Block& jet_values = jets ? *jets : ws.g;
     if (jets_only_) {
-        y = jet_values;
+        y = jet_values;  // (2q, b), also when q == 0
         return;
     }
     // Fit: c = K (2 B^T W x) + G g.
@@ -88,10 +90,7 @@ void Op::compute(Block& x, Block& y, const Block* jets, Workspace& ws, ComplexBl
         if (spectra) {
             spectra->middleCols(l0, b) = ws.spectrum;
         } else {
-            ws.real = ws.spectrum.real();
-            ws.imag = ws.spectrum.imag();
-            ws.values.noalias() = modes_real_ * ws.real;
-            ws.values.noalias() -= modes_imag_ * ws.imag;
+            mode_values(ws.spectrum, ws);
             if (lift_.size()) y.noalias() += lift_ * ws.values;
             else y += ws.values;
         }
@@ -103,6 +102,20 @@ void Op::compute(Block& x, Block& y, const Block* jets, Workspace& ws, ComplexBl
     }
 }
 
+bool Op::defers_modes() const { return rows_ > 1 && modes_real_.size() && !lift_.size() && correction_; }
+
+void Op::mode_values(const ComplexBlock& spectrum, Workspace& ws) const {
+    ws.real = spectrum.real();
+    ws.imag = spectrum.imag();
+    ws.values.noalias() = modes_real_ * ws.real;
+    ws.values.noalias() -= modes_imag_ * ws.imag;
+}
+
+void Op::check_lines(const MatrixRef& f) const {
+    if (f.rows() != cols_)
+        throw std::invalid_argument("expected " + std::to_string(cols_) + " samples per line, got " + std::to_string(f.rows()));
+}
+
 Matrix Op::matrix() const { return (*this)(Matrix::Identity(cols_, cols_)); }
 
 Matrix Op::boundary_matrix() const {
@@ -110,13 +123,17 @@ Matrix Op::boundary_matrix() const {
 }
 
 Matrix Op::operator()(const MatrixRef& f) const {
+    check_lines(f);
     Matrix y(rows_, f.cols());
     apply({f.data(), 1, f.outerStride(), f.cols()}, {y.data(), 1, rows_, f.cols()});
     return y;
 }
 
 Matrix Op::operator()(const MatrixRef& f, const MatrixRef& jets) const {
-    if (jets.cols() != f.cols()) throw std::invalid_argument("jets must have one column per field");
+    check_lines(f);
+    if (jets.rows() != jet_count() || jets.cols() != f.cols())
+        throw std::invalid_argument("jets must have shape (" + std::to_string(jet_count()) + ", " +
+                                    std::to_string(f.cols()) + ")");
     Matrix y(rows_, f.cols());
     const LinesView g{jets.data(), 1, jets.outerStride(), jets.cols()};
     apply({f.data(), 1, f.outerStride(), f.cols()}, {y.data(), 1, rows_, f.cols()}, &g);
@@ -140,7 +157,7 @@ void Op::apply_with_workspace(const LinesView& in, const MutableLinesView& out, 
     // spectra (plus real/imaginary copies) overwhelm cache for 3D fields.
     const Eigen::Index block = block_size();
     const Eigen::Index group = std::max<Eigen::Index>(1, 32768 / std::max(cols_, rows_) / block) * block;
-    if (rows_ > 1 && modes_real_.size() && !lift_.size() && correction_ && m > group) {
+    if (defers_modes() && m > group) {
         for (Eigen::Index l = 0; l < m; l += group) {
             const Eigen::Index count = std::min(group, m - l);
             const LinesView x{in.data + l * in.distance, in.stride, in.distance, count};
@@ -158,7 +175,7 @@ void Op::apply_with_workspace(const LinesView& in, const MutableLinesView& out, 
     Block& g = ws.given_jets;
     // Point evaluations apply their (P, h) rows to a bounded group of spectra
     // in one product. Single-row integrals stay in the cache-local block.
-    const bool deferred = modes_real_.size() && !lift_.size() && correction_ && rows_ > 1 && m > block;
+    const bool deferred = defers_modes() && m > block;
     ComplexBlock& spectra = ws.spectra;
     if (deferred) spectra.resize(cols_ / 2 + 1, m);
     for (Eigen::Index l0 = 0; l0 < m; l0 += block) {
@@ -182,10 +199,7 @@ void Op::apply_with_workspace(const LinesView& in, const MutableLinesView& out, 
         }
     }
     if (deferred) {
-        ws.real = spectra.real();
-        ws.imag = spectra.imag();
-        ws.values.noalias() = modes_real_ * ws.real;
-        ws.values.noalias() -= modes_imag_ * ws.imag;
+        mode_values(spectra, ws);
         if (major) MutableMap(out.data, rows_, m, Stride(out.distance)) += ws.values;
         else RowsMap(out.data, rows_, m, Stride(out.stride)) += ws.values;
     }

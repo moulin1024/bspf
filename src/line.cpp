@@ -3,6 +3,7 @@
 
 #include <cmath>
 #include <complex>
+#include <limits>
 #include <stdexcept>
 #include <string>
 
@@ -74,12 +75,18 @@ Line::Line(const Vector& x, const LineOptions& o) {
     require_integer("constraint_order", q, 0);
     const Eigen::Index N = x.size();
     if (N < 2 || !x.allFinite()) throw std::invalid_argument("x must be a finite real 1D grid with at least two points");
-    const double spacing0 = x(1) - x(0);
+    // Mean spacing; the tolerance allows for rounding of large coordinates.
+    const double spacing0 = (x(N - 1) - x(0)) / static_cast<double>(N - 1);
+    const double tolerance = 1e-10 * std::abs(spacing0) +
+                             64 * std::numeric_limits<double>::epsilon() * std::max(std::abs(x(0)), std::abs(x(N - 1)));
     for (Eigen::Index i = 0; i + 1 < N; ++i) {
         const double s = x(i + 1) - x(i);
-        if (!(s > 0) || std::abs(s - spacing0) > 1e-13 + 1e-10 * std::abs(spacing0))
+        if (!(s > 0) || std::abs(s - spacing0) > tolerance)
             throw std::invalid_argument("x must be strictly increasing and uniformly spaced");
     }
+    if (!o.knots && !o.n_basis && N < o.degree + 1)
+        throw std::invalid_argument("a grid of " + std::to_string(N) + " points is too small for degree " +
+                                    std::to_string(o.degree) + " (needs at least degree + 1 points)");
     int p = 0, modes = 0;
     if (o.endpoint_method == EndpointMethod::Chebyshev) {
         modes = o.chebyshev_modes.value_or(o.degree + 1);
@@ -87,6 +94,9 @@ Line::Line(const Vector& x, const LineOptions& o) {
         require_integer("chebyshev_penalty_power", o.chebyshev_penalty_power, 0);
         if (!std::isfinite(o.chebyshev_alpha) || o.chebyshev_alpha < 0)
             throw std::invalid_argument("chebyshev_alpha must be finite and nonnegative");
+        if (!o.boundary_points && N < std::max(2, modes))
+            throw std::invalid_argument("a grid of " + std::to_string(N) + " points is too small for " +
+                                        std::to_string(modes) + " Chebyshev modes");
         p = o.boundary_points.value_or(static_cast<int>(std::min<Eigen::Index>(N, 2 * modes)));
         require_integer("boundary_points", p, std::max(2, modes));
     } else {

@@ -119,6 +119,21 @@ int main() {
     catch (const std::invalid_argument&) { threw = true; }
     check(threw, "evaluation outside the domain rejected", 0.0);
 
+    // Shapes are checked before any strided read.
+    {
+        const bspf::Line line(Vector::LinSpaced(31, 0.0, 1.0));
+        const bspf::Op d1 = line.derivative(1);
+        bool rows = false, jet_rows = false;
+        try { d1(Matrix::Zero(10, 2)); } catch (const std::invalid_argument&) { rows = true; }
+        try { d1(Matrix::Zero(31, 2), Matrix::Zero(3, 2)); } catch (const std::invalid_argument&) { jet_rows = true; }
+        check(rows, "wrong sample count rejected", 0.0);
+        check(jet_rows, "wrong jet count rejected", 0.0);
+        bspf::LineOptions o;
+        o.constraint_order = 0;
+        const Matrix none = bspf::Line(Vector::LinSpaced(31, 0.0, 1.0), o).jets()(Matrix::Ones(31, 3));
+        check(none.rows() == 0 && none.cols() == 3, "jets of a q = 0 line are (0, m)", 0.0);
+    }
+
     std::printf("%d failure(s)\n", failures);
     return failures ? 1 : 0;
 }

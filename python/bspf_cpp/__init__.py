@@ -50,8 +50,11 @@ class Grid(_Grid):
     def hessian(self, f):
         """H[i, j] = d_i d_j f; the diagonal uses direct second derivatives."""
         d = self.dimension
-        return np.stack([np.stack([self.partial(f, tuple(int(k == i) + int(k == j) for k in range(d)))
-                                   for j in range(d)]) for i in range(d)])
+        h = [[None] * d for _ in range(d)]
+        for i in range(d):
+            for j in range(i, d):  # symmetric: compute the upper triangle once
+                h[i][j] = h[j][i] = self.partial(f, tuple(int(k == i) + int(k == j) for k in range(d)))
+        return np.stack([np.stack(row) for row in h])
 
     def curl(self, vector):
         """Scalar curl in 2D, vector curl in 3D."""

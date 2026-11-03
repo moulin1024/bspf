@@ -59,6 +59,8 @@ public:
 
 private:
     void check(const FieldView& f) const;
+    // Cached evaluation (kind 0) or quadrature (kind 1) op.
+    std::shared_ptr<const Op> cached_op(int kind, int axis, int order, std::vector<double> values) const;
     struct Cache;
     std::vector<Line> lines_;
     std::shared_ptr<Cache> cache_;

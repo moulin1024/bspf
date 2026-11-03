@@ -79,6 +79,11 @@ private:
     void apply_with_workspace(const LinesView& in, const MutableLinesView& out,
                               const LinesView* jets, bool accumulate, Workspace& ws) const;
     Eigen::Index block_size() const;
+    // Point evaluations and integrals apply their mode rows to many lines at once.
+    bool defers_modes() const;
+    // ws.values = Re(E R) for half spectra R (h, b).
+    void mode_values(const ComplexBlock& spectrum, Workspace& ws) const;
+    void check_lines(const MatrixRef& f) const;
 
     Eigen::Index rows_ = 0, cols_ = 0;
     std::shared_ptr<const detail::LineData> line_;

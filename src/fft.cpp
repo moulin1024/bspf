@@ -34,8 +34,9 @@ std::pair<fftw_plan, fftw_plan> FFT::plans(Eigen::Index m, bool interleaved) con
     const int real_dist = interleaved ? 1 : n, complex_dist = interleaved ? 1 : h;
     double* real = fftw_alloc_real(static_cast<size_t>(n) * m);
     fftw_complex* spectrum = fftw_alloc_complex(static_cast<size_t>(h) * m);
-    // Measured planning: setup cost is paid once per (batch size, layout).
-    const unsigned flags = FFTW_MEASURE | FFTW_UNALIGNED;
+    // Estimate planning: plans are made lazily per batch size on the apply path,
+    // and measured planning was not faster here (bench/bench_bspf).
+    const unsigned flags = FFTW_ESTIMATE | FFTW_UNALIGNED;
     fftw_plan r2c = fftw_plan_many_dft_r2c(1, &n, howmany, real, nullptr, stride, real_dist, spectrum, nullptr, stride,
                                            complex_dist, flags);
     fftw_plan c2r = fftw_plan_many_dft_c2r(1, &n, howmany, spectrum, nullptr, stride, complex_dist, real, nullptr,
@@ -56,19 +57,6 @@ void FFT::backward(std::complex<double>* spectrum, double* real, Eigen::Index m,
     if (m == 0) return;
     // c2r keeps only the real part of the zero and Nyquist bins, as Re(ifft) of the full spectrum does.
     fftw_execute_dft_c2r(plans(m, interleaved).second, reinterpret_cast<fftw_complex*>(spectrum), real);
-}
-
-ComplexMatrix FFT::forward(const Matrix& r) const {
-    ComplexMatrix spectrum(n_ / 2 + 1, r.cols());
-    forward(r.data(), spectrum.data(), r.cols(), false);
-    return spectrum;
-}
-
-Matrix FFT::backward(ComplexMatrix spectrum) const {
-    Matrix out(n_, spectrum.cols());
-    backward(spectrum.data(), out.data(), spectrum.cols(), false);
-    out /= static_cast<double>(n_);
-    return out;
 }
 
 std::optional<Banded> Banded::from(const Matrix& a, Eigen::Index max_width) {

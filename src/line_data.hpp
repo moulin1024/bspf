@@ -32,10 +32,6 @@ public:
     // c2r without the 1/n factor; overwrites `spectrum`.
     void backward(std::complex<double>* spectrum, double* real, Eigen::Index m, bool interleaved) const;
 
-    // Column-major conveniences (used to build operators).
-    ComplexMatrix forward(const Matrix& r) const;
-    Matrix backward(ComplexMatrix spectrum) const;  // includes 1/n
-
 private:
     std::pair<fftw_plan, fftw_plan> plans(Eigen::Index m, bool interleaved) const;
     int n_;

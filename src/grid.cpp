@@ -6,6 +6,8 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
+#include <tuple>
+#include <vector>
 
 namespace bspf {
 
@@ -54,8 +56,52 @@ Field apply_along(const Op& op, const FieldView& in, int axis, const double* jet
 
 struct Grid::Cache {
     std::mutex mutex;
+    // Derivative ops are kept for the grid's lifetime (references are handed out).
     std::map<std::pair<int, int>, std::unique_ptr<Op>> derivatives;
+    // Evaluation (kind 0) and quadrature (kind 1) ops by axis, order and
+    // coordinates; bounded, since probe points may change from call to call.
+    using Key = std::tuple<int, int, int, std::vector<double>>;
+    std::map<Key, std::shared_ptr<const Op>> others;
+    static constexpr size_t capacity = 64;
 };
+
+namespace {
+
+// Looks up `key`; on a miss compiles outside the lock (compiles can be slow
+// and other threads keep reading the cache), then keeps the first insertion.
+// Entries are never erased, so the returned reference stays valid.
+template <class Map, class Build>
+typename Map::mapped_type& cached(std::mutex& mutex, Map& map, const typename Map::key_type& key, Build&& build) {
+    {
+        std::lock_guard<std::mutex> lock(mutex);
+        auto it = map.find(key);
+        if (it != map.end() && it->second) return it->second;
+    }
+    typename Map::mapped_type value = build();
+    std::lock_guard<std::mutex> lock(mutex);
+    auto& slot = map[key];
+    if (!slot) slot = std::move(value);
+    return slot;
+}
+
+}  // namespace
+
+std::shared_ptr<const Op> Grid::cached_op(int kind, int axis, int order, std::vector<double> values) const {
+    const Line& l = line(axis);
+    Cache::Key key{kind, axis, order, std::move(values)};
+    {
+        std::lock_guard<std::mutex> lock(cache_->mutex);
+        auto it = cache_->others.find(key);
+        if (it != cache_->others.end()) return it->second;  // copied under the lock
+    }
+    const std::vector<double>& v = std::get<3>(key);
+    std::shared_ptr<const Op> op =
+        kind == 0 ? std::make_shared<const Op>(l.evaluate(Eigen::Map<const Vector>(v.data(), v.size()), order))
+                  : std::make_shared<const Op>(l.quadrature(v[0], v[1]));
+    std::lock_guard<std::mutex> lock(cache_->mutex);
+    if (cache_->others.size() >= Cache::capacity) cache_->others.clear();
+    return cache_->others.try_emplace(std::move(key), std::move(op)).first->second;
+}
 
 Grid::Grid(std::vector<Line> lines) : lines_(std::move(lines)), cache_(std::make_shared<Cache>()) {
     if (lines_.empty() || lines_.size() > 3) throw std::invalid_argument("provide one to three lines");
@@ -74,10 +120,8 @@ Shape Grid::shape() const {
 
 const Op& Grid::derivative(int axis, int order) const {
     const Line& l = line(axis);
-    std::lock_guard<std::mutex> lock(cache_->mutex);
-    auto& slot = cache_->derivatives[{axis, order}];
-    if (!slot) slot = std::make_unique<Op>(l.derivative(order));
-    return *slot;
+    return *cached(cache_->mutex, cache_->derivatives, {axis, order},
+                   [&] { return std::make_unique<Op>(l.derivative(order)); });
 }
 
 void Grid::check(const FieldView& f) const {
@@ -132,8 +176,10 @@ Field Grid::interpolate(const FieldView& f, const std::vector<Vector>& coordinat
         throw std::invalid_argument("derivatives must have one entry per spatial axis");
     std::optional<Field> result;
     for (int axis = 0; axis < dimension(); ++axis) {
-        const Op op = lines_[axis].evaluate(coordinates[axis], derivatives.empty() ? 0 : derivatives[axis]);
-        result = apply_along(op, result ? result->view() : f, axis);
+        const Vector& c = coordinates[axis];
+        const auto op = cached_op(0, axis, derivatives.empty() ? 0 : derivatives[axis],
+                                  std::vector<double>(c.data(), c.data() + c.size()));
+        result = apply_along(*op, result ? result->view() : f, axis);
     }
     return std::move(*result);
 }
@@ -150,8 +196,8 @@ Field Grid::integrate(const FieldView& f, const std::vector<std::pair<double, do
     std::optional<Field> result;
     // Innermost axis first: each step shrinks the data before the next one.
     for (int axis = dimension() - 1; axis >= 0; --axis) {
-        const Op op = lines_[axis].quadrature(bounds[axis].first, bounds[axis].second);
-        result = apply_along(op, result ? result->view() : f, axis);
+        const auto op = cached_op(1, axis, 0, {bounds[axis].first, bounds[axis].second});
+        result = apply_along(*op, result ? result->view() : f, axis);
     }
     result->shape.erase(result->shape.begin(), result->shape.begin() + dimension());
     return std::move(*result);
