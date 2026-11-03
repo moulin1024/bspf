@@ -16,10 +16,11 @@ from __future__ import annotations
 
 import numpy as np
 
-from ._core import GalerkinLine, Line, Op, basis_matrix, endpoint_scaled_knots, open_knots
+from ._core import GalerkinLine, Line, Op, SplineCurve, basis_matrix, endpoint_scaled_knots, open_knots
+from ._core import MappedGrid2D as _MappedGrid2D
 from ._core import Grid as _Grid
 
-__all__ = ["GalerkinLine", "Grid", "Line", "Op", "basis_matrix", "endpoint_scaled_knots", "open_knots"]
+__all__ = ["GalerkinLine", "Grid", "Line", "MappedGrid2D", "SplineCurve", "Op", "basis_matrix", "endpoint_scaled_knots", "open_knots"]
 
 
 class Grid(_Grid):
@@ -66,3 +67,20 @@ class Grid(_Grid):
         if d == 2:
             return p(1, 0) - p(0, 1)
         return np.stack([p(2, 1) - p(1, 2), p(0, 2) - p(2, 0), p(1, 0) - p(0, 1)])
+
+
+class MappedGrid2D(_MappedGrid2D):
+    """Structured grid on a region bounded by four spline curves.
+
+    Curves (SplineCurve) are oriented bottom: P00 -> P10, right: P10 -> P11,
+    top: P01 -> P11, left: P00 -> P01. Fields have shape (n_xi, n_eta, *batch);
+    derivatives are physical (x, y) derivatives by the chain rule.
+    """
+
+    def gradient(self, f):
+        """(f_x, f_y) stacked on a new leading axis."""
+        return np.stack([self.partial(f, (1, 0)), self.partial(f, (0, 1))])
+
+    def laplacian(self, f):
+        """f_xx + f_yy (first derivatives applied twice)."""
+        return self.partial(f, (2, 0)) + self.partial(f, (0, 2))

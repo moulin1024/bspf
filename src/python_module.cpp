@@ -14,6 +14,7 @@
 #include "bspf/bspline.hpp"
 #include "bspf/galerkin.hpp"
 #include "bspf/grid.hpp"
+#include "bspf/mapped.hpp"
 
 namespace nb = nanobind;
 using namespace nb::literals;
@@ -47,6 +48,27 @@ int normalize_axis(int axis, size_t ndim) {
     const int n = static_cast<int>(ndim);
     if (axis < -n || axis >= n) throw std::invalid_argument("axis out of range");
     return axis < 0 ? axis + n : axis;
+}
+
+bspf::EndpointMethod endpoint_method(const std::string& name);
+
+bspf::LineOptions line_options(int degree, std::optional<int> n_basis, std::optional<Vector> knots,
+                               std::optional<int> constraint_order, std::optional<int> boundary_points, double lam,
+                               double clustering, const std::string& method, std::optional<int> chebyshev_modes,
+                               double chebyshev_alpha, int chebyshev_penalty_power) {
+    bspf::LineOptions o;
+    o.degree = degree;
+    o.n_basis = n_basis;
+    o.knots = std::move(knots);
+    o.constraint_order = constraint_order;
+    o.boundary_points = boundary_points;
+    o.lam = lam;
+    o.clustering = clustering;
+    o.endpoint_method = endpoint_method(method);
+    o.chebyshev_modes = chebyshev_modes;
+    o.chebyshev_alpha = chebyshev_alpha;
+    o.chebyshev_penalty_power = chebyshev_penalty_power;
+    return o;
 }
 
 bspf::EndpointMethod endpoint_method(const std::string& name) {
@@ -109,19 +131,9 @@ NB_MODULE(_core, m) {
                 std::optional<int> constraint_order, std::optional<int> boundary_points, double lam,
                 double clustering, const std::string& method, std::optional<int> chebyshev_modes,
                 double chebyshev_alpha, int chebyshev_penalty_power) {
-                 bspf::LineOptions o;
-                 o.degree = degree;
-                 o.n_basis = n_basis;
-                 o.knots = std::move(knots);
-                 o.constraint_order = constraint_order;
-                 o.boundary_points = boundary_points;
-                 o.lam = lam;
-                 o.clustering = clustering;
-                 o.endpoint_method = endpoint_method(method);
-                 o.chebyshev_modes = chebyshev_modes;
-                 o.chebyshev_alpha = chebyshev_alpha;
-                 o.chebyshev_penalty_power = chebyshev_penalty_power;
-                 new (self) Line(x, o);
+                 new (self) Line(x, line_options(degree, n_basis, std::move(knots), constraint_order, boundary_points, lam,
+                                                 clustering, method, chebyshev_modes, chebyshev_alpha,
+                                                 chebyshev_penalty_power));
              },
              "x"_a, nb::kw_only(), "degree"_a = 5, "n_basis"_a = nb::none(), "knots"_a = nb::none(),
              "constraint_order"_a = nb::none(), "boundary_points"_a = nb::none(), "lam"_a = 0.0,
@@ -223,6 +235,50 @@ NB_MODULE(_core, m) {
         .def("stiffness", [](const bspf::GalerkinLine& g, const Matrix& u) { return g.stiffness(u); }, "u"_a)
         .def("second_derivative", [](const bspf::GalerkinLine& g, const Matrix& u) { return g.second_derivative(u); }, "u"_a)
         .def("extension", [](const bspf::GalerkinLine& g, const Matrix& u) { return g.extension(u); }, "u"_a);
+
+    nb::class_<bspf::SplineCurve>(m, "SplineCurve", "Clamped B-spline curve x(s) in the plane, s in [0, 1]")
+        .def(nb::init<const Matrix&, int>(), "control_points"_a, "degree"_a = 3)
+        .def(nb::init<const Matrix&, const Vector&, int>(), "control_points"_a, "knots"_a, "degree"_a)
+        .def_prop_ro("degree", &bspf::SplineCurve::degree)
+        .def_prop_ro("knots", [](const bspf::SplineCurve& c) { return Vector(c.knots()); })
+        .def_prop_ro("control_points", [](const bspf::SplineCurve& c) { return Matrix(c.control_points()); })
+        .def("evaluate", &bspf::SplineCurve::evaluate, "s"_a, "derivative"_a = 0,
+             "Points (derivative 0) or derivatives d^k x / ds^k at parameters s: (m, 2)");
+
+    nb::class_<bspf::MappedGrid2D>(m, "MappedGrid2D",
+                                   "Structured grid on a region bounded by four spline curves (transfinite map)")
+        .def("__init__",
+             [](bspf::MappedGrid2D* self, const bspf::SplineCurve& bottom, const bspf::SplineCurve& right,
+                const bspf::SplineCurve& top, const bspf::SplineCurve& left, std::pair<Eigen::Index, Eigen::Index> shape,
+                int degree, std::optional<int> n_basis, std::optional<int> constraint_order,
+                std::optional<int> boundary_points, double lam, double clustering, const std::string& method,
+                std::optional<int> chebyshev_modes, double chebyshev_alpha, int chebyshev_penalty_power) {
+                 new (self) bspf::MappedGrid2D(bottom, right, top, left, shape.first, shape.second,
+                                               line_options(degree, n_basis, std::nullopt, constraint_order,
+                                                            boundary_points, lam, clustering, method, chebyshev_modes,
+                                                            chebyshev_alpha, chebyshev_penalty_power));
+             },
+             "bottom"_a, "right"_a, "top"_a, "left"_a, "shape"_a, nb::kw_only(), "degree"_a = 5,
+             "n_basis"_a = nb::none(), "constraint_order"_a = nb::none(), "boundary_points"_a = nb::none(),
+             "lam"_a = 0.0, "clustering"_a = 0.0, "endpoint_method"_a = "finite_difference",
+             "chebyshev_modes"_a = nb::none(), "chebyshev_alpha"_a = 1e-12, "chebyshev_penalty_power"_a = 4)
+        .def_prop_ro("shape", &bspf::MappedGrid2D::shape)
+        .def_prop_ro("reference", &bspf::MappedGrid2D::reference, nb::rv_policy::reference_internal)
+        .def_prop_ro("x", [](const bspf::MappedGrid2D& g) { return Matrix(g.x()); })
+        .def_prop_ro("y", [](const bspf::MappedGrid2D& g) { return Matrix(g.y()); })
+        .def_prop_ro("x_xi", [](const bspf::MappedGrid2D& g) { return Matrix(g.x_xi()); })
+        .def_prop_ro("x_eta", [](const bspf::MappedGrid2D& g) { return Matrix(g.x_eta()); })
+        .def_prop_ro("y_xi", [](const bspf::MappedGrid2D& g) { return Matrix(g.y_xi()); })
+        .def_prop_ro("y_eta", [](const bspf::MappedGrid2D& g) { return Matrix(g.y_eta()); })
+        .def_prop_ro("jacobian", [](const bspf::MappedGrid2D& g) { return Matrix(g.jacobian()); })
+        .def("partial", [](const bspf::MappedGrid2D& g, const InArray& f, std::pair<int, int> orders) {
+                 Field out;
+                 {
+                     nb::gil_scoped_release release;
+                     out = g.partial(view(f), orders.first, orders.second);
+                 }
+                 return to_numpy(std::move(out));
+             }, "f"_a, "orders"_a, "Physical partial d^a/dx^a d^b/dy^b f for orders (a, b)");
 
     m.def("open_knots", &bspf::open_knots, "a"_a, "b"_a, "degree"_a, "n_basis"_a, "clustering"_a = 0.0);
     m.def("endpoint_scaled_knots", &bspf::endpoint_scaled_knots, "a"_a, "b"_a, "degree"_a, "n_basis"_a, "spacing"_a);
