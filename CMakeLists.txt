@@ -12,6 +12,7 @@ endif()
 option(BSPF_PYTHON "Build the nanobind module bspf_cpp._core" ON)
 option(BSPF_TESTS "Build the C++ tests" ON)
 option(BSPF_NATIVE "Compile for the host CPU (-march=native / -mcpu=native)" ON)
+option(BSPF_BLAS "Use a CBLAS dgemm (Accelerate, OpenBLAS, ...) for the large dense products, if found" ON)
 
 find_package(Eigen3 REQUIRED NO_MODULE)
 find_path(FFTW3_INCLUDE_DIR fftw3.h REQUIRED)
@@ -21,6 +22,26 @@ add_library(bspf STATIC src/bspline.cpp src/endpoints.cpp src/fft.cpp src/line.c
 target_include_directories(bspf PUBLIC include ${FFTW3_INCLUDE_DIR})
 target_link_libraries(bspf PUBLIC Eigen3::Eigen ${FFTW3_LIBRARY})
 target_compile_options(bspf PRIVATE -Wall -Wextra)
+if(BSPF_BLAS)
+  # Optional: the Galerkin correction's GEMMs run 3-6x faster in an optimized BLAS
+  # (on macOS, Accelerate is part of the OS). Without one, Eigen's kernels are used.
+  find_package(BLAS)
+  if(BLAS_FOUND)
+    include(CheckCXXSourceCompiles)
+    set(CMAKE_REQUIRED_LIBRARIES ${BLAS_LIBRARIES})
+    check_cxx_source_compiles("
+      extern \"C\" void cblas_dgemm(int, int, int, int, int, int, double, const double*, int,
+                                     const double*, int, double, double*, int);
+      int main() { double a = 2, b = 3, c = 0; cblas_dgemm(102, 111, 111, 1, 1, 1, 1.0, &a, 1, &b, 1, 0.0, &c, 1);
+                   return c == 6 ? 0 : 1; }" BSPF_HAVE_CBLAS)
+    unset(CMAKE_REQUIRED_LIBRARIES)
+    if(BSPF_HAVE_CBLAS)
+      target_link_libraries(bspf PUBLIC ${BLAS_LIBRARIES})
+      target_compile_definitions(bspf PRIVATE BSPF_HAVE_CBLAS)
+    endif()
+  endif()
+endif()
+message(STATUS "bspf: CBLAS dgemm ${BSPF_HAVE_CBLAS}")
 if(BSPF_NATIVE)
   include(CheckCXXCompilerFlag)
   check_cxx_compiler_flag(-march=native HAS_MARCH_NATIVE)
