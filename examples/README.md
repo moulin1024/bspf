@@ -19,7 +19,7 @@ PYTHONPATH=python python examples/basic/diff_1d.py --plot diff_1d.png
 | `basic/diff_2d.py` | `Grid.partial`, `Grid.gradient` | cosine modes + circular tanh front |
 | `basic/diff_3d.py` | `Grid.gradient`, `curl`, `divergence`, `laplacian` | shifted Taylor–Green vortex, Chebyshev endpoints |
 
-| `pde/wave_2d.py` | linear wave equation as a first-order system + RK4, Dirichlet walls; checks the clamped spectrum is real | two crossing plane waves, time-dependent wall data |
+| `pde/wave_2d.py` | linear wave equation as a first-order system + RK4, Dirichlet walls, with `Grid.weak_laplacian` (energy-stable Galerkin form) and Chebyshev jets | two crossing plane waves, time-dependent wall data |
 | `pde/heat_2d.py` | time-dependent heat equation: `Grid.laplacian` + RK4, Dirichlet walls | decaying mode with non-periodic, time-dependent wall data |
 
 The 2D example draws its random mode amplitudes with NumPy (seed 123), so the
