@@ -16,6 +16,9 @@
 
 namespace bspf::detail {
 
+// FFTW's planner is not thread-safe; every plan is created under this mutex.
+std::mutex& planner_mutex();
+
 // Batched real FFTs of length n over m lines, either contiguous (column-major
 // (n, m) data and (h, m) spectra) or interleaved (row-major: line l at offset l,
 // stride m). FFTW's planner is not thread-safe, execution with new arrays is:

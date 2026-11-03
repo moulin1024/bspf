@@ -6,14 +6,10 @@
 
 namespace bspf::detail {
 
-namespace {
-
 std::mutex& planner_mutex() {
     static std::mutex m;
     return m;
 }
-
-}  // namespace
 
 FFT::~FFT() {
     std::lock_guard<std::mutex> lock(planner_mutex());
