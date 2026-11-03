@@ -18,6 +18,7 @@ PYTHONPATH=python python examples/basic/diff_1d.py --plot diff_1d.png
 | `basic/interpolate_1d.py` | `Line.evaluate` values and derivatives off the grid | same |
 | `basic/diff_2d.py` | `Grid.partial`, `Grid.gradient` | cosine modes + circular tanh front |
 | `basic/diff_3d.py` | `Grid.gradient`, `curl`, `divergence`, `laplacian` | shifted Taylor–Green vortex, Chebyshev endpoints |
+| `basic/diff_mapped_2d.py` | `MappedGrid2D`: physical first and second derivatives on a region bounded by four spline curves (transfinite map, exact metrics) | analytic f(x, y) on a curved quadrilateral |
 
 | `pde/wave_2d.py` | linear wave equation as a first-order system + RK4, Dirichlet walls, with `Grid.weak_laplacian` (energy-stable Galerkin form) and Chebyshev jets | two crossing plane waves, time-dependent wall data |
 | `pde/heat_2d.py` | time-dependent heat equation: `Grid.weak_laplacian` (energy-stable Galerkin form) + RK4, Dirichlet walls, Chebyshev jets | decaying mode with non-periodic, time-dependent wall data |
