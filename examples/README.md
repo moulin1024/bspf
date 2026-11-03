@@ -21,6 +21,7 @@ PYTHONPATH=python python examples/basic/diff_1d.py --plot diff_1d.png
 
 | `pde/wave_2d.py` | linear wave equation as a first-order system + RK4, Dirichlet walls, with `Grid.weak_laplacian` (energy-stable Galerkin form) and Chebyshev jets | two crossing plane waves, time-dependent wall data |
 | `pde/heat_2d.py` | time-dependent heat equation: `Grid.weak_laplacian` (energy-stable Galerkin form) + RK4, Dirichlet walls, Chebyshev jets | decaying mode with non-periodic, time-dependent wall data |
+| `pde/burgers_2d.py` | 2D viscous Burgers system: `Grid.partial` advection + `Grid.weak_laplacian` diffusion + RK4, Dirichlet walls; jets chosen by Re | exact traveling-wave front (Fletcher), Re = 100 by default |
 
 The 2D example draws its random mode amplitudes with NumPy (seed 123), so the
 field differs slightly from pybspf's JAX-generated one.
