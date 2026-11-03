@@ -70,12 +70,20 @@ data's time derivative); see DESIGN.md.
 Jets are ordered left `f, f', ..., f^(q-1)`, then right. Evaluation points and
 integration bounds outside the grid raise `ValueError` when the op is built.
 
+## Examples
+
+[`examples/`](examples/README.md) has runnable scripts on pybspf's benchmark
+fields: 1D differentiation, integration and interpolation, 2D partials and 3D
+vector calculus, plus time-dependent heat and wave equations with
+non-periodic Dirichlet walls (`examples/pde`). Start with `PYTHONPATH=python python examples/basic/diff_1d.py`.
+
 ## Tests and benchmarks
 
-The accepted implementation passes 183 Python tests (including parity with
+The accepted implementation passes 190 Python tests (including parity with
 pybspf and 40-digit accuracy checks) and the C++ checks. The tests also cover
-large batches, explicit jets, read-only inputs, concurrent calls and the
-energy-stable Galerkin Laplacian (exact products, real spectrum, wave energy).
+large batches, explicit jets, read-only inputs, concurrent calls, the
+energy-stable Galerkin Laplacian (exact products, real spectrum, wave energy)
+and run every example.
 
 
 ```sh
