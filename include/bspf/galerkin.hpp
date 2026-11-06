@@ -38,6 +38,8 @@ struct GalerkinOptions {
     // Singular values of W - (D_per)_I below this times (pi / dx)^2 are dropped
     // from the applied operator's low-rank correction.
     double operator_tolerance = 1e-14;
+    // Composite Gauss points per cell (split at spline knots).
+    int quadrature_order = 16;
 };
 
 class GalerkinLine {
@@ -57,6 +59,16 @@ public:
     // Exact Galerkin products for columns u (N, m).
     Matrix mass(const MatrixRef& u) const;
     Matrix stiffness(const MatrixRef& u) const;
+
+    // Compact composite quadrature (no dummy or zero-weight rows). Evaluation
+    // and weighted adjoint projection share the FFT/spline factorization.
+    const Vector& quadrature_points() const;
+    const Vector& quadrature_weights() const;
+    Matrix evaluate(const MatrixRef& u, int derivative = 0) const;
+    Matrix project(const MatrixRef& values, int derivative = 0) const;
+    // Full mass solve, or M_II solve on (N-2,m) loads when interior=true.
+    // Full solves reuse the interior low-rank inverse plus a 2x2 wall Schur solve.
+    Matrix solve_mass(const MatrixRef& rhs, bool interior = false) const;
 
     // Dirichlet interior operators, (N, m) -> (N - 2, m):
     //   W u = -M_II^{-1} (K u)_I          (interior second derivative)

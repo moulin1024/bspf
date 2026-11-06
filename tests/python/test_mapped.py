@@ -97,3 +97,28 @@ def test_invalid_geometry_is_rejected():
     # Swapping top and bottom flips the orientation: the map folds.
     with pytest.raises(ValueError, match="folds"):
         bc.MappedGrid2D(top, line_curve((1.1, 1.2), (1.0, 0.1)), bottom, line_curve((-0.1, 1.0), (0, 0)), (9, 9))
+
+
+def test_distributed_corrected_map_and_physical_chain_rule():
+    """Independent analytic map checks distribution inversion and interior metrics."""
+    sides = (line_curve((0, 0), (1, 0)), line_curve((1, 0), (1, 1)),
+             line_curve((0, 1), (1, 1)), line_curve((0, 0), (0, 1)))
+    n = 129
+    g = bc.MappedGrid2D(*sides, (n, n), dist_xi=np.array([0., .35, 1.]),
+                        correction=(np.array([[.2]]), np.array([[-.1]])), **CHEB6)
+    xi, eta = np.meshgrid(np.linspace(0, 1, n), np.linspace(0, 1, n), indexing="ij")
+    # psi(s) = .7*s + .3*s**2; rationalized inverse avoids cancellation at zero.
+    s = 2 * xi / (.7 + np.sqrt(.49 + 1.2 * xi))
+    bubble = 4 * xi * (1 - xi) * eta * (1 - eta)
+    bx = 4 * (1 - 2 * xi) * eta * (1 - eta)
+    by = 4 * xi * (1 - xi) * (1 - 2 * eta)
+    np.testing.assert_allclose(g.x, s + .2 * bubble, atol=2e-13)
+    np.testing.assert_allclose(g.y, eta - .1 * bubble, atol=2e-13)
+    np.testing.assert_allclose(g.x_xi, 1 / (.7 + .6 * s) + .2 * bx, atol=2e-12)
+    np.testing.assert_allclose(g.x_eta, .2 * by, atol=2e-12)
+    np.testing.assert_allclose(g.y_xi, -.1 * bx, atol=2e-12)
+    np.testing.assert_allclose(g.y_eta, 1 - .1 * by, atol=2e-12)
+    u = g.x**2 + g.x * g.y + 2 * g.y**2
+    for orders, exact in [((1, 0), 2*g.x + g.y), ((0, 1), g.x + 4*g.y),
+                          ((2, 0), 2.), ((1, 1), 1.), ((0, 2), 4.)]:
+        np.testing.assert_allclose(g.partial(u, orders), exact, atol=2e-7, rtol=0)

@@ -182,6 +182,9 @@ struct GalerkinLine::Data {
     Matrix extra_trig[2];                 // (T r)^(k) at the extra points (n_extra, N)
     Matrix extra_spline[2];               // B^(k) at the extra points (n_extra, n_basis)
     Vector extra_weights;
+    Vector points, weights;
+    std::vector<std::vector<Index>> sample_rows;
+    Eigen::Matrix2d wall_schur_inverse;
     Matrix U;                  // low-rank interior mass: M_II = dx (I + U diag(s) U^T)
     Vector shrink;             // s / (1 + s)
     Matrix M_IB;               // (N - 2, 2)
@@ -215,6 +218,46 @@ struct GalerkinLine::Data {
             u.bottomRows(p).noalias() += line.boundary_blocks().right.transpose() * g.bottomRows(q);
         }
         return u;
+    }
+
+    Matrix evaluate(const Matrix& u, int k) const {
+        const Matrix c = fit(u);
+        const Matrix r = u - line.basis() * c;
+        const ComplexMatrix R = real_fft->forward(r);
+        Matrix result(points.size(), u.cols());
+        for (Index qi = 0; qi < quadrature; ++qi) {
+            Matrix v = real_fft->backward(shift[k][qi].asDiagonal() * R);
+            v.noalias() += spline_at[k][qi] * c;
+            for (Index j = 0; j < n; ++j)
+                if (sample_rows[qi][j] >= 0) result.row(sample_rows[qi][j]) = v.row(j);
+        }
+        if (extra_weights.size()) {
+            result.bottomRows(extra_weights.size()).noalias() = extra_trig[k] * r;
+            result.bottomRows(extra_weights.size()).noalias() += extra_spline[k] * c;
+        }
+        return result;
+    }
+
+    Matrix project(const Matrix& values, int k) const {
+        const Index m = values.cols();
+        ComplexMatrix adjoint = ComplexMatrix::Zero(n / 2 + 1, m);
+        Matrix spline = Matrix::Zero(nb, m);
+        for (Index qi = 0; qi < quadrature; ++qi) {
+            Matrix v = Matrix::Zero(n, m);
+            for (Index j = 0; j < n; ++j)
+                if (sample_rows[qi][j] >= 0)
+                    v.row(j) = cell_weights[qi](j) * values.row(sample_rows[qi][j]);
+            spline.noalias() += spline_at[k][qi].transpose() * v;
+            adjoint += shift[k][qi].conjugate().asDiagonal() * real_fft->forward(v);
+        }
+        Matrix t = real_fft->backward(std::move(adjoint));
+        if (extra_weights.size()) {
+            const Matrix v = extra_weights.asDiagonal() * values.bottomRows(extra_weights.size());
+            t.noalias() += extra_trig[k].transpose() * v;
+            spline.noalias() += extra_spline[k].transpose() * v;
+        }
+        spline.noalias() -= line.basis().transpose() * t;
+        return t + fit_transpose(spline);
     }
 
     // The Galerkin product (M for k = 0, K for k = 1) of columns u, by quadrature
@@ -256,6 +299,20 @@ struct GalerkinLine::Data {
         Matrix y = x;
         if (U.cols()) y.noalias() -= U * (shrink.asDiagonal() * (U.transpose() * x));
         return y / dx;
+    }
+
+    Matrix full_mass_solve(const Matrix& rhs) const {
+        Matrix result(n, rhs.cols());
+        const Matrix z = mass_solve(rhs.middleRows(1, n - 2));
+        Matrix boundary(2, rhs.cols());
+        boundary.row(0) = rhs.row(0);
+        boundary.row(1) = rhs.row(n - 1);
+        boundary.noalias() -= M_IB.transpose() * z;
+        const Matrix walls = wall_schur_inverse * boundary;
+        result.row(0) = walls.row(0);
+        result.row(n - 1) = walls.row(1);
+        result.middleRows(1, n - 2) = z - extension_walls * walls;
+        return result;
     }
 
     Matrix interior_mass(const Matrix& x) const {  // M_II x for interior vectors x
@@ -344,6 +401,7 @@ GalerkinLine::GalerkinLine(const Line& line, const GalerkinOptions& options) {
     auto d = std::make_shared<Data>(line);
     const Index n = line.size(), degree = line.degree();
     if (n < 4) throw std::invalid_argument("the Galerkin line needs at least 4 points");
+    if (options.quadrature_order < 4) throw std::invalid_argument("quadrature_order must be at least 4");
     d->n = n;
     d->K = n / 2;
     d->nb = line.n_basis();
@@ -369,7 +427,7 @@ GalerkinLine::GalerkinLine(const Line& line, const GalerkinOptions& options) {
     // split there (the spline pieces have kinks); all others use 16 Gauss points
     // at common offsets, so their trigonometric values come from one FFT pair each.
     const Vector& t = line.knots();
-    const int Q = 16;
+    const int Q = options.quadrature_order;
     Vector gn, gw;
     gauss_legendre(Q, gn, gw);
     d->quadrature = Q;
@@ -387,6 +445,8 @@ GalerkinLine::GalerkinLine(const Line& line, const GalerkinOptions& options) {
         d->spline_at[k].resize(Q);
     }
     d->cell_weights.resize(Q);
+    d->sample_rows.assign(Q, std::vector<Index>(n, -1));
+    std::vector<double> sample_points, sample_weights;
     for (Index qi = 0; qi < Q; ++qi) {
         const double s = (gn(qi) + 1) / 2;  // offset within the cell
         Vector w = Vector::Constant(n, d->dx * gw(qi) / 2);
@@ -394,6 +454,12 @@ GalerkinLine::GalerkinLine(const Line& line, const GalerkinOptions& options) {
         for (Index j = 0; j + 1 < n; ++j)
             if (!breaks[j].empty()) w(j) = 0.0;
         d->cell_weights[qi] = w;
+        for (Index j = 0; j < n; ++j) {
+            if (w(j) == 0) continue;
+            d->sample_rows[qi][j] = static_cast<Index>(sample_points.size());
+            sample_points.push_back(x0 + (static_cast<double>(j) + s) * d->dx);
+            sample_weights.push_back(w(j));
+        }
         Vector points(n);
         for (Index j = 0; j < n; ++j) points(j) = std::min(x0 + (static_cast<double>(j) + s) * d->dx, x0 + length);
         for (int k = 0; k <= 1; ++k) {
@@ -426,6 +492,10 @@ GalerkinLine::GalerkinLine(const Line& line, const GalerkinOptions& options) {
     }
     d->extra_weights = Eigen::Map<const Vector>(extra_weights.data(), static_cast<Index>(extra_weights.size()));
     const Vector extra = Eigen::Map<const Vector>(extra_points.data(), static_cast<Index>(extra_points.size()));
+    sample_points.insert(sample_points.end(), extra_points.begin(), extra_points.end());
+    sample_weights.insert(sample_weights.end(), extra_weights.begin(), extra_weights.end());
+    d->points = Eigen::Map<const Vector>(sample_points.data(), static_cast<Index>(sample_points.size()));
+    d->weights = Eigen::Map<const Vector>(sample_weights.data(), static_cast<Index>(sample_weights.size()));
     for (int k = 0; k <= 1; ++k) {
         d->extra_spline[k] = basis_matrix(t, extra, static_cast<int>(degree), k);
         d->extra_trig[k].resize(extra.size(), n);
@@ -481,8 +551,17 @@ GalerkinLine::GalerkinLine(const Line& line, const GalerkinOptions& options) {
     // Wall coupling of the mass: (M e_0)_I and (M e_{N-1})_I.
     Matrix walls = Matrix::Zero(n, 2);
     walls(0, 0) = walls(n - 1, 1) = 1.0;
-    d->M_IB = d->product(walls, 0).middleRows(1, ni);
+    const Matrix wall_mass = d->product(walls, 0);
+    d->M_IB = wall_mass.middleRows(1, ni);
     d->extension_walls = d->mass_solve(d->M_IB);
+    Eigen::Matrix2d wall_block;
+    wall_block.row(0) = wall_mass.row(0);
+    wall_block.row(1) = wall_mass.row(n - 1);
+    Eigen::Matrix2d schur = wall_block - d->M_IB.transpose() * d->extension_walls;
+    schur = (0.5 * (schur + schur.transpose())).eval();
+    Eigen::LLT<Eigen::Matrix2d> wall_factor(schur);
+    if (wall_factor.info() != Eigen::Success) throw std::runtime_error("Galerkin wall mass Schur complement is not positive definite");
+    d->wall_schur_inverse = wall_factor.solve(Eigen::Matrix2d::Identity());
 
     // Compress L = W - (D_strong)_I by a randomized SVD with power iterations,
     // using only fast products with L and L^T. Its rank is bounded in N;
@@ -533,6 +612,25 @@ Index GalerkinLine::mass_rank() const { return d_->U.cols(); }
 Index GalerkinLine::operator_rank() const { return d_->P.cols(); }
 double GalerkinLine::fit_amplification() const { return d_->amplification; }
 const Line& GalerkinLine::line() const { return d_->line; }
+const Vector& GalerkinLine::quadrature_points() const { return d_->points; }
+const Vector& GalerkinLine::quadrature_weights() const { return d_->weights; }
+
+Matrix GalerkinLine::evaluate(const MatrixRef& u, int derivative) const {
+    if (u.rows() != d_->n) throw std::invalid_argument("evaluate expects N rows");
+    if (derivative < 0 || derivative > 1) throw std::invalid_argument("derivative must be 0 or 1");
+    return d_->evaluate(u, derivative);
+}
+
+Matrix GalerkinLine::project(const MatrixRef& values, int derivative) const {
+    if (values.rows() != d_->points.size()) throw std::invalid_argument("project expects one row per quadrature point");
+    if (derivative < 0 || derivative > 1) throw std::invalid_argument("derivative must be 0 or 1");
+    return d_->project(values, derivative);
+}
+
+Matrix GalerkinLine::solve_mass(const MatrixRef& rhs, bool interior) const {
+    if (rhs.rows() != (interior ? d_->n - 2 : d_->n)) throw std::invalid_argument("incorrect mass load row count");
+    return interior ? d_->mass_solve(rhs) : d_->full_mass_solve(rhs);
+}
 
 Matrix GalerkinLine::mass(const MatrixRef& u) const {
     if (u.rows() != d_->n) throw std::invalid_argument("expected " + std::to_string(d_->n) + " samples per column");

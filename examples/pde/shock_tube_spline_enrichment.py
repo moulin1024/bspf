@@ -1,0 +1,160 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+"""Local quintic B-spline enrichment, with retained refinement behind fronts.
+
+Front locations come from the evolving density/pressure sensor. The local
+basis centers lie on a fixed fine lattice. Previously selected centers are
+retained: adaptation adds resolution instead of intentionally discarding
+previously represented structures. Nearly dependent residual modes are removed
+from newly added directions by a mass-Gram eigendecomposition; previously
+accepted directions are preserved. FFT BSPF remains the global base space.
+"""
+import argparse
+import json
+from pathlib import Path
+import numpy as np
+from scipy.interpolate import BSpline
+from scipy.sparse import csr_matrix
+from shock_tube_enrichment import EnrichedSpace, run_enriched, primitives
+
+
+class SplineSpace(EnrichedSpace):
+    shape = BSpline.basis_element(np.arange(-3., 4.), extrapolate=False)
+    shape_x = shape.derivative()
+
+    def __init__(self, base, centers, spacing, previous=None):
+        self.spacing = spacing
+        retained = None
+        if previous is not None:
+            retained = np.zeros((len(centers), previous.k))
+            retained[np.searchsorted(centers, previous.centers)] = previous.transform
+        super().__init__(base, centers, np.full(len(centers), spacing),
+                         orthogonalize=True, retained=retained)
+
+    def raw(self, x):
+        z = (np.asarray(x)[:, None]-self.centers)/self.spacing
+        return (np.nan_to_num(self.shape(z)), np.nan_to_num(self.shape_x(z))/self.spacing)
+
+
+class SparseSplineSpace(SplineSpace):
+    """Exact factored actions H=(S-Phi C)T using compact-support sparse S.
+
+    The accepted trial space and mass Schur complement are unchanged. Dense H
+    arrays are used during setup only and discarded after spectral estimation.
+    """
+    def __init__(self, base, centers, spacing, previous=None):
+        self.previous_radius_vector=None if previous is None else previous.radius_vector
+        self.correction_seed=None if previous is None else (np.searchsorted(centers,previous.centers),previous.correction)
+        z=(base.q[:,None]-np.asarray(centers))/spacing
+        self.S=csr_matrix(np.nan_to_num(self.shape(z)))
+        self.Sx=csr_matrix(np.nan_to_num(self.shape_x(z))/spacing)
+        super().__init__(base,centers,spacing,previous)
+        del self.H, self.Hx, self.correction_seed
+
+    def transfer_from(self, previous, state):
+        """Inject coefficients into the retained basis, without an L2 solve."""
+        if self.base is not previous.base or self.k < previous.k or self.spacing != previous.spacing:
+            raise ValueError('transfer requires the same base and a retained spline space')
+        indices=np.searchsorted(self.centers,previous.centers)
+        if np.any(indices>=len(self.centers)) or not np.array_equal(self.centers[indices],previous.centers):
+            raise ValueError('previous centers were not retained')
+        other=np.ones(len(self.centers),dtype=bool);other[indices]=False
+        if (not np.array_equal(self.correction[:,indices],previous.correction)
+                or not np.array_equal(self.transform[indices,:previous.k],previous.transform)
+                or np.any(self.transform[other,:previous.k])):
+            raise ValueError('previous basis directions were not retained exactly')
+        result=np.zeros((self.n+self.k,state.shape[1]))
+        result[:self.n+previous.k]=state
+        return result
+
+    def evaluate_with_gradient(self,state):
+        a=self.transform@state[self.n:]
+        coefficients=state[:self.n]-self.correction@a
+        return (self.base.evaluate(coefficients)+self.S@a,
+                self.base.evaluate(coefficients,1)+self.Sx@a)
+
+    def radius_start(self,size):
+        if self.previous_radius_vector is None:
+            return np.random.default_rng(0).normal(size=size)
+        seed=np.zeros(size)
+        seed[:len(self.previous_radius_vector)]=self.previous_radius_vector
+        seed+=1e-3*np.linalg.norm(seed)*np.random.default_rng(0).normal(size=size)/np.sqrt(size)
+        return seed
+
+    def evaluate(self,state,derivative=0):
+        a=self.transform@state[self.n:]
+        coefficients=state[:self.n]-self.correction@a
+        return self.base.evaluate(coefficients,derivative)+(self.Sx if derivative else self.S)@a
+
+    def project(self,values,derivative=0):
+        b=self.base.project(values,derivative)
+        local=(self.Sx if derivative else self.S).T@(self.base.weights[:,None]*values)
+        return np.vstack((b,self.transform.T@(local-self.correction.T@b)))
+
+    def at(self,x,state):
+        a=self.transform@state[self.n:]
+        return self.base.line.evaluate(x).matrix@(state[:self.n]-self.correction@a)+self.raw(x)[0]@a
+
+
+class LocalRefinement:
+    def __init__(self, refinement=8, halfwidth=2., space_type=SplineSpace):
+        self.refinement, self.halfwidth = refinement, halfwidth
+        if refinement < 1 or halfwidth <= 0:
+            raise ValueError("positive refinement and patch halfwidth required")
+        self.space_type=space_type
+        self.indices = set()
+        self.previous = None
+
+    def __call__(self, base, centers, widths):
+        h = 1/(base.n-1)
+        spacing = h/self.refinement
+        for center in centers:
+            low = max(3, int(np.floor((center-self.halfwidth*h)/spacing)))
+            high = min(int(round(1/spacing))-3, int(np.ceil((center+self.halfwidth*h)/spacing)))
+            self.indices.update(range(low, high+1))
+        centers=np.array(sorted(self.indices))*spacing
+        if self.previous is not None and self.previous.base is base and np.array_equal(centers,self.previous.centers):
+            return self.previous
+        self.previous = self.space_type(base, centers, spacing, previous=self.previous)
+        return self.previous
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--reference', default='benchmarks/shock_tube/enrichment_n65_mu0001_fine.npz')
+    parser.add_argument('--refinement', type=int, default=8)
+    parser.add_argument('--halfwidth', type=float, default=2.)
+    parser.add_argument('--quadrature', type=int, default=64)
+    parser.add_argument('--interval', type=float, default=.005)
+    parser.add_argument('--cfl', type=float, default=.35)
+    parser.add_argument('--backend',choices=['dense','sparse'],default='sparse')
+    parser.add_argument('--prefix', default='benchmarks/shock_tube/spline_enrichment')
+    args = parser.parse_args()
+    params = json.loads(Path(args.reference).with_suffix('.json').read_text())['parameters']
+    result = run_enriched(n=params['n'], mu=params['mu'], final_time=params['time'],
+        width=params['width'], interval=args.interval, quadrature=args.quadrature, cfl=args.cfl,
+        space_factory=LocalRefinement(args.refinement, args.halfwidth,
+            space_type=SparseSplineSpace if args.backend=='sparse' else SplineSpace))
+    reference = np.load(args.reference)
+    exact = primitives(reference['reference'])
+    metrics = {name:dict(l1=float(np.trapezoid(abs(v-r),result['probes'])), linf=float(abs(v-r).max()),
+        total_variation=float(np.sum(abs(np.diff(v)))))
+        for name,v,r in zip(('rho','u','p','T'),primitives(result['output']),exact)}
+    prefix = Path(args.prefix)
+    prefix.parent.mkdir(parents=True, exist_ok=True)
+    report = dict(parameters=vars(args), metrics=metrics, **{s:result[s] for s in ('summary','history','updates')})
+    prefix.with_suffix('.json').write_text(json.dumps(report, indent=2))
+    np.savez(prefix.with_suffix('.npz'),x=result['probes'],output=result['output'])
+    import matplotlib.pyplot as plt
+    fig, axes = plt.subplots(2,2,figsize=(12,8),constrained_layout=True)
+    for label, output in [('BSPF',reference['base']),('Local spline enrichment',result['output']),('Reference',reference['reference'])]:
+        for ax,name,v in zip(axes.flat,('Density','Velocity','Pressure','Temperature'),primitives(output)):
+            ax.plot(result['probes'],v,label=label,lw=1.1)
+            ax.set(xlabel='x',title=name,xlim=(.35,.85))
+            ax.legend(fontsize=8)
+    fig.suptitle(f"Local spline enrichment: {params['n']} base + {result['summary']['enrichment_count']} modes, mu={params['mu']:g}")
+    fig.savefig(prefix.with_suffix('.png'),dpi=160)
+    print(json.dumps(dict(summary=result['summary'],metrics=metrics),indent=2),flush=True)
+
+
+if __name__ == '__main__':
+    main()

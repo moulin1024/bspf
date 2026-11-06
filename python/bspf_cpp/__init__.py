@@ -18,9 +18,10 @@ import numpy as np
 
 from ._core import GalerkinLine, Line, Op, SplineCurve, basis_matrix, endpoint_scaled_knots, open_knots
 from ._core import MappedGrid2D as _MappedGrid2D
+from ._core import MultiPatch2D as _MultiPatch2D
 from ._core import Grid as _Grid
 
-__all__ = ["GalerkinLine", "Grid", "Line", "MappedGrid2D", "SplineCurve", "Op", "basis_matrix", "endpoint_scaled_knots", "open_knots"]
+__all__ = ["GalerkinLine", "Grid", "Line", "MappedGrid2D", "MultiPatch2D", "SplineCurve", "Op", "basis_matrix", "endpoint_scaled_knots", "open_knots"]
 
 
 class Grid(_Grid):
@@ -82,5 +83,30 @@ class MappedGrid2D(_MappedGrid2D):
         return np.stack([self.partial(f, (1, 0)), self.partial(f, (0, 1))])
 
     def laplacian(self, f):
-        """f_xx + f_yy (first derivatives applied twice)."""
+        """f_xx + f_yy using direct reference second derivatives and map metrics."""
         return self.partial(f, (2, 0)) + self.partial(f, (0, 2))
+
+
+class MultiPatch2D(_MultiPatch2D):
+    """Conforming deformed patches (MappedGrid2D) joined at complete faces.
+
+    Faces are (patch, axis, side) as in bspf-fluid's PatchMesh2D; interfaces are
+    ((patch, axis, side), (patch, axis, side), reverse). Periodic pairs (keyword
+    ``periodic``) add a translation, ((patch, axis, side), (patch, axis, side),
+    reverse, (dx, dy)), with the right face equal to the left face shifted by
+    (dx, dy), e.g. the pitch of a cascade. Fields are lists with one
+    (n_xi, n_eta, *batch) array per patch; nodes shared by several patches are
+    averaged after differentiation. By default, interface-crossing lines use
+    up to eight neighbour ghost samples; ``overlap=0`` disables this extension.
+    ``partial(..., average_shared=False)`` retains both interface traces.
+    """
+
+    def gradient(self, fields):
+        """[(f_x, f_y) stacked on a new leading axis] per patch."""
+        fx, fy = self.partial(fields, (1, 0)), self.partial(fields, (0, 1))
+        return [np.stack(pair) for pair in zip(fx, fy)]
+
+    def laplacian(self, fields):
+        """f_xx + f_yy per patch (shared nodes averaged)."""
+        return self.average_shared([a + b for a, b in zip(self.partial(fields, (2, 0), average_shared=False),
+                                                         self.partial(fields, (0, 2), average_shared=False))])

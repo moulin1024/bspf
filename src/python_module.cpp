@@ -7,6 +7,7 @@
 #include <nanobind/stl/optional.h>
 #include <nanobind/stl/pair.h>
 #include <nanobind/stl/string.h>
+#include <nanobind/stl/tuple.h>
 #include <nanobind/stl/vector.h>
 
 #include <stdexcept>
@@ -15,6 +16,7 @@
 #include "bspf/galerkin.hpp"
 #include "bspf/grid.hpp"
 #include "bspf/mapped.hpp"
+#include "bspf/multipatch.hpp"
 
 namespace nb = nanobind;
 using namespace nb::literals;
@@ -220,12 +222,18 @@ NB_MODULE(_core, m) {
 
     nb::class_<bspf::GalerkinLine>(m, "GalerkinLine",
                                    "Energy-stable (Galerkin) second derivative on a Line's BSPF trial space")
-        .def("__init__", [](bspf::GalerkinLine* self, const Line& line, double mass_tolerance, double operator_tolerance) {
+        .def("__init__", [](bspf::GalerkinLine* self, const Line& line, double mass_tolerance, double operator_tolerance, int quadrature_order) {
                  bspf::GalerkinOptions o;
                  o.mass_tolerance = mass_tolerance;
                  o.operator_tolerance = operator_tolerance;
+                 o.quadrature_order = quadrature_order;
                  new (self) bspf::GalerkinLine(line, o);
-             }, "line"_a, nb::kw_only(), "mass_tolerance"_a = 1e-12, "operator_tolerance"_a = 1e-14)
+             }, "line"_a, nb::kw_only(), "mass_tolerance"_a = 1e-12, "operator_tolerance"_a = 1e-14, "quadrature_order"_a = 16)
+        .def_prop_ro("quadrature_points", [](const bspf::GalerkinLine& g) { return Vector(g.quadrature_points()); })
+        .def_prop_ro("quadrature_weights", [](const bspf::GalerkinLine& g) { return Vector(g.quadrature_weights()); })
+        .def("evaluate", [](const bspf::GalerkinLine& g, const Matrix& u, int k) { return g.evaluate(u, k); }, "u"_a, "derivative"_a = 0)
+        .def("project", [](const bspf::GalerkinLine& g, const Matrix& u, int k) { return g.project(u, k); }, "values"_a, "derivative"_a = 0)
+        .def("solve_mass", [](const bspf::GalerkinLine& g, const Matrix& u, bool interior) { return g.solve_mass(u, interior); }, "rhs"_a, "interior"_a = false)
         .def_prop_ro("operator_rank", &bspf::GalerkinLine::operator_rank)
         .def_prop_ro("fit_amplification", &bspf::GalerkinLine::fit_amplification)
         .def("exact_second_derivative", [](const bspf::GalerkinLine& g, const Matrix& u) { return g.exact_second_derivative(u); }, "u"_a)
@@ -252,16 +260,34 @@ NB_MODULE(_core, m) {
                 const bspf::SplineCurve& top, const bspf::SplineCurve& left, std::pair<Eigen::Index, Eigen::Index> shape,
                 int degree, std::optional<int> n_basis, std::optional<int> constraint_order,
                 std::optional<int> boundary_points, double lam, double clustering, const std::string& method,
-                std::optional<int> chebyshev_modes, double chebyshev_alpha, int chebyshev_penalty_power) {
+                std::optional<int> chebyshev_modes, double chebyshev_alpha, int chebyshev_penalty_power,
+                std::optional<Vector> dist_xi, std::optional<Vector> dist_eta, std::optional<Vector> dist_bottom,
+                std::optional<Vector> dist_top, std::optional<Vector> dist_left, std::optional<Vector> dist_right,
+                std::optional<std::pair<Matrix, Matrix>> correction) {
+                 auto pick = [](const std::optional<Vector>& edge, const std::optional<Vector>& axis) {
+                     return edge ? bspf::Distribution(*edge) : axis ? bspf::Distribution(*axis) : bspf::Distribution();
+                 };
+                 const bspf::EdgeDistribution distribution{pick(dist_bottom, dist_xi), pick(dist_top, dist_xi),
+                                                           pick(dist_left, dist_eta), pick(dist_right, dist_eta)};
                  new (self) bspf::MappedGrid2D(bottom, right, top, left, shape.first, shape.second,
                                                line_options(degree, n_basis, std::nullopt, constraint_order,
                                                             boundary_points, lam, clustering, method, chebyshev_modes,
-                                                            chebyshev_alpha, chebyshev_penalty_power));
+                                                            chebyshev_alpha, chebyshev_penalty_power),
+                                               distribution, correction ? correction->first : Matrix(),
+                                               correction ? correction->second : Matrix());
              },
              "bottom"_a, "right"_a, "top"_a, "left"_a, "shape"_a, nb::kw_only(), "degree"_a = 5,
              "n_basis"_a = nb::none(), "constraint_order"_a = nb::none(), "boundary_points"_a = nb::none(),
              "lam"_a = 0.0, "clustering"_a = 0.0, "endpoint_method"_a = "finite_difference",
-             "chebyshev_modes"_a = nb::none(), "chebyshev_alpha"_a = 1e-12, "chebyshev_penalty_power"_a = 4)
+             "chebyshev_modes"_a = nb::none(), "chebyshev_alpha"_a = 1e-12, "chebyshev_penalty_power"_a = 4,
+             "dist_xi"_a = nb::none(), "dist_eta"_a = nb::none(), "dist_bottom"_a = nb::none(),
+             "dist_top"_a = nb::none(), "dist_left"_a = nb::none(), "dist_right"_a = nb::none(),
+             "correction"_a = nb::none(),
+             "Edge node distributions psi(s) (Bernstein coefficients 0, ..., 1, increasing): the fraction of an "
+             "edge's nodes before curve parameter s (bottom/top along xi, left/right along eta; dist_xi / dist_eta "
+             "set both edges of an axis). Inside, xi = (1 - eta) psi_bottom(s) + eta psi_top(s) and likewise for eta. "
+             "correction: (cx, cy), interior Bernstein coefficients (p - 1, q - 1) of a correction "
+             "sum c_kl B_k^p(xi) B_l^q(eta) added to the map (zero on the edges)")
         .def_prop_ro("shape", &bspf::MappedGrid2D::shape)
         .def_prop_ro("reference", &bspf::MappedGrid2D::reference, nb::rv_policy::reference_internal)
         .def_prop_ro("x", [](const bspf::MappedGrid2D& g) { return Matrix(g.x()); })
@@ -279,6 +305,66 @@ NB_MODULE(_core, m) {
                  }
                  return to_numpy(std::move(out));
              }, "f"_a, "orders"_a, "Physical partial d^a/dx^a d^b/dy^b f for orders (a, b)");
+
+    using FaceTuple = std::tuple<int, int, int>;
+    using LinkTuple = std::tuple<FaceTuple, FaceTuple, bool>;
+    using PeriodicTuple = std::tuple<FaceTuple, FaceTuple, bool, std::pair<double, double>>;
+    auto face = [](const FaceTuple& t) { return bspf::Face{std::get<0>(t), std::get<1>(t), std::get<2>(t)}; };
+    auto views = [](const std::vector<InArray>& fields) {
+        std::vector<FieldView> v;
+        for (const InArray& a : fields) v.push_back(view(a));
+        return v;
+    };
+    auto arrays = [](std::vector<Field>&& fields) {
+        std::vector<OutArray> out;
+        for (Field& f : fields) out.push_back(to_numpy(std::move(f)));
+        return out;
+    };
+    nb::class_<bspf::MultiPatch2D>(m, "MultiPatch2D",
+                                   "Conforming deformed patches joined at complete faces (patch, axis, side)")
+        .def("__init__",
+             [face](bspf::MultiPatch2D* self, const std::vector<bspf::MappedGrid2D>& patches,
+                    const std::vector<LinkTuple>& links, const std::vector<PeriodicTuple>& periodic, double tolerance,
+                    int overlap, int stencil) {
+                 std::vector<bspf::PatchInterface> interfaces;
+                 for (const LinkTuple& l : links)
+                     interfaces.push_back({face(std::get<0>(l)), face(std::get<1>(l)), std::get<2>(l)});
+                 for (const PeriodicTuple& l : periodic)
+                     interfaces.push_back({face(std::get<0>(l)), face(std::get<1>(l)), std::get<2>(l),
+                                           {std::get<3>(l).first, std::get<3>(l).second}});
+                 new (self) bspf::MultiPatch2D(patches, interfaces, tolerance, overlap, stencil);
+             },
+             "patches"_a, "interfaces"_a, "periodic"_a = std::vector<PeriodicTuple>(), "tolerance"_a = 1e-10,
+             "overlap"_a = 8, "stencil"_a = 12,
+             "interfaces: ((patch, axis, side), (patch, axis, side), reverse) per shared face; periodic: "
+             "((patch, axis, side), (patch, axis, side), reverse, (dx, dy)) with right face = left face + (dx, dy)")
+        .def_prop_ro("patch_count", &bspf::MultiPatch2D::patch_count)
+        .def_prop_ro("overlap", &bspf::MultiPatch2D::overlap)
+        .def("ghost_depth", [face](const bspf::MultiPatch2D& g, const FaceTuple& f) { return g.ghost_depth(face(f)); }, "face"_a,
+             "ghost points used beyond face (patch, axis, side)")
+        .def_prop_ro("node_count", &bspf::MultiPatch2D::node_count)
+        .def("patch", &bspf::MultiPatch2D::patch, "index"_a, nb::rv_policy::reference_internal)
+        .def_prop_ro("boundary_faces", [](const bspf::MultiPatch2D& g) {
+                 std::vector<FaceTuple> out;
+                 for (const bspf::Face& f : g.boundary_faces()) out.emplace_back(f.patch, f.axis, f.side);
+                 return out;
+             })
+        .def("partial", [views, arrays](const bspf::MultiPatch2D& g, const std::vector<InArray>& fields,
+                                        std::pair<int, int> orders, bool average) {
+                 std::vector<Field> out;
+                 {
+                     nb::gil_scoped_release release;
+                     out = g.partial(views(fields), orders.first, orders.second, average);
+                 }
+                 return arrays(std::move(out));
+             }, "fields"_a, "orders"_a, "average_shared"_a = true,
+             "Physical partial per patch; shared interface nodes averaged")
+        .def("average_shared", [views, arrays](const bspf::MultiPatch2D& g, const std::vector<InArray>& fields) {
+                 return arrays(g.average_shared(views(fields)));
+             }, "fields"_a)
+        .def("shared_jump", [views](const bspf::MultiPatch2D& g, const std::vector<InArray>& fields) {
+                 return g.shared_jump(views(fields));
+             }, "fields"_a, "Largest difference of a shared node's values across patches");
 
     m.def("open_knots", &bspf::open_knots, "a"_a, "b"_a, "degree"_a, "n_basis"_a, "clustering"_a = 0.0);
     m.def("endpoint_scaled_knots", &bspf::endpoint_scaled_knots, "a"_a, "b"_a, "degree"_a, "n_basis"_a, "spacing"_a);

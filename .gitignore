@@ -6,3 +6,13 @@ __pycache__/
 *.dylib
 *.pyd
 .DS_Store
+*.png
+
+# Local research and downloaded benchmark assets; retained on disk.
+/experimental/
+/benchmarks/
+/vki_ls89/
+/writing-block.md
+experiments/*
+benchmarks/*
+experimental/*
