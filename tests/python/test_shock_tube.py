@@ -132,3 +132,26 @@ def test_fft_dense_rhs_and_evolution(shock):
     a, b = fast.solve(.02), dense.solve(.02)
     np.testing.assert_allclose(a["output"], b["output"], atol=2e-10, rtol=2e-10)
     assert a["summary"]["steps"] == b["summary"]["steps"]
+
+
+@pytest.mark.parametrize('backend', ['fft', 'dense'])
+def test_cached_samples_and_combined_mass(shock, monkeypatch, backend):
+    solver = shock.BSPFNavierStokes(65, mu=.001, quadrature=12, backend=backend)
+    state = shock.initial_state(solver.x, .03)
+    state[:, 1] = .03*np.sin(np.pi*solver.x)
+    samples = solver.evaluate(state)
+    convective, viscous = shock.fluxes(samples, solver.evaluate(state, 1), solver.mu, solver.kappa, solver.gamma)
+    load = solver.project(convective-viscous, 1)
+    expected = np.zeros_like(state)
+    expected[:, (0, 2)] = solver.solve_mass(load[:, (0, 2)])
+    expected[1:-1, 1:2] = solver.solve_mass(load[1:-1, 1:2], interior=True)
+    dt = solver.timestep(state, .7)
+    diagnostics = solver.diagnostics(state)
+    evaluate = solver.evaluate
+    def derivative_only(value, derivative=0):
+        assert derivative == 1, 'cached samples should not be reevaluated'
+        return evaluate(value, derivative)
+    monkeypatch.setattr(solver, 'evaluate', derivative_only)
+    np.testing.assert_allclose(solver.rhs(state, samples), expected, atol=1e-9, rtol=1e-9)
+    assert solver.timestep(state, .7, samples) == dt
+    assert solver.diagnostics(state, samples) == diagnostics

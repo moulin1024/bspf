@@ -12,6 +12,7 @@
 #include <random>
 
 #include <Eigen/SVD>
+#include <Eigen/Sparse>
 #include <stdexcept>
 #include <vector>
 
@@ -178,7 +179,7 @@ struct GalerkinLine::Data {
     Index quadrature = 0;
     std::vector<ComplexVector> shift[2];  // per offset: (i w)^k exp(i w s dx) / N, half spectrum
     std::vector<Vector> cell_weights;     // per offset: Gauss weights; 0 on split cells and at j = N-1
-    std::vector<Matrix> spline_at[2];     // per offset: B^(k)(x_j + s dx) (N, n_basis), row N-1 zero
+    std::vector<Eigen::SparseMatrix<double>> spline_at[2];     // per offset: B^(k)(x_j + s dx) (N, n_basis), row N-1 zero
     Matrix extra_trig[2];                 // (T r)^(k) at the extra points (n_extra, N)
     Matrix extra_spline[2];               // B^(k) at the extra points (n_extra, n_basis)
     Vector extra_weights;
@@ -463,8 +464,11 @@ GalerkinLine::GalerkinLine(const Line& line, const GalerkinOptions& options) {
         Vector points(n);
         for (Index j = 0; j < n; ++j) points(j) = std::min(x0 + (static_cast<double>(j) + s) * d->dx, x0 + length);
         for (int k = 0; k <= 1; ++k) {
-            d->spline_at[k][qi] = basis_matrix(t, points, static_cast<int>(degree), k);
-            d->spline_at[k][qi].row(n - 1).setZero();
+            Matrix spline = basis_matrix(t, points, static_cast<int>(degree), k);
+            spline.row(n - 1).setZero();
+            // Keep compact support in all evaluation/projection kernels. No
+            // nonzero entries are dropped; this matters when n_basis grows.
+            d->spline_at[k][qi] = spline.sparseView(0.0, 0.0);
             ComplexVector shift(n / 2 + 1);
             for (Index j = 0; j <= n / 2; ++j) {
                 const double w_j = 2 * M_PI * static_cast<double>(j) / (n * d->dx);

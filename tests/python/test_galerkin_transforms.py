@@ -57,3 +57,17 @@ def test_transform_arguments():
                  lambda: g.solve_mass(np.zeros((31, 1)))):
         with pytest.raises(ValueError):
             call()
+
+
+@pytest.mark.parametrize('n,nb', [(129,41),(257,73)])
+def test_many_endpoint_splines_keep_adjoint_and_mass(n,nb):
+    line=bc.Line(np.linspace(0,1,n),**(OPTIONS|dict(n_basis=nb)))
+    g=bc.GalerkinLine(line,quadrature_order=12)
+    rng=np.random.default_rng(52)
+    u=rng.normal(size=(n,3))
+    v=rng.normal(size=(len(g.quadrature_points),3))
+    for derivative in (0,1):
+        phi=line.evaluate(g.quadrature_points,derivative=derivative).matrix
+        np.testing.assert_allclose(g.evaluate(u,derivative),phi@u,atol=1e-9,rtol=1e-9)
+        np.testing.assert_allclose(g.project(v,derivative),phi.T@(g.quadrature_weights[:,None]*v),atol=1e-9,rtol=1e-9)
+    np.testing.assert_allclose(g.mass(g.solve_mass(u)),u,atol=2e-8,rtol=2e-8)

@@ -68,7 +68,7 @@ def fluxes(state, gradient, mu, kappa, gamma=1.4):
 
 
 class BSPFNavierStokes:
-    def __init__(self, n=65, mu=.01, prandtl=.72, gamma=1.4, quadrature=8, backend="fft"):
+    def __init__(self, n=65, mu=.01, prandtl=.72, gamma=1.4, quadrature=8, backend="fft", line_options=None):
         if n < 25 or quadrature < 4:
             raise ValueError("n >=25 and quadrature >=4 required")
         if not all(np.isfinite(v) and v > 0 for v in (mu, prandtl)) or not np.isfinite(gamma) or gamma <= 1:
@@ -79,7 +79,10 @@ class BSPFNavierStokes:
         self.n, self.mu, self.prandtl, self.gamma = n, mu, prandtl, gamma
         self.kappa = mu*gamma/((gamma-1)*prandtl)  # cp=gamma/(gamma-1), R=1
         self.x = np.linspace(0., 1., n)
-        self.line = bspf.Line(self.x, **OPTIONS)
+        options = dict(OPTIONS)
+        options.update(line_options or {})
+        self.line_options = options
+        self.line = bspf.Line(self.x, **options)
         self.backend = backend
         if backend == "fft":
             self.galerkin = bspf.GalerkinLine(self.line, quadrature_order=quadrature)
@@ -110,6 +113,10 @@ class BSPFNavierStokes:
             self.momentum_factor = cho_factor(self.M[1:-1, 1:-1], lower=True)
             self.diffusion_radius = float(eigvalsh(stiffness, self.M, subset_by_index=[n-1, n-1])[0])
             self.integral = self.weights@self.V
+        wall_load = np.zeros((n, 2))
+        wall_load[[0, -1]] = np.eye(2)
+        wall_response = self.solve_mass(wall_load)
+        self.wall_lift = np.linalg.solve(wall_response[[0, -1]].T, wall_response.T).T
         self.quadrature = quadrature
         self.setup_seconds = perf_counter()-start
 
@@ -128,19 +135,21 @@ class BSPFNavierStokes:
             return self.galerkin.solve_mass(rhs, interior)
         return cho_solve(self.momentum_factor if interior else self.mass_factor, rhs, check_finite=False)
 
-    def rhs(self, state):
+    def rhs(self, state, sampled=None):
         primitives(state, self.gamma)
-        sampled = self.evaluate(state)
+        if sampled is None:
+            sampled = self.evaluate(state)
         convective, viscous = fluxes(sampled, self.evaluate(state, 1), self.mu, self.kappa, self.gamma)
         residual = self.project(convective-viscous, 1)
-        rate = np.empty_like(state)
-        rate[:, (0, 2)] = self.solve_mass(residual[:, (0, 2)])
-        rate[1:-1, 1] = self.solve_mass(residual[1:-1, 1:2], interior=True)[:, 0]
+        rate = self.solve_mass(residual)
+        rate[:, 1] -= self.wall_lift@rate[[0, -1], 1]
         rate[[0, -1], 1] = 0.
         return rate
 
-    def timestep(self, state, cfl):
-        rho, u, p, _ = primitives(self.evaluate(state), self.gamma)
+    def timestep(self, state, cfl, sampled=None):
+        if sampled is None:
+            sampled = self.evaluate(state)
+        rho, u, p, _ = primitives(sampled, self.gamma)
         wavespeed = float(np.max(np.abs(u)+np.sqrt(self.gamma*p/rho)))
         diffusivity = max(4*self.mu/3, self.kappa*(self.gamma-1))/float(np.min(rho))
         # Conservative heuristic combining RK4 imaginary/negative-real limits.
@@ -148,8 +157,10 @@ class BSPFNavierStokes:
         return cfl/(wavespeed*np.sqrt(self.diffusion_radius)/2.83
                     + diffusivity*self.diffusion_radius/2.785293563405282)
 
-    def diagnostics(self, state):
-        rho, _, p, _ = primitives(self.evaluate(state), self.gamma)
+    def diagnostics(self, state, sampled=None):
+        if sampled is None:
+            sampled = self.evaluate(state)
+        rho, _, p, _ = primitives(sampled, self.gamma)
         entropy = float(self.weights@(rho*np.log(p/rho**self.gamma)/(self.gamma-1)))
         totals = self.integral@state
         return dict(mass=float(totals[0]), momentum=float(totals[1]), energy=float(totals[2]),
@@ -162,24 +173,31 @@ class BSPFNavierStokes:
         if not np.isfinite(final_time) or final_time <= 0 or not np.isfinite(cfl) or not 0 < cfl <= 1:
             raise ValueError("positive finite final time and 0<cfl<=1 required")
         state = self.initial_coefficients(width)
-        initial = self.diagnostics(state)
+        sampled = self.evaluate(state)
+        initial = self.diagnostics(state, sampled)
         history = [dict(time=0., **initial)]
         t, steps, rejected = 0., 0, 0
         min_dt, max_dt = float("inf"), 0.
         next_record = final_time/40
         start = perf_counter()
         last_report = start
+        # Preserve overrides used by the regularization experiments. The plain
+        # solver can reuse accepted samples for both CFL and the first RK stage.
+        plain_rhs = type(self).rhs is BSPFNavierStokes.rhs
+        plain_timestep = type(self).timestep is BSPFNavierStokes.timestep
         while t < final_time:
-            dt = min(self.timestep(state, cfl), final_time-t)
+            stable_dt = self.timestep(state, cfl, sampled) if plain_timestep else self.timestep(state, cfl)
+            dt = min(stable_dt, final_time-t)
             for attempt in range(13):
                 try:
-                    k1 = self.rhs(state)
+                    k1 = self.rhs(state, sampled) if plain_rhs else self.rhs(state)
                     k2 = self.rhs(state+.5*dt*k1)
                     k3 = self.rhs(state+.5*dt*k2)
                     k4 = self.rhs(state+dt*k3)
                     trial = state+dt*(k1+2*k2+2*k3+k4)/6
                     primitives(trial, self.gamma)
-                    primitives(self.evaluate(trial), self.gamma)
+                    trial_samples = self.evaluate(trial)
+                    primitives(trial_samples, self.gamma)
                     break
                 except NonphysicalState:
                     rejected += 1
@@ -188,18 +206,18 @@ class BSPFNavierStokes:
                 raise RuntimeError(f"nonphysical stages persist at t={t:g}; refine the mesh or initial layer")
             if t+dt == t:
                 raise RuntimeError("time step underflow")
-            state = trial
+            state, sampled = trial, trial_samples
             t = min(final_time, t+dt)
             steps += 1
             min_dt, max_dt = min(min_dt, dt), max(max_dt, dt)
             if t >= next_record or t == final_time:
-                history.append(dict(time=t, **self.diagnostics(state)))
+                history.append(dict(time=t, **self.diagnostics(state, sampled)))
                 next_record += final_time/40
             if progress and perf_counter()-last_report > 15:
                 print(f"n={self.n}: t={t:.5f}/{final_time:g}, steps={steps}, dt={dt:.2e}", flush=True)
                 last_report = perf_counter()
         elapsed = perf_counter()-start
-        final = self.diagnostics(state)
+        final = self.diagnostics(state, sampled)
         probes = np.linspace(0, 1, 2001)
         output = self.line.evaluate(probes)(state)
         primitives(output, self.gamma)

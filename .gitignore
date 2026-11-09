@@ -9,10 +9,13 @@ __pycache__/
 *.png
 
 # Local research and downloaded benchmark assets; retained on disk.
-/experimental/
+/experimental/*
 /benchmarks/
 /vki_ls89/
 /writing-block.md
 experiments/*
 benchmarks/*
 experimental/*
+
+# Reusable mapping implementation; other local research stays ignored.
+!/experimental/stokes_chebyshev_atlas/

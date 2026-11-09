@@ -136,3 +136,61 @@ def test_no_unused_final_time_enrichment(enrichment):
     assert all(row['time']<.006-1e-13 for row in result['updates'])
     assert result['summary']['final_time']==pytest.approx(.006)
     assert result['summary']['max_relative_mass_drift']<1e-10
+
+
+def test_sparse_samples_and_probe_cache(enrichment):
+    spline = importlib.import_module('shock_tube_spline_enrichment')
+    base = enrichment.BSPFNavierStokes(33, mu=.001, quadrature=16)
+    centers = np.array([.4, .5, .6])
+    spacing = .02
+    dense = spline.SplineSpace(base, centers, spacing)
+    sparse = spline.SparseSplineSpace(base, centers, spacing)
+    x = np.array([1., .5, .34, .4, .66, 0., .5])
+    values, gradients = sparse.sparse_samples(x, centers, spacing)
+    expected, expected_x = dense.raw(x)
+    np.testing.assert_allclose(values.toarray(), expected, atol=1e-14)
+    np.testing.assert_allclose(gradients.toarray(), expected_x, atol=1e-12)
+    state = np.random.default_rng(14).normal(size=(sparse.n+sparse.k, 3))
+    for probes in (x, x[::-1], x):
+        np.testing.assert_allclose(sparse.at(probes, state), dense.at(probes, state), atol=1e-10)
+        old_cache = sparse._probe_cache
+        sparse.at(probes.copy(), state)
+        assert sparse._probe_cache is old_cache
+    x[0] = .51
+    np.testing.assert_allclose(sparse.at(x, state), dense.at(x, state), atol=1e-10)
+
+
+@pytest.mark.parametrize('backend,n', [('fft',33), ('fft',129), ('dense',33)])
+def test_radius_block_products_match_quadrature(enrichment, backend, n):
+    spline = importlib.import_module('shock_tube_spline_enrichment')
+    base = enrichment.BSPFNavierStokes(n, mu=.001, quadrature=16, backend=backend)
+    class CheckedSpace(spline.SparseSplineSpace):
+        def _radius_operators(self):
+            actions = super()._radius_operators()
+            state = np.random.default_rng(22).normal(size=(self.n+self.k, 3))
+            for derivative, action in enumerate(actions):
+                expected = self.project(self.evaluate(state, derivative), derivative)
+                np.testing.assert_allclose(action(state), expected, rtol=2e-8, atol=1e-7)
+            return actions
+    spline.LocalRefinement(2, space_type=CheckedSpace)(base, [.5], [.02])
+    assert hasattr(base, '_radius_base_blocks') == (backend == 'fft' and n <= 128)
+
+
+def test_fused_mass_rates_and_retained_gram(enrichment):
+    spline = importlib.import_module('shock_tube_spline_enrichment')
+    base = enrichment.BSPFNavierStokes(33, mu=.001, quadrature=24)
+    factory = spline.LocalRefinement(4, space_type=spline.SparseSplineSpace)
+    rng = np.random.default_rng(37)
+    for center in (.5, .55, .6):
+        space = factory(base, [center], [.02])
+        size = space.n+space.k
+        phi = space.evaluate(np.eye(size))
+        mass = phi.T@(base.weights[:, None]*phi)
+        np.testing.assert_allclose(space.small, mass[space.n:, space.n:], atol=1e-9)
+        load = rng.normal(size=(size, 3))
+        rate = space.solve_rates(load)
+        free = np.r_[np.arange(1, space.n-1), np.arange(space.n, size)]
+        np.testing.assert_array_equal(rate[[0, space.n-1], 1], 0)
+        np.testing.assert_allclose(mass@rate[:, (0, 2)], load[:, (0, 2)], atol=1e-8)
+        np.testing.assert_allclose((mass@rate)[free, 1], load[free, 1], atol=1e-8)
+        np.testing.assert_allclose(rate, enrichment.EnrichedSpace.solve_rates(space, load), atol=1e-8)

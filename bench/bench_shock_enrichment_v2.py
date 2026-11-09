@@ -28,6 +28,7 @@ print(json.dumps(r['summary']))
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--repeats',type=int,default=3)
+    parser.add_argument('--baseline-cfl',type=float,default=.35)
     parser.add_argument('--baseline-dir',default='benchmarks/shock_tube/enrichment_before_v2')
     parser.add_argument('--prefix',default='benchmarks/shock_tube/enrichment_v2_benchmark')
     args=parser.parse_args()
@@ -36,7 +37,8 @@ def main():
     if not (baseline/'shock_tube_enrichment.py').exists():parser.error('baseline snapshots missing')
     if args.repeats<1:parser.error('positive repeats required')
     prefix=root/args.prefix;prefix.parent.mkdir(parents=True,exist_ok=True)
-    variants={'previous_q32_cfl035':(True,32,.35),'updated_q32_cfl035':(False,32,.35),'updated_q32_cfl070':(False,32,.7)}
+    previous_key=f'previous_q32_cfl{round(100*args.baseline_cfl):03d}'
+    variants={previous_key:(True,32,args.baseline_cfl),'updated_q32_cfl035':(False,32,.35),'updated_q32_cfl070':(False,32,.7)}
     results={k:[] for k in variants};outputs={}
     for repetition in range(args.repeats):
         names=list(variants)
@@ -57,7 +59,7 @@ def main():
     ref=np.load(root/'benchmarks/shock_tube/enrichment_n65_mu0001_fine.npz');x=ref['x']
     sys.path.insert(0,str(root/'examples/pde'))
     from shock_tube_1d import primitives
-    target=primitives(ref['reference']);old=outputs['previous_q32_cfl035'];summary={}
+    target=primitives(ref['reference']);old=outputs[previous_key];summary={}
     for name in variants:
         rows=results[name]
         summary[name]=dict(median_seconds=float(np.median([r['seconds'] for r in rows])),
@@ -66,10 +68,10 @@ def main():
             metrics={key:dict(l1=float(np.trapezoid(abs(v-r),x)),linf=float(abs(v-r).max()))
                 for key,v,r in zip(('rho','u','p','T'),primitives(outputs[name]),target)})
     for name in variants:
-        summary[name]['speedup']=summary['previous_q32_cfl035']['median_seconds']/summary[name]['median_seconds']
+        summary[name]['speedup']=summary[previous_key]['median_seconds']/summary[name]['median_seconds']
     report=dict(parameters=dict(mu=.0001,time=.1,n=65,width=.01,interval=.005,refinement=8,halfwidth=2.,repeats=args.repeats),
         baseline_snapshot=str(baseline),summary=summary,runs=results,
-        note='Old final count includes five modes added at t=0.1; updated solver stops adapting at final time.')
+        note='Baseline CFL and mode counts are recorded per run; snapshots determine the previous implementation.')
     prefix.with_suffix('.json').write_text(json.dumps(report,indent=2))
     np.savez(prefix.with_suffix('.npz'),x=x,reference=ref['reference'],**outputs)
     print(json.dumps(summary,indent=2))

@@ -21,7 +21,7 @@ from shock_tube_1d import BSPFNavierStokes, NonphysicalState, fluxes, initial_st
 
 
 class EnrichedSpace:
-    def __init__(self, base, centers, widths, orthogonalize=False, retained=None):
+    def __init__(self, base, centers, widths, orthogonalize=False, retained=None, retained_gram=None):
         self.base = base
         self.centers, self.widths = np.asarray(centers), np.asarray(widths)
         self.n, self.k = base.n, len(centers)
@@ -42,6 +42,7 @@ class EnrichedSpace:
         if np.any(self.scale < 1e-9):
             raise ValueError('enrichment is numerically redundant')
         self.transform = np.diag(1/self.scale)
+        old = None
         if orthogonalize:
             directions = np.eye(len(centers))
             if retained is not None:
@@ -49,7 +50,7 @@ class EnrichedSpace:
                 # raw functions, rather than truncating a rotated old space.
                 directions = directions[:, np.all(retained == 0, axis=1)]
                 old = h@retained
-                gram_old = old.T@(base.weights[:, None]*old)
+                gram_old = old.T@(base.weights[:, None]*old) if retained_gram is None else retained_gram
                 coupling = old.T@(base.weights[:, None]*(h@directions))
                 directions = directions-retained@np.linalg.solve(gram_old, coupling)
             residual = h@directions
@@ -60,10 +61,17 @@ class EnrichedSpace:
             added = directions@(eigenvectors[:, keep]/np.sqrt(eigenvalues[keep]))
             self.transform = added if retained is None else np.column_stack((retained, added))
             self.k = self.transform.shape[1]
-        self.H = h@self.transform
+        self.H = h@self.transform if old is None else np.column_stack((old, h@added))
         self.Hx = (raw_x-base.evaluate(self.correction, 1))@self.transform
         self.cross = base.project(self.H)
-        self.small = self.H.T@(base.weights[:, None]*self.H)
+        if old is None:
+            self.small = self.H.T@(base.weights[:, None]*self.H)
+        else:
+            old_count = old.shape[1]
+            new_h = self.H[:, old_count:]
+            cross_h = old.T@(base.weights[:, None]*new_h)
+            new_gram = new_h.T@(base.weights[:, None]*new_h)
+            self.small = np.block([[gram_old, cross_h], [cross_h.T, new_gram]])
         self.factors = {}
         for interior in (False, True):
             cross = self.cross[1:-1] if interior else self.cross
@@ -76,11 +84,16 @@ class EnrichedSpace:
         def op(action):
             return LinearOperator((size, size), matvec=lambda x: action(x[:, None]).ravel(), dtype=float)
         seed = self.radius_start(size) if hasattr(self, 'radius_start') else np.random.default_rng(0).normal(size=size)
-        eigenvalues, eigenvectors = eigsh(op(lambda x: self.project(self.evaluate(x, 1), 1)),
-            M=op(lambda x: self.project(self.evaluate(x))), Minv=op(self.mass),
+        mass_action, stiffness_action = self._radius_operators()
+        eigenvalues, eigenvectors = eigsh(op(stiffness_action),
+            M=op(mass_action), Minv=op(self.mass),
             k=1, which='LA', tol=1e-8, v0=seed, return_eigenvectors=True)
         self.radius = float(eigenvalues[0])
         self.radius_vector = eigenvectors[:, 0]
+
+    def _radius_operators(self):
+        return (lambda x: self.project(self.evaluate(x)),
+                lambda x: self.project(self.evaluate(x, 1), 1))
 
     def raw(self, x):
         x = np.asarray(x)[:, None]
@@ -106,7 +119,7 @@ class EnrichedSpace:
         cross = self.cross[1:-1] if interior else self.cross
         extension, factor = self.factors[interior]
         z = self.base.solve_mass(rhs[:nbase], interior)
-        a = cho_solve(factor, rhs[nbase:]-cross.T@z)
+        a = cho_solve(factor, rhs[nbase:]-cross.T@z, check_finite=False)
         return np.vstack((z-extension@a, a))
 
     def fit(self, samples):
@@ -125,6 +138,9 @@ class EnrichedSpace:
         values, gradient = self.evaluate_with_gradient(state)
         convective, viscous = fluxes(values, gradient, b.mu, b.kappa, b.gamma)
         load = self.project(convective-viscous, 1)
+        return self.solve_rates(load)
+
+    def solve_rates(self, load):
         rate = np.zeros_like(load)
         rate[:, (0, 2)] = self.mass(load[:, (0, 2)])
         free = np.r_[np.arange(1, self.n-1), np.arange(self.n, self.n+self.k)]
@@ -183,8 +199,9 @@ def run_enriched(n=65, mu=.0001, final_time=.1, width=.01, interval=.002, quadra
             min_density=float(rho.min()), min_pressure=float(p.min()),
             entropy=float(base.weights@(rho*np.log(p/rho**base.gamma)/(base.gamma-1)))))
     record()
+    sampled_state = space.evaluate(state)
     while t < final_time-1e-14:
-        rho, u, p, _ = primitives(space.evaluate(state))
+        rho, u, p, _ = primitives(sampled_state)
         speed = np.max(abs(u)+np.sqrt(base.gamma*p/rho))
         diffusion = max(4*mu/3, base.kappa*(base.gamma-1))/rho.min()
         dt = min(cfl/(speed*np.sqrt(space.radius)/2.83+diffusion*space.radius/2.785), final_time-t, next_update-t)
@@ -195,7 +212,8 @@ def run_enriched(n=65, mu=.0001, final_time=.1, width=.01, interval=.002, quadra
                 k3 = space.rhs(state+dt*k2/2)
                 k4 = space.rhs(state+dt*k3)
                 trial = state+dt*(k1+2*k2+2*k3+k4)/6
-                primitives(space.evaluate(trial))
+                trial_samples = space.evaluate(trial)
+                primitives(trial_samples)
                 break
             except NonphysicalState:
                 rejected += 1
@@ -205,20 +223,23 @@ def run_enriched(n=65, mu=.0001, final_time=.1, width=.01, interval=.002, quadra
         if dt < 1e-14:
             raise RuntimeError(f'time step underflow at t={t}')
         state, t, steps = trial, t+dt, steps+1
+        sampled_state = trial_samples
         if t >= next_update-1e-13 and t < final_time-1e-13:
             centers, widths = detect(probes, space.at(probes, state), h)
             candidate = make_space(base, centers, widths)
-            samples = space.evaluate(state)
+            samples = sampled_state
             remapped = candidate.transfer_from(space, state) if hasattr(candidate, 'transfer_from') else candidate.fit(samples)
             try:
-                primitives(candidate.evaluate(remapped))
+                remapped_samples = candidate.evaluate(remapped)
+                primitives(remapped_samples)
                 primitives(candidate.at(probes, remapped))
             except NonphysicalState:
                 rejected_remaps += 1
             else:
-                error = np.sqrt(np.sum(base.weights[:, None]*(candidate.evaluate(remapped)-samples)**2))
+                error = np.sqrt(np.sum(base.weights[:, None]*(remapped_samples-samples)**2))
                 updates.append(dict(time=t, centers=centers, widths=widths, projection_l2=float(error), modes=candidate.k))
                 space, state = candidate, remapped
+                sampled_state = remapped_samples
             next_update += interval
             record()
     record()
