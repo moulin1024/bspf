@@ -278,7 +278,7 @@ void MultiPatch2D::build_extensions(int stencil) {
             const Index n = patches_[p].shape()[d];
             const double h = 1.0 / static_cast<double>(n - 1);
             const Line line(Vector::LinSpaced(n + ext.low + ext.high, -ext.low * h, 1.0 + ext.high * h),
-                            patches_[p].options());
+                            patches_[p].options(d));
             for (int order = 1; order <= 2; ++order) ext.derivative[order] = std::make_shared<Op>(line.derivative(order));
         }
 }

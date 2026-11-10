@@ -222,10 +222,12 @@ void MappedGrid2D::correction(double xi, double eta, double out[6][2]) const {
 
 MappedGrid2D::MappedGrid2D(SplineCurve bottom, SplineCurve right, SplineCurve top, SplineCurve left, Index n_xi,
                            Index n_eta, const LineOptions& options, EdgeDistribution distribution, Matrix correction_x,
-                           Matrix correction_y)
-    : n_xi_(n_xi), n_eta_(n_eta), options_(options), bottom_(bottom), right_(right), top_(top), left_(left),
-      distribution_(std::move(distribution)), correction_{std::move(correction_x), std::move(correction_y)},
-      reference_({Line(Vector::LinSpaced(n_xi, 0.0, 1.0), options), Line(Vector::LinSpaced(n_eta, 0.0, 1.0), options)}) {
+                           Matrix correction_y, std::optional<LineOptions> eta_options)
+    : n_xi_(n_xi), n_eta_(n_eta), options_(options), eta_options_(eta_options.value_or(options)), bottom_(bottom),
+      right_(right), top_(top), left_(left), distribution_(std::move(distribution)),
+      correction_{std::move(correction_x), std::move(correction_y)},
+      reference_({Line(Vector::LinSpaced(n_xi, 0.0, 1.0), options),
+                  Line(Vector::LinSpaced(n_eta, 0.0, 1.0), eta_options.value_or(options))}) {
     Vector ends(2);
     ends << 0.0, 1.0;
     const Matrix b = bottom.evaluate(ends), r = right.evaluate(ends), t = top.evaluate(ends), l = left.evaluate(ends);

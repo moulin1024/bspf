@@ -19,6 +19,7 @@ struct FieldView;
 namespace detail {
 struct LineData;
 struct Banded;
+struct OpAccess;  // read-only export of an op's tables (CUDA backend)
 }  // namespace detail
 
 // A batch of `count` lines of samples: sample i of line l is data[l*distance + i*stride].
@@ -58,6 +59,7 @@ public:
 
 private:
     friend class Line;
+    friend struct detail::OpAccess;
     friend void apply_along(const Op&, const FieldView&, double*, int, const double*, bool);
     using Block = Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>;
     Op() = default;

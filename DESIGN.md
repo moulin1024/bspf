@@ -206,6 +206,67 @@ very large N (FD degree 6 or Chebyshev q4 at N >= 2048, max|F| >= 5e7) the weak
 operator is limited to about 1e-6..1e-5 relative; q <= 3 (or FD default up to
 N ~ 2048) stays at the strong operator's accuracy.
 
+### FP32 CUDA backend (2026-11-09)
+
+`bspf::cuda` (`include/bspf/cuda.hpp`, `src/cuda/`, CMake `-DBSPF_CUDA=ON`,
+Python `bspf_cpp.cuda`) runs the same split on an NVIDIA GPU in float32.
+A host `Line`/`Op` is built and factored in double as before; its tables are
+rounded to float once and uploaded. Each application is cuBLAS SGEMMs (fit,
+spline rows, remainder, spectral rows, lifts) plus batched cuFFT R2C/C2R and a
+multiplier kernel that, like FFTW's c2r, keeps only the real part of the zero
+and even-N Nyquist bins. Lines along non-innermost axes are gathered into
+contiguous blocks by a tiled shared-memory transpose and scattered back
+(accumulating for the Laplacian). Blocks are bounded to 2^24 samples
+(`BSPF_CUDA_CHUNK`); workspaces, FFT plans and the stream-ordered memory pool
+are reused across calls. One stream; calls are serialized by a process lock.
+
+One deliberate difference from the CPU: the fit is applied as
+`c = (F + G J) f` (or `F f + G g` with given jets), with `F = K 2 B^T W`
+formed in double. The CPU's two-step `K (2 B^T W f)` is fine in double but in
+float32 K's entries (1e2..6e2) cancel against a projection of size ~4e-2,
+which cost the spline part 10-34x the float32 floor; the folded maps round no
+worse than the input itself.
+
+Accuracy. The reference is the float32 floor: how far the float64 CPU result
+moves when only the input is rounded to float32 (no float32 method can beat
+it). The device stays within 1-5x of that floor (`tests/python/test_cuda.py`,
+8x bound for orders <= 2, 40x for orders 3-4 where knots finer than the grid
+make spline rows cancel). Against exact solutions (`bench/validate_cuda.py`,
+`bench/results/cuda_validation.json`), relative max errors:
+
+| quantity | N = 64 | 128 | 256 | 512 |
+| --- | ---: | ---: | ---: | ---: |
+| values, interpolation, integrals, primitives | 1e-7 | 2e-7 | 2e-7 | 2e-7 |
+| first derivatives (1D/2D/3D) | 1e-5 | 1e-5..2e-5 | 2e-5..4e-5 | 5e-5..7e-5 |
+| second derivatives, Laplacian | 4e-4..2e-3 | 9e-4..3e-3 | 3e-3 | 1.4e-2 |
+
+(The 3D grids are 32^3..128^3 and follow the same pattern.) Float32 rounding
+is amplified by about omega^k ~ N^k, so derivative errors grow with N while the
+double CPU converges: float32 is adequate for values, integrals and first
+derivatives; second derivatives reach 1e-3..1e-2 at N >= 256; third and fourth
+derivatives are not meaningful in float32 beyond small N.
+
+Speed (`bench/bench_cuda.py`, `bench/results/cuda_speedup.json`; RTX 3070 vs
+the CPU library on one Ryzen 7 5800X core, float64). "Device" keeps input and
+output in GPU memory; "end to end" is numpy float64 in and out, including
+transfers through a pinned staging buffer and the float conversion:
+
+| case | CPU | GPU device | speedup | end to end | speedup |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| 1D 1024 x 4096 lines, d1 | 57.1 ms | 0.70 ms | 82x | 7.4 ms | 7.7x |
+| 2D 1024^2 Laplacian | 20.3 ms | 0.40 ms | 51x | 1.16 ms | 18x |
+| 2D 2048^2 Laplacian | 115 ms | 1.60 ms | 72x | 8.2 ms | 14x |
+| 2D 2048^2 interpolation (3/4 res) | 844 ms | 2.71 ms | 311x | 6.8 ms | 124x |
+| 3D 96^3 Laplacian | 22.2 ms | 0.53 ms | 42x | 1.16 ms | 19x |
+| 3D 128^3 Laplacian | 52.1 ms | 1.30 ms | 40x | 3.7 ms | 14x |
+| 3D 192^3 Laplacian | 236 ms | 4.20 ms | 56x | 16.6 ms | 14x |
+| 3D 192^3 integration | 35.5 ms | 0.70 ms | 51x | 5.2 ms | 6.9x |
+
+Small problems are launch-bound (2D 256^2: 18-24x for derivatives, 5.6x for
+integration). Keep fields resident on the device (`bspf_cpp.cuda.Array`)
+across steps: transfers then cost nothing per call, and they dominate the end
+to end times above for single derivatives.
+
 ### Execution
 
 Ops are immutable and safe to share across threads. FFTW plans are cached per
@@ -214,8 +275,9 @@ new arrays is lock-free. Single-threaded by default.
 
 ## Layout
 
-    include/bspf/   bspline, endpoints, line, op, grid (public headers)
+    include/bspf/   bspline, endpoints, line, op, grid, cuda (public headers)
     src/            implementations, private LineData/FFT, nanobind module
+    src/cuda/       FP32 CUDA backend (host tables export.cpp, device backend.cu)
     python/bspf_cpp Python package (Line, Op, Grid + vector calculus helpers)
     tests/cpp       C++ consistency checks (ctest)
     tests/python    parity with pybspf, 40-digit accuracy reference
@@ -238,3 +300,8 @@ new arrays is lock-free. Single-threaded by default.
   accumulation, input immutability, scratch reuse and concurrent calls.
 
 Validation of the consolidated implementation: 149 Python tests and CTest pass.
+
+* `tests/python/test_cuda.py` (27 tests, skipped without a device) checks the
+  CUDA backend against the CPU within the float32 floor: every op kind and
+  endpoint method in 1D on both layouts, given jets, 1-3D grids with batch
+  axes, device-resident chains, errors, and the chunked paths.

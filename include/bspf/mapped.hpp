@@ -4,6 +4,7 @@
 // chain rule with exact metrics.
 #pragma once
 
+#include <optional>
 #include <utility>
 #include <vector>
 
@@ -91,12 +92,13 @@ public:
     // coefficients c_kl, k = 1..p-1, l = 1..q-1, of a correction added to the map,
     //     X(xi, eta) += sum_kl c_kl B_k^p(xi) B_l^q(eta),
     // which vanishes on all four edges (e.g. fitted to an elliptically smoothed grid).
+    // eta_options: line options of the eta axis (default: `options`, used for xi).
     MappedGrid2D(SplineCurve bottom, SplineCurve right, SplineCurve top, SplineCurve left, Eigen::Index n_xi,
                  Eigen::Index n_eta, const LineOptions& options = {}, EdgeDistribution distribution = {},
-                 Matrix correction_x = {}, Matrix correction_y = {});
+                 Matrix correction_x = {}, Matrix correction_y = {}, std::optional<LineOptions> eta_options = {});
 
     const Grid& reference() const { return reference_; }
-    const LineOptions& options() const { return options_; }
+    const LineOptions& options(int axis = 0) const { return axis == 0 ? options_ : eta_options_; }
     // The transfinite map and its first derivatives at a reference point (xi, eta),
     // which may lie outside [0, 1]^2 (the curves continue polynomially).
     void map(double xi, double eta, double X[2], double X_xi[2], double X_eta[2]) const;
@@ -123,7 +125,7 @@ private:
     Field combine(const std::vector<std::pair<const Matrix*, const Field*>>& terms) const;
 
     Eigen::Index n_xi_ = 0, n_eta_ = 0;
-    LineOptions options_;
+    LineOptions options_, eta_options_;
     SplineCurve bottom_, right_, top_, left_;
     EdgeDistribution distribution_;
     Matrix correction_[2];  // interior Bernstein coefficients (p - 1, q - 1) of the x and y corrections

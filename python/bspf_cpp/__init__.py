@@ -16,12 +16,17 @@ from __future__ import annotations
 
 import numpy as np
 
-from ._core import GalerkinLine, Line, Op, SplineCurve, basis_matrix, endpoint_scaled_knots, open_knots
+from ._core import Boundary, BoundaryKind, CompressibleSolver2D, multigrid_solve, newton_krylov_solve, GalerkinLine, Line, Op, SplineCurve, basis_matrix, endpoint_scaled_knots, open_knots
 from ._core import MappedGrid2D as _MappedGrid2D
 from ._core import MultiPatch2D as _MultiPatch2D
 from ._core import Grid as _Grid
 
-__all__ = ["GalerkinLine", "Grid", "Line", "MappedGrid2D", "MultiPatch2D", "SplineCurve", "Op", "basis_matrix", "endpoint_scaled_knots", "open_knots"]
+try:  # FP32 CUDA backend, present when built with -DBSPF_CUDA=ON
+    from ._core import cuda
+except ImportError:
+    cuda = None
+
+__all__ = ["GalerkinLine", "Grid", "Line", "MappedGrid2D", "MultiPatch2D", "SplineCurve", "Op", "Boundary", "BoundaryKind", "CompressibleSolver2D", "multigrid_solve", "newton_krylov_solve", "basis_matrix", "cuda", "endpoint_scaled_knots", "open_knots"]
 
 
 class Grid(_Grid):

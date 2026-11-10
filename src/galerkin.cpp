@@ -688,4 +688,29 @@ void GalerkinLine::extension(const double* in, Index in_stride, double* out, Ind
     strided(*d_, [&](const Matrix& u) { return d_->extension(u); }, in, in_stride, out, out_stride);
 }
 
+detail::GalerkinTables detail::galerkin_tables(const GalerkinLine& g) {
+    const GalerkinLine::Data& d = *g.d_;
+    GalerkinTables t;
+    t.n = d.n;
+    t.nb = d.nb;
+    t.offsets = d.quadrature;
+    t.points = d.points.size();
+    // fit with the estimated jets folded in: c = F u
+    const Matrix I = Matrix::Identity(d.n, d.n);
+    t.fit = d.fit(I);
+    t.basis = d.line.basis();
+    for (int k = 0; k <= 1; ++k) {
+        t.shift[k] = d.shift[k];
+        t.spline[k].resize(d.quadrature);
+        for (Index q = 0; q < d.quadrature; ++q) t.spline[k][q] = Matrix(d.spline_at[k][q]);
+        t.extra_trig[k] = d.extra_trig[k];
+        t.extra_spline[k] = d.extra_spline[k];
+    }
+    t.rows = d.sample_rows;
+    t.weights = d.cell_weights;
+    t.extra_weights = d.extra_weights;
+    return t;
+}
+
 }  // namespace bspf
+

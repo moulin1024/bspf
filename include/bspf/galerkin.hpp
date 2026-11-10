@@ -32,6 +32,29 @@
 
 namespace bspf {
 
+class GalerkinLine;
+
+namespace detail {
+// Dense tables of a GalerkinLine's fast evaluation (exported for device backends):
+//     evaluate:  c = F u,  r = u - B c,  values at offset q, sample j (row rows[q][j] >= 0):
+//                irfft(shift[k][q] o rfft(r))_j + (spline[k][q] c)_j;  extra rows: extra_trig r + extra_spline c
+//     project:   the adjoint, with weights[q][j] (and extra_weights) applied to the values first.
+// The FFTs are unnormalized (shift carries 1/N); imaginary parts of the DC and even-N Nyquist
+// bins are ignored by the real inverse transform.
+struct GalerkinTables {
+    Eigen::Index n = 0, nb = 0, offsets = 0, points = 0;
+    Matrix fit;    // F (nb, n): fit_samples + fit_jets J, formed in double
+    Matrix basis;  // B (n, nb)
+    std::vector<Eigen::VectorXcd> shift[2];  // per offset, (n/2 + 1)
+    std::vector<Matrix> spline[2];           // per offset, (n, nb)
+    std::vector<std::vector<Eigen::Index>> rows;  // per offset, n entries: quadrature row or -1
+    std::vector<Vector> weights;             // per offset, n entries
+    Matrix extra_trig[2], extra_spline[2];   // (n_extra, n), (n_extra, nb); rows points - n_extra .. points - 1
+    Vector extra_weights;
+};
+GalerkinTables galerkin_tables(const GalerkinLine& line);
+}  // namespace detail
+
 struct GalerkinOptions {
     // Eigenvalues of M_II / dx - I below this are dropped from the low-rank mass.
     double mass_tolerance = 1e-12;
@@ -93,6 +116,7 @@ public:
     void extension(const double* in, Eigen::Index in_stride, double* out, Eigen::Index out_stride) const;
 
     struct Data;
+    friend detail::GalerkinTables detail::galerkin_tables(const GalerkinLine&);
 
 private:
     std::shared_ptr<const Data> d_;

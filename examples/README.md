@@ -26,6 +26,8 @@ PYTHONPATH=python python examples/basic/diff_1d.py --plot diff_1d.png
 | `pde/heat_2d.py` | time-dependent heat equation: `Grid.weak_laplacian` (energy-stable Galerkin form) + RK4, Dirichlet walls, Chebyshev jets | decaying mode with non-periodic, time-dependent wall data |
 | `pde/burgers_2d.py` | 2D viscous Burgers system: `Grid.partial` advection + `Grid.weak_laplacian` diffusion + RK4, Dirichlet walls; jets chosen by Re | exact traveling-wave front (Fletcher), Re = 100 by default |
 | `pde/shock_tube_1d.py` | BSPF Galerkin compressible Navier–Stokes + RK4, physical viscosity and heat conduction, rigid adiabatic walls | regularized Sod states; mass/energy balance, entropy and spatial refinement |
+| `pde/laval_nozzle_2d.py` | 2D compressible Euler / Navier–Stokes on one `MappedGrid2D` block with the C++ `CompressibleSolver2D`: Galerkin BSPF weak form, weak inlet/outlet/wall fluxes, Legendre spectral vanishing viscosity, local-time-step RK4 with Anderson acceleration and grid sequencing | planar Laval nozzle, total-condition inlet, supersonic exit; isentropic invariants, mass flow, Re = 2000 boundary layers |
+| `pde/laval_nozzle_mms.py` | manufactured-solution check of the nozzle solver's full Navier–Stokes operator on the curved block | smooth subsonic state, sympy source |
 
 The 2D example draws its random mode amplitudes with NumPy (seed 123), so the
 field differs slightly from pybspf's JAX-generated one.
@@ -1389,3 +1391,234 @@ The single-shock speed advantage therefore does not transfer to this prototype.
 The report includes the failed smaller configuration, conservation diagnostics,
 cost breakdown and a common-grid comparison plot. The regression suite now
 passes 192 tests.
+
+## Laval nozzle on a mapped block (C++ CompressibleSolver2D, 2026-11-10)
+
+First step towards a mapped multi-block compressible solver. The numerics are
+`bspf.CompressibleSolver2D` (`include/bspf/compressible.hpp`); the Python
+scripts only build the geometry, boundary conditions and initial state, call
+`solve`, and post-process. Sextic wall (`--shape sextic --length 4`, the
+default): area ratio 1.5, throat curvature radius 5.3, inlet M = 0.43,
+quasi-1D exit M = 1.85. Results in `bench/results/nozzle/`.
+
+How the method got here (each step measured by linearized-operator eigenvalues):
+* collocation BSPF with strong boundary values has boundary-localized growing
+  modes (even 1D acoustics between walls), so it blows up;
+* the Galerkin derivative D = M^-1 C is summation-by-parts and as accurate, but
+  with nodal fluxes and the dense norm M the variable-coefficient system keeps
+  growing modes whose rate grows with N (1D linearized Euler reproduces it);
+* the Galerkin weak form, with fluxes formed at Gauss points and weak face
+  fluxes, removes them in 1D and nearly in 2D (6-10 weak modes left); a
+  Legendre-basis spectral vanishing viscosity, spectrally small on resolved
+  fields, makes the 2D operator stable;
+* a free-stream correction (the quadrature's metric-identity defect times the
+  nodal fluxes) keeps uniform flow exact; 5 Gauss points per cell are needed
+  for full accuracy (4 leaves an error floor near 4e-8).
+
+Manufactured Navier–Stokes solution (Re = 100), relative steady-state error:
+
+| Gauss points per cell | 65×23 | 97×33 |
+|---|---|---|
+| 4 | 7.0e-8 | 4.2e-8 |
+| 5 (default) | 1.4e-8 | 1.5e-9 |
+| 6 | 1.4e-8 | 1.5e-9 |
+
+Euler nozzle, 97×33 (exactly isentropic flow): Cd = 0.99924113, max entropy
+error 2.3e-6, max enthalpy error 1.6e-6, mass-flow variation between sections
+2.0e-9.
+
+Steady-state cost, 97×33 Euler on one Ryzen 5800X (16 threads available):
+
+| | steps | time |
+|---|---|---|
+| Python prototype, plain RK4 | ~35 000 | ~90 min (default SVV diverged) |
+| C++, plain RK4 (measured to step 6000, residual 6e-5) | ~35 000 | ~20 min (estimated) |
+| C++, Anderson depth 8 | 6 500 | 4 min |
+| C++, Anderson + grid sequencing from 49×17, 1 thread | 2 600 | 88 s |
+| same, `OMP_NUM_THREADS=8` | 2 600 | 65 s (fine stage 46 s) |
+
+Navier–Stokes, Re = 2000, 97×49 with wall clustering 8 (sequenced from 49×25,
+8 threads, Cd = 0.95383 in both columns):
+
+| | explicit viscous | line-implicit wall-normal viscous |
+|---|---|---|
+| right-hand side | 16.7 ms | 6.3 ms (viscous divergence as nodal tensor products) |
+| one step | 68.5 ms | 26.2 ms (incl. per-line LU) |
+| steps, 49×25 + 97×49 | 5 100 + 8 250 | 4 250 + 5 450 |
+| time | 655 s | 216 s |
+
+The implicit wall-normal viscous terms raise the near-wall time step 1.4×
+(49×25) to 1.8× (97×49); after that the near-wall step equals the Euler one, so
+the acoustic wall-normal limit binds. Making the wall-normal inviscid terms
+line-implicit too is the next step for clustered viscous grids.
+
+One right-hand side at 97×33 costs 9.1 ms on one thread and 3.2 ms on eight;
+it is bound by the dense quadrature-point GEMMs (BSPF trial functions are
+global along each line), about 160 MFLOP per evaluation. More than 8 threads
+is slower, and small grids (49×17) gain nothing from threads.
+
+    OMP_NUM_THREADS=8 PYTHONPATH=python python examples/pde/laval_nozzle_2d.py \
+        --n 97 33 --sequence 49 17
+    OMP_NUM_THREADS=8 PYTHONPATH=python python examples/pde/laval_nozzle_2d.py \
+        --n 97 49 --sequence 49 25 --re 2000 --cluster 8 --cfl 0.45 --tol 1e-9
+
+### FP32 GPU solver (`bspf.cuda.CompressibleSolver2D`, 2026-11-10)
+
+Built from a CPU solver (`bspf.cuda.CompressibleSolver2D(cpu_solver, refresh=10)`),
+Euler flows only so far. Every step runs on the device: the BSPF trial field is
+evaluated at the Gauss points and projected back with GalerkinLine's fast
+structure (banded spline + batched cuFFT, `bspf.cuda.GalerkinAxis`), fluxes and
+face states in fused kernels, mass solve and SVV with cuBLAS, and the
+line-implicit preconditioner along eta lines as batched cuBLAS LU (refactored
+every `refresh` steps). FP32 needs a small fit amplification, hence n_basis ~ N/3
+(at least 24) per axis.
+
+Euler nozzle on an RTX 3070, line-implicit with `refresh=10`, no Anderson:
+
+| grid | explicit | line-implicit |
+|---|---|---|
+| 97×33, to residual 1e-4 | 6 050 steps, 18.6 s (3.1 ms/step) | 1 150 steps, 4.5 s |
+| 193×65, to residual 2e-4 | not reached in 8 000 steps | 2 950 steps, 27.5 s; Cd 0.999237, entropy error 8e-5 |
+
+Stall check on 193×65 (2026-11-10). With SVV 0.1 and Anderson the residual
+levelled off at 2-3e-4 from step 5 000 on. It was not the FP32 floor: the exact
+(double) residual of that state was 3.2e-4 with the device right-hand side
+accurate to 1e-5 in the interior. Without Anderson the same run diverged (the
+CPU solver too, so not an FP32 effect): left preconditioning pushed the weakly
+damped modes of the operator (stability margin ~0 at SVV 0.1) to growth, and
+Anderson only masked it. SVV 0.2, now the default, makes the iteration stable
+and costs no accuracy (Euler MMS 97×33: 6.3e-10 vs 9.2e-10). The remaining
+plateau near 1e-4 is the FP32 floor: there the double residual is 9.8e-5
+overall but 1.7e-5 in the interior, and the device/double difference is 7e-5,
+concentrated at the boundary. Anderson acceleration does not help on the device
+(FP32 normal equations): 5 900 instead of 2 950 steps on 193×65 and a Cd off by
+1e-4, so use `anderson=0` there. A second gap, found with the manufactured
+solution: the preconditioner linearized only wall penalties on the eta faces,
+so exterior (fixed-state) faces diverged; their penalty is now included (MMS
+65×23: 300 steps, error 1.2e-9, as explicit).
+
+At 97×33 the device steady state matches the double-precision CPU one to 1e-5.
+The FP32 floor grows with N (face rounding amplified by the mass inverse at the
+corners): residuals stall near 3e-5 on 97×33, and entropy errors are 5e-5 there
+and 7e-4 on 193×65 (CPU: 2e-6).
+
+### FAS multigrid with h- and p-coarsening (`bspf.multigrid_solve`, 2026-11-10)
+
+C++ (`include/bspf/multigrid.hpp`), for CPU and GPU levels alike: injected
+state, full-weighting residual restriction, BSPF prolongation of the
+correction, damping omega = 0.5 (halved automatically if a correction would be
+nonphysical), V- or W-cycles. Levels are nested per axis (n or (n + 1) / 2), so
+p-levels (same nodes, lower-order trial space: degree 5 or 3 with
+finite-difference jets) and semi-coarsening mix with h-levels.
+`--multigrid 0` builds the deepest hierarchy, e.g. for 193×65:
+193×65 high, 97×33 high, 49×17 high, 49×17 medium, 25×9 medium, 25×9 low,
+13×5 low, 7×5 low.
+
+| case | cycles | fine-step work | notes |
+|---|---|---|---|
+| GPU 97×33, 2 levels / deep, to 1e-4 | 11 / 11 | 442 / 427 | 2.7 s / 4.9 s (small GPU levels are latency bound) |
+| GPU 193×65, 3 levels / deep, to 2e-4 | 14 / 13 | 457 / 424 | 6.4 s / 8.7 s; single grid 2 950 steps, 27.5 s |
+| CPU double 97×33, 2 levels / deep, to 1e-8 | 70 / 57 | 2 543 / 2 004 | late rate 0.90 / 0.86 per cycle |
+| CPU double 193×65, 3 levels / deep | stall at 3e-7 | | Cd 0.99924113 |
+
+Open: the line-implicit smoother's stability margin shrinks with N. 97×33
+converges fully in double, 193×65 stalls at 3e-7 (a neutral mode that no
+coarse level removes), and 385×129 diverges even on a single grid and at CFL
+0.4 (explicit pseudo-time stays stable there). Multigrid cannot cure a
+non-damping smoother; the preconditioner (nodal SBP form of the eta operator)
+has to match the weak-form residual better, or be used inside a Krylov solver.
+
+### Weak-form line operator, and multigrid without it (2026-11-10)
+
+The line-implicit preconditioner now linearizes the weak-form eta operator
+(Gauss-point Jacobians, quadrature mass, numerical face fluxes) instead of the
+nodal form; 193×65 then converges on a single grid. It still diverges once the
+eta lines get long (193×129, 97×129 after ~800 steps), so the multigrid
+smoother defaults to explicit RK4 (`--line-implicit none` with `--multigrid`),
+with a smoother-aware h/p hierarchy (`order_valid(..., implicit=False)`).
+
+Explicit-smoothed deep FAS on the GPU (FP32), cycles to the FP32 tolerance:
+97×33 16, 193×65 22, 193×129 18, 385×129 21 (fine-step work 550-700): grid
+independent, including grids where line-implicit smoothing diverges.
+In double precision (CPU) both grids reach ~1e-5 in ~40 cycles with Cd correct
+to 1e-7, but the tail is slow (97×33: 8.5e-8 after 200 cycles) or stalls
+(193×65: 4-5e-6). The weak-form operator itself has weakly growing modes
+without SVV (49×17: 8 eigenvalues with Re > 0, max 0.256), identical with 5 or
+8 Gauss points per cell, so not quadrature aliasing: a formulation property
+(Galerkin in conservative variables is not energy stable for variable-
+coefficient Euler), which pseudo-time iterations cannot converge past.
+
+### Newton-Krylov with FAS preconditioning (`bspf.newton_krylov_solve`, 2026-11-10)
+
+Newton on R(U) = 0 with FGMRES; Jacobian-vector products by directional finite
+differences (step ~ sqrt(machine epsilon)), right preconditioner one FAS cycle of
+the deep h/p hierarchy (explicit smoothing) applied to a small perturbation
+(linearized by the same kind of difference); inexact-Newton tolerances and a
+line search. Driver: `--multigrid 0 --newton`. CPU, double precision:
+
+| grid | Newton steps | Krylov iterations | residual | time | Cd | entropy error |
+|---|---|---|---|---|---|---|
+| 97×33 | 7 | 71 | 4.9e-12 | 53 s | 0.99924113 | 4.9e-5 |
+| 193×65 | 7 | 125 | 1.6e-11 | 228 s | 0.99924113 | 7.0e-8 |
+
+Pseudo-time methods stalled on 193×65 (4e-6 explicit-smoothed multigrid, 3e-7
+line-implicit); Newton only needs an invertible Jacobian. On the GPU in FP32 it
+cannot go below the FP32 floor (~1e-4 at 193×65): the finite-difference
+Jacobian products are rounding noise there.
+
+Entropy-variable trial field (`variables="entropy"`): implemented, but the 49×17
+Jacobian (SVV off) then has 68 growing modes (max Re 0.455) against 8 (0.256)
+in conservative variables. Entropy stability needs the matching A0-weighted
+mass and exact integration of U(V_h); pseudo-time with the tensor mass in U
+does not inherit it. Off by default.
+
+### FP64 device solver, FP32 multigrid preconditioner (2026-11-10)
+
+The device code is templated on precision (cuBLAS S/D, cuFFT R2C/D2Z):
+`bspf.cuda.CompressibleSolver2D(cpu, precision="double")` is the default and
+matches the CPU residual to 1e-11 (97×33); `precision="float"` keeps the FP32
+path. `bspf.cuda.newton_krylov_solve(fp32_levels, U, residual=fp64_solver)` runs
+Newton, FGMRES and the Jacobian products in FP64 and the FAS preconditioner on
+FP32 levels (driver: `--multigrid 0 --newton --device cuda`):
+
+| grid | Newton steps | Krylov iterations | residual | GPU mixed | CPU FP64 | Cd | entropy error |
+|---|---|---|---|---|---|---|---|
+| 97×33 | 7 | 75 | 7.8e-12 | 29 s | 53 s | 0.99924113 | 4.9e-5 |
+| 193×65 | 7 | 162 | 4.9e-12 | 90 s | 228 s | 0.99924113 | 7.0e-8 |
+
+FP64 steps on the RTX 3070 cost ~10× FP32 (1/32 FP64 rate): 150 ms vs 16 ms per
+line-implicit step on 193×65, so the FP64 solver is used for residuals only.
+
+Device Krylov (`device_krylov=True`, default with an FP64 `residual`): Newton,
+FGMRES (CGS2 by cuBLAS gemv), Jacobian products and the line search keep their
+vectors on the GPU; only the preconditioner's input and output cross to the
+host. Same convergence (193×65: 7 Newton, 164 Krylov), same time (91 s): the
+breakdown is 82 s preconditioner, 3.2 s Jacobian products, 0.05 s Krylov
+algebra. The host-driven FAS cycle (per-level solve calls, host restriction and
+CPU prolongation) is the bottleneck, ~0.5 s per cycle against ~0.2 s of GPU work.
+
+### Reference: PyFR 2.1 on the same nozzle (RTX 3070, 2026-11-10)
+
+`bench/pyfr_nozzle_case.py NX NY ORDER PREFIX --steady` writes the gmsh mesh
+(exact degree-6 Bezier walls, curved quads) and the PyFR ini: Euler, Rusanov,
+`char-riem-inv` inlet from the quasi-1D state (PyFR's Euler system has no total-
+condition inlet, so Cd differs; the entropy invariant is exact in both),
+`sup-out-fn`, `slp-adia-wall`; steady by dual time (one backward-Euler step,
+dt = 1e8) with local pseudo-time RK45 and p-multigrid 4-3-2-1-0.
+
+Per right-hand side, ~12.7k DOF: PyFR 45 µs (FP64) / 27 µs (FP32); BSPF GPU
+18.5 ms (FP64) / 1.67 ms (FP32).
+
+Steady solve to residual ~1e-10/1e-11, L2 entropy error:
+
+| | DOF | time | L2 entropy error |
+|---|---|---|---|
+| PyFR p4, 16×8 | 3 200 | 10.0 s | 1.1e-6 |
+| PyFR p4, 32×16 | 12 800 | 13.1 s | 5.1e-8 |
+| PyFR p4, 64×32 | 51 200 | 35.3 s | 3.2e-9 |
+| BSPF 97×33 | 3 201 | 17.8 s | 2.0e-6 |
+| BSPF 193×65 | 12 545 | 61.7 s | 3.2e-9 |
+
+BSPF converges faster with resolution (×600 per 4× DOF vs ×20) and is 16× more
+accurate at equal DOF, but each residual is 60-400× more expensive, so PyFR
+reaches 3.2e-9 in about half the time with 4× the DOF.

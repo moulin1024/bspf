@@ -23,6 +23,12 @@ cmake --build build -j
 ctest --test-dir build             # C++ checks
 ```
 
+Optional FP32 CUDA backend (cuBLAS + cuFFT; NVIDIA GPU and CUDA toolkit):
+
+```sh
+cmake -S . -B build -DBSPF_CUDA=ON -DCUDAToolkit_ROOT=/path/to/cuda   # CMAKE_CUDA_ARCHITECTURES defaults to native
+```
+
 The module is written to `python/bspf_cpp/_core*.so`, so `PYTHONPATH=python`
 makes `import bspf_cpp` work. Options: `-DBSPF_PYTHON=OFF`, `-DBSPF_TESTS=OFF`,
 `-DBSPF_NATIVE=OFF` (disable `-march/-mcpu=native`).
@@ -62,6 +68,24 @@ grid = bc.Grid.uniform((x, y))
 grid.partial(u, (1, 0)); grid.laplacian(u); grid.gradient(u)
 grid.interpolate(u, (xs, ys)); grid.integrate(u, bounds=[(0, 0.5), (0, 1)])
 ```
+
+### GPU (float32)
+
+With `-DBSPF_CUDA=ON`, `bc.cuda` runs the same operators on an NVIDIA GPU in
+float32, 40-300x faster than one CPU core when fields stay on the device:
+
+```python
+gpu = bc.cuda.Grid(grid)                    # from a bc.Grid
+u = bc.cuda.Array(f)                        # upload (float64 -> float32)
+lap = gpu.laplacian(u)                      # device Array; also partial, interpolate, integrate
+lap.get()                                   # download as float64
+gpu.laplacian(f)                            # numpy in, numpy out (includes transfers)
+d1 = bc.cuda.Op(line.derivative(1)); d1(u, axis=0)
+```
+
+Float32 rounding grows with derivative order and N: values, integrals and first
+derivatives are accurate to ~1e-7 and ~1e-5; second derivatives reach
+1e-3..1e-2 at N >= 256. See DESIGN.md for the measurements.
 
 For time-dependent problems with Dirichlet walls, `grid.weak_laplacian(u,
 wall_values)` is the energy-stable (Galerkin) Laplacian on the same BSPF trial
