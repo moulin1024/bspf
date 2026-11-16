@@ -1,5 +1,90 @@
 # CUDA BSPF Galerkin Poisson in 3D
 
+## 257³ GPU optimization
+
+The optimization campaign uses the fixed n=257, q=386 curved Gaussian MMS,
+full BSPF nodal forcing and preassembled mass load on an A100-SXM-64GB.
+The final implementation achieved **2.188×**: 0.630042 s versus
+1.378296 s across nine warm samples per executable on the same GPU
+(job 64618164). Both use 18 CG iterations and the same precision/tolerance;
+independent q=394/402 physical audits give relative L2 error 3.05428e-12.
+All 60 GPU tests pass. Reproduction and evidence are recorded in
+[OPTIMIZATION_257.md](OPTIMIZATION_257.md).
+
+The implementation coalesces tensor transposes, keeps eight reflection
+sectors separate through the operator, reuses metric loads across sectors,
+and retains the final gradient GEMM's layout through the metric multiply.
+Compact metric arrays are prepared once during solver setup. Reflection
+eligibility is checked against both axis tables and every metric component;
+odd quadrature sizes or asymmetric metrics use the general operator path.
+The 2× result applies to this validated symmetric curved domain.
+
+Diagnostic overrides: `BSPF_POISSON_OCTANTS=0` disables sector processing;
+`BSPF_POISSON_OCTANT_ROTATED=0` restores explicit gradient layout conversions;
+`BSPF_POISSON_TILED_ROTATE=0` restores the original transpose kernels.
+`BSPF_POISSON_PARITY=0` disables all reflection splitting.
+
+## Nodal forcing interpolation
+
+For full BSPF nodal forcing, the default `--rhs-assembly auto` now selects
+`nodal-mass`: precompute `M_J = E.T @ W_J @ E` in compact tensor form and
+apply it directly to nodal forcing. The current map has an even quartic
+Jacobian determinant, so only three weighted 1D mass matrices and a
+3-by-3-by-3 coefficient tensor are needed. The factors match the selected
+Gauss rule; this does not change the RHS discretization. `NodalMass` in
+`nodal_mass.py` can be retained and applied repeatedly to new nodal forcing.
+
+The native `set_load(load, boundary)` interface accepts this integrated
+load before boundary lifting. Repeated solves reuse it without a quadrature
+RHS projection. `--rhs-assembly quadrature` restores the explicit
+interpolate-then-integrate path. The mass path requires rebuilding the native
+binary; older binaries do not support the `load` input field.
+
+`rhs_mass_setup_s` and `rhs_mass_apply_s` record synchronized GPU preprocessing
+times separately. Native warm solve timing for the preassembled-load path
+excludes mass setup/application, while the quadrature path includes RHS
+projection. Do not interpret that timing difference as an isolated mass-kernel
+speedup. The stiffness operator and solver are unchanged.
+
+GPU validation job 64616023 passed on an A100 at n=17,33,65. Loads agree with
+explicit interpolation/projection within 1.5e-15 relative and solutions within
+2e-15. Polynomial guards, independent physical error audits, zero loads and
+nonfinite-load rejection passed. At n=65 the Gaussian MMS error is 3.94e-12;
+both warm solve paths take about 22 ms, so this check does not demonstrate a
+material end-to-end speedup. Factors occupy 15*n*n doubles (507,000 bytes at
+n=65). Results: `../evidence/mass_rhs_leonardo_64616023/comparison.json`.
+
+The BSPF harness now defaults to `--forcing-mode nodal-bspf`: evaluate the
+physical forcing at the n³ mapped solution nodes, then use the existing full
+BSPF evaluation matrix `B = axis.evaluate(gauss_points, 0)[0]` in each direction
+to transfer those samples to the Gauss grid. This preserves both the spline
+and Fourier enrichment of the nodal interpolant.
+Interpolation acts on `f(X(s))`; geometry metrics and volume weights are
+evaluated directly at the Gauss points. The stiffness operator, preconditioner,
+and quadrature-order defaults are unchanged. No analytic metric tensors are
+used by this path.
+
+The separate `--forcing-mode nodal-spline --forcing-spline-degree 5` experiment
+uses not-a-knot quintic splines and is not equivalent to the full BSPF
+interpolant. `--forcing-mode quadrature` restores direct forcing
+evaluation at every Gauss point for comparison. Results record the forcing
+mode, degree, and volume sample count. Use separate output directories for
+different modes; the harness rejects mixing them with existing results.
+
+```bash
+python bench/turbulence_3d/bspf_poisson/run.py --n 65 --forcing-mode nodal-bspf \
+  --output bench/turbulence_3d/evidence/bspf_nodal_forcing
+```
+
+CPU checks cover full BSPF enrichment reproduction and the separate spline
+interpolation. The earlier quintic-spline smooth curved-domain Poisson check
+gave relative solution errors of 1.81e-8 at n=17 and 2.15e-10 at n=33, versus
+approximately 1e-11 with direct forcing evaluation; these numbers do not
+describe the full BSPF transfer. The interpolation error
+therefore needs its own refinement check. These checks did not execute the
+CUDA harness. Historical performance/accuracy results below used direct
+Gauss-point forcing evaluation.
+
 Current Gaussian MMS campaign: [dependencies, builds, validation and reproduction](../REPRODUCING.md). Historical measurements below retain their original configurations.
 
 Native reusable C++ API: `include/bspf/cuda_poisson.hpp`; implementation:
@@ -31,7 +116,10 @@ FP32. TF32 is disabled explicitly. Residuals are scaled before conversion to
 FP32, and results converted back to FP64. Eigenproblems are prepared in FP64.
 True-residual replacement restarts CG, including when its recursive residual
 first passes tolerance. A final check uses the full recovered solution and
-original quadrature operator. No analytic MMS values enter CG or stopping.
+active quadrature operator. Reflection splitting discards only axis-table
+roundoff within its bounded eligibility tolerance; the optimization campaign
+also compares against the original unsplit operator and independently audits
+physical error. No analytic MMS values enter CG or stopping.
 
 All six faces receive exact nonzero Dirichlet nodal samples. The boundary lift has zero
 interior; each repeated solve resets the correction to zero. Source sampling,

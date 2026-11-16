@@ -26,7 +26,7 @@ def harness():
     mod=importlib.util.module_from_spec(spec);spec.loader.exec_module(mod)
     return mod
 
-@pytest.fixture(scope='module',params=[(11,28,8),(12,29,7)])
+@pytest.fixture(scope='module',params=[(11,28,8),(12,29,7),(12,28,7),(65,98,8)])
 def data(harness,request):
     n,q,degree=request.param
     a=harness.HybridAxis((n-degree-1)//2,degree=degree,nodes='symmetric_qr')
@@ -45,8 +45,9 @@ def data(harness,request):
 
 def run(harness,tmp_path,d,check=False):
     harness.write_bundle(tmp_path/'input.bin',d)
-    env=os.environ.copy();sdk='/home/moulin/Workspace/nvidia/hpc_sdk/Linux_x86_64/26.5'
-    env['LD_LIBRARY_PATH']=f'{sdk}/math_libs/lib64:{sdk}/cuda/13.2/lib64'
+    env=os.environ.copy()
+    if env.get('BSPF_NATIVE_LIBRARY_PATH'):
+        env['LD_LIBRARY_PATH']=env['BSPF_NATIVE_LIBRARY_PATH']
     return subprocess.run([str(EXE),str(tmp_path/'input.bin'),str(tmp_path/'solution')]+(['check'] if check else []),env=env,capture_output=True,text=True)
 
 def test_curved_operator_preconditioner_and_solution(harness,data,tmp_path):
@@ -64,6 +65,28 @@ def test_zero_load_has_no_iterations(harness,data,tmp_path):
     result=run(harness,tmp_path,d);assert result.returncode==0,result.stderr
     assert not np.any(harness.read_bundle(tmp_path/'solution.bin')['solution'])
     assert all(r['iterations']==0 for r in json.loads((tmp_path/'solution.json').read_text())['runs'])
+
+def test_preassembled_load_matches_quadrature_rhs(harness,data,tmp_path):
+    n,exact,original=data
+    baseline=tmp_path/'quadrature';baseline.mkdir()
+    result=run(harness,baseline,original)
+    assert result.returncode==0,result.stderr
+    d=dict(original);b=d['B'];q=len(b)
+    d['load']=harness.tensor((d['forcing']*d['measure']).reshape(q,q,q),b.T,b.T,b.T).reshape(n*n,n)
+    del d['forcing']
+    assembled=tmp_path/'assembled';assembled.mkdir()
+    result=run(harness,assembled,d)
+    assert result.returncode==0,result.stderr
+    u=harness.read_bundle(assembled/'solution.bin')['solution']
+    ref=harness.read_bundle(baseline/'solution.bin')['solution']
+    np.testing.assert_allclose(u,ref,rtol=1e-10,atol=1e-10)
+    assert json.loads((assembled/'solution.json').read_text())['preassembled_load']
+    d['load']=np.zeros_like(d['load']);d['boundary']=np.zeros_like(d['boundary'])
+    zero=tmp_path/'zero';zero.mkdir()
+    result=run(harness,zero,d)
+    assert result.returncode==0,result.stderr
+    assert not np.any(harness.read_bundle(zero/'solution.bin')['solution'])
+    assert all(r['iterations']==0 for r in json.loads((zero/'solution.json').read_text())['runs'])
 
 @pytest.mark.parametrize('invalid',['metric','spectrum','lift'])
 def test_rejects_invalid_cg_problem(harness,data,tmp_path,invalid):
@@ -106,6 +129,7 @@ def test_parity_toggle_and_nonsymmetric_fallback(harness,data,tmp_path,monkeypat
 
 
 def test_shared_contraction_adjoint_and_equivalence(harness,data,tmp_path,monkeypatch):
+    monkeypatch.setenv('BSPF_POISSON_OCTANTS','0')
     n,_,d=data
     solutions=[]
     for mode in ('0','1'):
@@ -122,6 +146,7 @@ def test_shared_contraction_adjoint_and_equivalence(harness,data,tmp_path,monkey
 
 @pytest.mark.parametrize('shared',['0','1'])
 def test_fused_layout_matches_unfused_operator(harness,data,tmp_path,monkeypatch,shared):
+    monkeypatch.setenv('BSPF_POISSON_OCTANTS','0')
     n,_,d=data
     checks=[];solutions=[]
     monkeypatch.setenv('BSPF_POISSON_PARITY','1')
@@ -137,3 +162,33 @@ def test_fused_layout_matches_unfused_operator(harness,data,tmp_path,monkeypatch
         solutions.append(harness.read_bundle(folder/'solution.bin')['solution'])
     assert la.norm(checks[0]-checks[1])/la.norm(checks[0])<2e-14
     assert la.norm(solutions[0]-solutions[1])/la.norm(solutions[0])<1e-12
+
+
+def test_octant_metric_eligibility_and_operator(harness,data,tmp_path,monkeypatch):
+    n,_,original=data
+    for mode in ('enabled','disabled','asymmetric_metric'):
+        folder=tmp_path/mode;folder.mkdir()
+        d={k:v.copy() for k,v in original.items()}
+        monkeypatch.setenv('BSPF_POISSON_OCTANTS','0' if mode=='disabled' else '1')
+        if mode=='asymmetric_metric':d['xx'][0,0]*=1.01
+        result=run(harness,folder,d,True);assert result.returncode==0,result.stderr
+        stats=json.loads((folder/'solution.json').read_text())
+        assert stats['octant_optimized']==(mode=='enabled' and len(d['B'])%2==0)
+        checks=harness.check_operator(d,folder,n)
+        assert checks['operator_relative_error']<2e-12
+    on=harness.read_bundle(tmp_path/'enabled/solution.bin')['solution']
+    off=harness.read_bundle(tmp_path/'disabled/solution.bin')['solution']
+    assert la.norm(on-off)/la.norm(off)<1e-12
+
+
+@pytest.mark.parametrize('shared',['0','1'])
+def test_octant_rotated_layout_equivalence(harness,data,tmp_path,monkeypatch,shared):
+    n,_,d=data;checks=[]
+    monkeypatch.setenv('BSPF_POISSON_SHARED',shared)
+    for mode in ('0','1'):
+        folder=tmp_path/mode;folder.mkdir()
+        monkeypatch.setenv('BSPF_POISSON_OCTANT_ROTATED',mode)
+        result=run(harness,folder,d,True);assert result.returncode==0,result.stderr
+        assert harness.check_operator(d,folder,n)['operator_relative_error']<2e-12
+        checks.append(harness.read_bundle(folder/'solution_check.bin')['apply'])
+    assert la.norm(checks[0]-checks[1])/la.norm(checks[0])<2e-14

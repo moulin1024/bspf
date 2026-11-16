@@ -37,6 +37,9 @@ public:
     // forcing: q^3 quadrature samples; boundary: n^3 nodal values.
     // Uploads are outside solve timing. boundary must be zero in the interior.
     void set_rhs(const std::vector<double>& forcing, const std::vector<double>& boundary);
+    // Already integrated weak load: n^3 entries, before boundary lifting.
+    // Repeated solves reuse it without performing quadrature RHS projection.
+    void set_load(const std::vector<double>& load, const std::vector<double>& boundary);
     // Every call starts from the same boundary lift and zero interior correction.
     // FP64 operator/CG/reductions; FP32 tensor inverse, no TF32 arithmetic.
     Poisson3DStats solve(const Poisson3DOptions& = {});
@@ -48,6 +51,7 @@ public:
     bool shared_contractions() const;
     bool parity_optimized() const; // reflection-split FP64 contractions active
     bool fused_tensor_layout() const; // parity conversion includes tensor rotations
+    bool octant_optimized() const; // validated reflection-symmetric metric sectors
 private:
     struct Impl;
     std::unique_ptr<Impl> d_;

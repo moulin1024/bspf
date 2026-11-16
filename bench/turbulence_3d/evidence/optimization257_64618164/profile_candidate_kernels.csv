@@ -1,0 +1,22 @@
+Generating SQLite file /leonardo_work/EUHPC_E07_069/bspf/bench/turbulence_3d/evidence/optimization257_64618164/profile_candidate.sqlite from /leonardo_work/EUHPC_E07_069/bspf/bench/turbulence_3d/evidence/optimization257_64618164/profile_candidate.nsys-rep
+Processing [/leonardo_work/EUHPC_E07_069/bspf/bench/turbulence_3d/evidence/optimization257_64618164/profile_candidate.sqlite] with [/leonardo/prod/spack/7.3/install/linux-icelake/cuda-12.6.0-fawaeoadqhqzj4i3im3kxugcoiohvstp/nsight-systems-2024.4.2/host-linux-x64/reports/cuda_gpu_kern_sum.py]...
+Time (%),Total Time (ns),Instances,Avg (ns),Med (ns),Min (ns),Max (ns),StdDev (ns),Name
+19.3,501350657,3360,149211.5,153056.0,78112,238431,54708.1,void cutlass::Kernel2<cutlass_80_tensorop_d884gemm_32x64_16x4_tn_align1>(T1::Params)
+15.1,391014217,7392,52896.9,56160.0,35648,73312,12462.3,"void bspf::cuda::<unnamed>::transpose_tiled<double>(const T1 *, T1 *, int, int)"
+14.6,378969462,2856,132692.4,129903.5,85120,211615,45649.6,void cutlass::Kernel2<cutlass_80_tensorop_d884gemm_64x32_16x4_nn_align1>(T1::Params)
+14.1,365658855,2520,145102.7,131616.0,120287,192192,24428.5,void cutlass::Kernel2<cutlass_80_tensorop_d884gemm_64x64_16x4_nn_align1>(T1::Params)
+9.6,249031189,2016,123527.4,127743.5,97568,152223,14953.9,void cutlass::Kernel2<cutlass_80_tensorop_d884gemm_64x64_16x4_tn_align1>(T1::Params)
+8.5,219489502,84,2612970.3,2612213.0,2602997,2633429,5436.5,"bspf::cuda::<unnamed>::flux_octant(int, int, bool, const double *, const double *, const double *, const double *, const double *, const double *, double *, double *, double *)"
+4.8,123517805,1572,78573.7,53024.0,31392,288255,83536.4,"bspf::cuda::<unnamed>::combine(unsigned long, double *, const double *, double, double)"
+3.6,92875566,216,429979.5,427838.0,426590,479294,10110.0,ampere_sgemm_64x64_nn
+3.6,92593796,216,428675.0,426590.0,425598,477022,10041.9,ampere_sgemm_128x64_tn
+2.0,52148130,432,120713.3,122031.5,110848,127167,3846.7,"void bspf::cuda::<unnamed>::transpose_tiled<float>(const T1 *, T1 *, int, int)"
+1.1,29657410,144,205954.2,206479.0,195455,210879,2772.4,"void dot_kernel<double, (int)128, (int)0, cublasDotParams<cublasGemvTensor<const double>, cublasGemvTensorStridedBatched<double>>>(T4)"
+0.9,23778178,312,76212.1,60784.0,12287,238048,68034.3,"void nrm2_kernel<double, double, double, (int)0, (int)0, (int)128>(cublasNrm2Params<int, T1, T3>)"
+0.7,17785566,84,211732.9,211759.5,205440,216415,2023.7,"void bspf::cuda::<unnamed>::octant_convert<(bool)1>(const double *, double *, int, bspf::cuda::<unnamed>::OctantLayout)"
+0.7,17146139,84,204120.7,204304.0,197184,210144,2565.7,"void bspf::cuda::<unnamed>::octant_convert<(bool)0>(const double *, double *, int, bspf::cuda::<unnamed>::OctantLayout)"
+0.4,10828792,72,150399.9,149888.0,148896,158976,1919.3,"bspf::cuda::<unnamed>::extend(int, const float *, double *, double)"
+0.4,10711831,72,148775.4,149039.5,142431,156095,3281.5,"bspf::cuda::<unnamed>::extract(int, const double *, float *, double)"
+0.3,8960220,84,106669.3,106175.5,105920,118976,2364.3,"bspf::cuda::<unnamed>::mask(double *, int)"
+0.3,8542016,72,118639.1,118048.0,117856,131839,2769.7,"bspf::cuda::<unnamed>::inverse(int, const float *, float, float, float, float *)"
+0.0,688413,144,4780.6,4767.0,4672,5344,114.8,"void reduce_1Block_kernel<double, (int)128, (int)7, cublasGemvTensorStridedBatched<double>, cublasGemvTensorStridedBatched<double>, cublasGemvTensorStridedBatched<double>>(const T1 *, T1, T4, int, const T1 *, T1, T5, T6, cublasPointerMode_t, cublasLtEpilogue_t, cublasGemvTensorStridedBatched<const biasType<T6::value_type, T1>::type>)"

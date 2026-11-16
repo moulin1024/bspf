@@ -31,10 +31,25 @@ template<class T> void write(std::ostream& f,T v){f.write(reinterpret_cast<const
 Bundle load(const std::string& path){
   std::ifstream f(path,std::ios::binary);char magic[8];f.read(magic,8);
   if(!f||std::memcmp(magic,"BSPFCPP1",8))throw std::runtime_error("Invalid bundle: "+path);
+  const auto file_bytes=std::filesystem::file_size(path);
   uint32_t count=read<uint32_t>(f);if(count>1000)throw std::runtime_error("Invalid array count");Bundle b;
   for(uint32_t i=0;i<count;++i){auto len=read<uint32_t>(f);if(!len||len>200)throw std::runtime_error("Invalid name");std::string name(len,' ');f.read(name.data(),len);
-    uint64_t r=read<uint64_t>(f),c=read<uint64_t>(f);if(!r||!c||r>100000||c>100000||r*c>100000000)throw std::runtime_error("Invalid dimensions");
-    Mat m(r,c);f.read(reinterpret_cast<char*>(m.v.data()),m.size()*8);if(!f)throw std::runtime_error("Truncated array");
+    const uint64_t r=read<uint64_t>(f),c=read<uint64_t>(f);
+    // Flattened 3D fields can exceed the old 100k-axis/100M-entry limits.
+    // Validate representability and payload size before allocating instead.
+    if(!r || !c || r>std::numeric_limits<size_t>::max()/c)
+      throw std::runtime_error("Invalid or overflowing dimensions for array: "+name);
+    const size_t entries=static_cast<size_t>(r*c);
+    if(entries>std::vector<double>().max_size() ||
+       entries>static_cast<uint64_t>(std::numeric_limits<std::streamsize>::max())/sizeof(double))
+      throw std::runtime_error("Array byte size is not representable: "+name);
+    const auto bytes=static_cast<std::streamsize>(entries*sizeof(double));
+    const auto offset=f.tellg();
+    if(offset<0 || static_cast<uintmax_t>(offset)>file_bytes ||
+       static_cast<uintmax_t>(bytes)>file_bytes-static_cast<uintmax_t>(offset))
+      throw std::runtime_error("Truncated array payload: "+name);
+    Mat m(static_cast<size_t>(r),static_cast<size_t>(c));
+    f.read(reinterpret_cast<char*>(m.v.data()),bytes);if(!f)throw std::runtime_error("Truncated array: "+name);
     for(double x:m.v)if(!std::isfinite(x))throw std::runtime_error("Nonfinite input array");
     if(!b.emplace(name,std::move(m)).second)throw std::runtime_error("Duplicate array");}
   return b;
