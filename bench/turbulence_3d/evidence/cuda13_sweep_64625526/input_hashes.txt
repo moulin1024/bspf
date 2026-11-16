@@ -1,0 +1,2 @@
+2cca3c32a24e1a58162a45f94b7753630cd9c3b7eec9541b1a5bc5cd18708351  /leonardo_work/EUHPC_E07_069/bspf/.toolchains/leonardo/build/bspf-poisson-cuda13/bspf_poisson3d
+c9119da1d12d3bbca43497bcddc5f5b92baf6611cdd047c49866e025812c9949  /leonardo_work/EUHPC_E07_069/bspf/bench/turbulence_3d/evidence/nonperiodic_curved_gaussian/modes.npz

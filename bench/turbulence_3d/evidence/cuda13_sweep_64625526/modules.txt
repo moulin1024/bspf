@@ -1,0 +1,10 @@
+Currently Loaded Modulefiles:
+ 1) profile/base(default)         7) gmake/4.4.1 <aL>          13) gcc/13.4.0
+ 2) cintools/1.0                  8) ncurses/6.6-mtxs2x6 <aL>
+ 3) profile/candidate             9) cmake/3.31.11 <aL>
+ 4) nghttp2/1.67.1-qi7pnyo <aL>  10) cuda/13.0
+ 5) zlib-ng/2.3.3 <aL>           11) zstd/1.5.7-kqfc3ig <aL>
+ 6) curl/8.20.0 <aL>             12) binutils/2.43.1 <aL>
+
+Key:
+(symbolic-version)  <module-tag>  <aL>=auto-loaded

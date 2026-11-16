@@ -1,0 +1,397 @@
+{
+  "n": 257,
+  "q": 386,
+  "input_sha256": "14f08a945330ce2acbaf86cee5f917bcd77a8269eedeaa47e55748fc39d1b4c5",
+  "modes_sha256": "c9119da1d12d3bbca43497bcddc5f5b92baf6611cdd047c49866e025812c9949",
+  "optimization_environment": {
+    "BSPF_POISSON_BINARY": "/leonardo_work/EUHPC_E07_069/bspf/.toolchains/leonardo/build/bspf-poisson-cuda13/bspf_poisson3d",
+    "BSPF_POISSON_FP64_EMULATION": "performant"
+  },
+  "binary_sha256": {
+    "baseline": "2cca3c32a24e1a58162a45f94b7753630cd9c3b7eec9541b1a5bc5cd18708351",
+    "candidate": "2cca3c32a24e1a58162a45f94b7753630cd9c3b7eec9541b1a5bc5cd18708351"
+  },
+  "runs": {
+    "baseline": [
+      {
+        "gpu": "NVIDIA A100-SXM-64GB",
+        "n": 257,
+        "q": 386,
+        "dofs": 16974593,
+        "free_dofs": 16581375,
+        "operator_precision": "float64",
+        "cg_precision": "float64",
+        "preconditioner_precision": "float32",
+        "tf32": false,
+        "device_bytes": 9076440176,
+        "cublas_version": 130100,
+        "fp64_emulation": "native",
+        "parity_optimized": true,
+        "shared_contractions": true,
+        "fused_tensor_layout": true,
+        "device_setup_s": 1.690343534,
+        "runs": [
+          {
+            "iterations": 18,
+            "residual_replacements": 1,
+            "relative_residual": 4.988940722945241e-13,
+            "cg_s": 0.601442097,
+            "wall_s": 0.629474194
+          },
+          {
+            "iterations": 18,
+            "residual_replacements": 1,
+            "relative_residual": 4.988940722945241e-13,
+            "cg_s": 0.601512748,
+            "wall_s": 0.629504952
+          },
+          {
+            "iterations": 18,
+            "residual_replacements": 1,
+            "relative_residual": 4.988940722945241e-13,
+            "cg_s": 0.601590644,
+            "wall_s": 0.629577236
+          },
+          {
+            "iterations": 18,
+            "residual_replacements": 1,
+            "relative_residual": 4.988940722945241e-13,
+            "cg_s": 0.60154894,
+            "wall_s": 0.629548148
+          }
+        ],
+        "preassembled_load": true,
+        "octant_optimized": true,
+        "process_s": 9.774770392104983
+      },
+      {
+        "gpu": "NVIDIA A100-SXM-64GB",
+        "n": 257,
+        "q": 386,
+        "dofs": 16974593,
+        "free_dofs": 16581375,
+        "operator_precision": "float64",
+        "cg_precision": "float64",
+        "preconditioner_precision": "float32",
+        "tf32": false,
+        "device_bytes": 9076440176,
+        "cublas_version": 130100,
+        "fp64_emulation": "native",
+        "parity_optimized": true,
+        "shared_contractions": true,
+        "fused_tensor_layout": true,
+        "device_setup_s": 1.873151865,
+        "runs": [
+          {
+            "iterations": 18,
+            "residual_replacements": 1,
+            "relative_residual": 4.988940722945241e-13,
+            "cg_s": 0.664645146,
+            "wall_s": 0.718197974
+          },
+          {
+            "iterations": 18,
+            "residual_replacements": 1,
+            "relative_residual": 4.988940722945241e-13,
+            "cg_s": 0.601766447,
+            "wall_s": 0.629770469
+          },
+          {
+            "iterations": 18,
+            "residual_replacements": 1,
+            "relative_residual": 4.988940722945241e-13,
+            "cg_s": 0.601792365,
+            "wall_s": 0.629787371
+          },
+          {
+            "iterations": 18,
+            "residual_replacements": 1,
+            "relative_residual": 4.988940722945241e-13,
+            "cg_s": 0.601750654,
+            "wall_s": 0.629759369
+          }
+        ],
+        "preassembled_load": true,
+        "octant_optimized": true,
+        "process_s": 7.9582180585712194
+      },
+      {
+        "gpu": "NVIDIA A100-SXM-64GB",
+        "n": 257,
+        "q": 386,
+        "dofs": 16974593,
+        "free_dofs": 16581375,
+        "operator_precision": "float64",
+        "cg_precision": "float64",
+        "preconditioner_precision": "float32",
+        "tf32": false,
+        "device_bytes": 9076440176,
+        "cublas_version": 130100,
+        "fp64_emulation": "native",
+        "parity_optimized": true,
+        "shared_contractions": true,
+        "fused_tensor_layout": true,
+        "device_setup_s": 1.955991778,
+        "runs": [
+          {
+            "iterations": 18,
+            "residual_replacements": 1,
+            "relative_residual": 4.988940722945241e-13,
+            "cg_s": 0.664920477,
+            "wall_s": 0.718736272
+          },
+          {
+            "iterations": 18,
+            "residual_replacements": 1,
+            "relative_residual": 4.988940722945241e-13,
+            "cg_s": 0.602310398,
+            "wall_s": 0.63032877
+          },
+          {
+            "iterations": 18,
+            "residual_replacements": 1,
+            "relative_residual": 4.988940722945241e-13,
+            "cg_s": 0.602059942,
+            "wall_s": 0.630083578
+          },
+          {
+            "iterations": 18,
+            "residual_replacements": 1,
+            "relative_residual": 4.988940722945241e-13,
+            "cg_s": 0.601967936,
+            "wall_s": 0.63001652
+          }
+        ],
+        "preassembled_load": true,
+        "octant_optimized": true,
+        "process_s": 8.253427663818002
+      }
+    ],
+    "candidate": [
+      {
+        "gpu": "NVIDIA A100-SXM-64GB",
+        "n": 257,
+        "q": 386,
+        "dofs": 16974593,
+        "free_dofs": 16581375,
+        "operator_precision": "float64",
+        "cg_precision": "float64",
+        "preconditioner_precision": "float32",
+        "tf32": false,
+        "device_bytes": 9613311088,
+        "cublas_version": 130100,
+        "fp64_emulation": "performant",
+        "parity_optimized": true,
+        "shared_contractions": true,
+        "fused_tensor_layout": true,
+        "device_setup_s": 1.902726967,
+        "runs": [
+          {
+            "iterations": 18,
+            "residual_replacements": 1,
+            "relative_residual": 4.988940722945241e-13,
+            "cg_s": 0.612471951,
+            "wall_s": 0.64217222
+          },
+          {
+            "iterations": 18,
+            "residual_replacements": 1,
+            "relative_residual": 4.988940722945241e-13,
+            "cg_s": 0.60137666,
+            "wall_s": 0.629384284
+          },
+          {
+            "iterations": 18,
+            "residual_replacements": 1,
+            "relative_residual": 4.988940722945241e-13,
+            "cg_s": 0.601473312,
+            "wall_s": 0.629484141
+          },
+          {
+            "iterations": 18,
+            "residual_replacements": 1,
+            "relative_residual": 4.988940722945241e-13,
+            "cg_s": 0.601453515,
+            "wall_s": 0.629464453
+          }
+        ],
+        "preassembled_load": true,
+        "octant_optimized": true,
+        "process_s": 8.426717281341553
+      },
+      {
+        "gpu": "NVIDIA A100-SXM-64GB",
+        "n": 257,
+        "q": 386,
+        "dofs": 16974593,
+        "free_dofs": 16581375,
+        "operator_precision": "float64",
+        "cg_precision": "float64",
+        "preconditioner_precision": "float32",
+        "tf32": false,
+        "device_bytes": 9613311088,
+        "cublas_version": 130100,
+        "fp64_emulation": "performant",
+        "parity_optimized": true,
+        "shared_contractions": true,
+        "fused_tensor_layout": true,
+        "device_setup_s": 1.894773239,
+        "runs": [
+          {
+            "iterations": 18,
+            "residual_replacements": 1,
+            "relative_residual": 4.988940722945241e-13,
+            "cg_s": 0.658779557,
+            "wall_s": 0.711840512
+          },
+          {
+            "iterations": 18,
+            "residual_replacements": 1,
+            "relative_residual": 4.988940722945241e-13,
+            "cg_s": 0.60118147,
+            "wall_s": 0.629177203
+          },
+          {
+            "iterations": 18,
+            "residual_replacements": 1,
+            "relative_residual": 4.988940722945241e-13,
+            "cg_s": 0.601248421,
+            "wall_s": 0.629247445
+          },
+          {
+            "iterations": 18,
+            "residual_replacements": 1,
+            "relative_residual": 4.988940722945241e-13,
+            "cg_s": 0.601153947,
+            "wall_s": 0.62915038
+          }
+        ],
+        "preassembled_load": true,
+        "octant_optimized": true,
+        "process_s": 8.072045167908072
+      },
+      {
+        "gpu": "NVIDIA A100-SXM-64GB",
+        "n": 257,
+        "q": 386,
+        "dofs": 16974593,
+        "free_dofs": 16581375,
+        "operator_precision": "float64",
+        "cg_precision": "float64",
+        "preconditioner_precision": "float32",
+        "tf32": false,
+        "device_bytes": 9613311088,
+        "cublas_version": 130100,
+        "fp64_emulation": "performant",
+        "parity_optimized": true,
+        "shared_contractions": true,
+        "fused_tensor_layout": true,
+        "device_setup_s": 1.969828343,
+        "runs": [
+          {
+            "iterations": 18,
+            "residual_replacements": 1,
+            "relative_residual": 4.988940722945241e-13,
+            "cg_s": 0.659027721,
+            "wall_s": 0.712700104
+          },
+          {
+            "iterations": 18,
+            "residual_replacements": 1,
+            "relative_residual": 4.988940722945241e-13,
+            "cg_s": 0.601815406,
+            "wall_s": 0.62986387
+          },
+          {
+            "iterations": 18,
+            "residual_replacements": 1,
+            "relative_residual": 4.988940722945241e-13,
+            "cg_s": 0.60172963,
+            "wall_s": 0.629760135
+          },
+          {
+            "iterations": 18,
+            "residual_replacements": 1,
+            "relative_residual": 4.988940722945241e-13,
+            "cg_s": 0.601607077,
+            "wall_s": 0.629616859
+          }
+        ],
+        "preassembled_load": true,
+        "octant_optimized": true,
+        "process_s": 8.143820831552148
+      }
+    ]
+  },
+  "comparison": [
+    {
+      "trial": 0,
+      "solution_relative_difference": 0.0,
+      "solution_bitwise_equal": true,
+      "operators": {
+        "apply": {
+          "relative_difference": 0.0,
+          "bitwise_equal": true
+        },
+        "precondition": {
+          "relative_difference": 0.0,
+          "bitwise_equal": true
+        }
+      }
+    },
+    {
+      "trial": 1,
+      "solution_relative_difference": 0.0,
+      "solution_bitwise_equal": true
+    },
+    {
+      "trial": 2,
+      "solution_relative_difference": 0.0,
+      "solution_bitwise_equal": true
+    }
+  ],
+  "timing_scope": "Native warm RHS/lifting/CG/recovery, one warmup then three samples per invocation; setup and audits excluded",
+  "warm_samples_s": {
+    "baseline": [
+      0.629504952,
+      0.629577236,
+      0.629548148,
+      0.629770469,
+      0.629787371,
+      0.629759369,
+      0.63032877,
+      0.630083578,
+      0.63001652
+    ],
+    "candidate": [
+      0.629384284,
+      0.629484141,
+      0.629464453,
+      0.629177203,
+      0.629247445,
+      0.62915038,
+      0.62986387,
+      0.629760135,
+      0.629616859
+    ]
+  },
+  "median_s": {
+    "baseline": 0.629770469,
+    "candidate": 0.629464453
+  },
+  "speedup": 1.0004861529488147,
+  "audits": [
+    {
+      "q": 394,
+      "relative_l2": 3.0542869120749335e-12,
+      "volume": 0.9200000000000023
+    },
+    {
+      "q": 402,
+      "relative_l2": 3.054280369857333e-12,
+      "volume": 0.9200000000000029
+    }
+  ],
+  "validated": true,
+  "target_achieved": false
+}

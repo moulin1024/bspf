@@ -17,8 +17,34 @@ void ck(cudaError_t e) { if(e!=cudaSuccess) throw std::runtime_error(cudaGetErro
 void ck(cublasStatus_t e) { if(e!=CUBLAS_STATUS_SUCCESS) throw std::runtime_error("cuBLAS error "+std::to_string(int(e))); }
 struct Context {
     cudaStream_t stream{}; cublasHandle_t blas{};
-    Context(){ck(cudaStreamCreate(&stream));try{ck(cublasCreate(&blas));ck(cublasSetStream(blas,stream));ck(cublasSetMathMode(blas,CUBLAS_PEDANTIC_MATH));}catch(...){if(blas)cublasDestroy(blas);cudaStreamDestroy(stream);throw;}}
-    ~Context(){if(blas)cublasDestroy(blas);if(stream)cudaStreamDestroy(stream);}
+    void* workspace=nullptr;size_t workspace_bytes=0;int cublas_version=0;
+    std::string emulation="native";
+    Context(){
+        ck(cudaStreamCreate(&stream));
+        try{
+            ck(cublasCreate(&blas));ck(cublasSetStream(blas,stream));ck(cublasGetVersion(blas,&cublas_version));
+            const char* setting=std::getenv("BSPF_POISSON_FP64_EMULATION");
+#if CUBLAS_VERSION >= 130100
+            emulation=setting?setting:"performant";
+            if(emulation!="native"&&emulation!="performant"&&emulation!="eager")throw std::invalid_argument("FP64 emulation must be native, performant or eager");
+            if(emulation!="native"){
+                ck(cublasSetMathMode(blas,CUBLAS_FP64_EMULATED_FIXEDPOINT_MATH));
+                ck(cublasSetEmulationStrategy(blas,emulation=="eager"?CUBLAS_EMULATION_STRATEGY_EAGER:CUBLAS_EMULATION_STRATEGY_PERFORMANT));
+                // Preserve FP64-level accuracy: never reduce the mantissa target.
+                ck(cublasSetFixedPointEmulationMantissaControl(blas,CUDA_EMULATION_MANTISSA_CONTROL_DYNAMIC));
+                ck(cublasSetFixedPointEmulationMantissaBitOffset(blas,0));
+                ck(cublasSetFixedPointEmulationMaxMantissaBitCount(blas,79));
+                // Reuse emulation scratch across the synchronized CG iterations.
+                workspace_bytes=size_t(512)*1024*1024;ck(cudaMalloc(&workspace,workspace_bytes));
+                ck(cublasSetWorkspace(blas,workspace,workspace_bytes));
+            }else ck(cublasSetMathMode(blas,CUBLAS_PEDANTIC_MATH));
+#else
+            if(setting&&std::string(setting)!="native")throw std::invalid_argument("FP64 emulation requires cuBLAS >=13.1 (CUDA 13.0 Update 2)");
+            ck(cublasSetMathMode(blas,CUBLAS_PEDANTIC_MATH));
+#endif
+        }catch(...){if(blas)cublasDestroy(blas);if(workspace)cudaFree(workspace);cudaStreamDestroy(stream);throw;}
+    }
+    ~Context(){if(blas)cublasDestroy(blas);if(workspace)cudaFree(workspace);if(stream)cudaStreamDestroy(stream);}
     void sync() const {ck(cudaStreamSynchronize(stream));}
 };
 template<class T> struct Buffer {
@@ -529,7 +555,9 @@ struct GalerkinPoisson3D::Impl {
 };
 GalerkinPoisson3D::GalerkinPoisson3D(const Poisson3DData& d):d_(std::make_unique<Impl>(d)){}
 GalerkinPoisson3D::~GalerkinPoisson3D()=default;
-std::size_t GalerkinPoisson3D::device_bytes()const{return d_->bytes;}
+std::size_t GalerkinPoisson3D::device_bytes()const{return d_->bytes+d_->ctx.workspace_bytes;}
+int GalerkinPoisson3D::cublas_version()const{return d_->ctx.cublas_version;}
+std::string GalerkinPoisson3D::fp64_emulation()const{return d_->ctx.emulation;}
 bool GalerkinPoisson3D::parity_optimized()const{return d_->parity;}
 bool GalerkinPoisson3D::shared_contractions()const{return d_->shared;}
 bool GalerkinPoisson3D::fused_tensor_layout()const{return d_->fused;}

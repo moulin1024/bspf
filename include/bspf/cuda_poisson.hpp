@@ -3,6 +3,7 @@
 #include <array>
 #include <cstddef>
 #include <memory>
+#include <string>
 #include <vector>
 
 namespace bspf::cuda {
@@ -48,6 +49,8 @@ public:
     std::vector<double> apply_host(const std::vector<double>&);
     std::vector<double> precondition_host(const std::vector<double>&);
     std::size_t device_bytes() const;
+    int cublas_version() const;
+    std::string fp64_emulation() const; // requested strategy; cuBLAS may fall back to native
     bool shared_contractions() const;
     bool parity_optimized() const; // reflection-split FP64 contractions active
     bool fused_tensor_layout() const; // parity conversion includes tensor rotations

@@ -26,6 +26,8 @@ def main():
     p.add_argument('--modes',type=Path,required=True)
     p.add_argument('--output',type=Path,required=True)
     p.add_argument('--trials',type=int,default=3)
+    p.add_argument('--baseline-emulation',choices=['native','performant','eager'])
+    p.add_argument('--candidate-emulation',choices=['native','performant','eager'])
     args=p.parse_args()
     if args.trials<3:p.error('At least three alternating trials required')
     args.output.mkdir(parents=True,exist_ok=False)
@@ -48,8 +50,11 @@ def main():
             command=[str(getattr(args,name)),str(args.case/'input.bin'),str(prefix)]
             if trial==0:command.append('check')
             start=time.perf_counter()
+            run_env=env.copy()
+            strategy=getattr(args,name+'_emulation')
+            if strategy:run_env['BSPF_POISSON_FP64_EMULATION']=strategy
             with (directory/'native.log').open('w') as log:
-                subprocess.run(command,env=env,stdout=log,stderr=subprocess.STDOUT,check=True)
+                subprocess.run(command,env=run_env,stdout=log,stderr=subprocess.STDOUT,check=True)
             data=json.loads(prefix.with_suffix('.json').read_text())
             if not data['preassembled_load'] or data['operator_precision']!='float64':raise RuntimeError('Changed solve configuration')
             if any(r['relative_residual']>1e-11 for r in data['runs']):raise RuntimeError('Failed true residual')

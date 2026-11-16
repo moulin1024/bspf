@@ -24,6 +24,12 @@ Diagnostic overrides: `BSPF_POISSON_OCTANTS=0` disables sector processing;
 `BSPF_POISSON_TILED_ROTATE=0` restores the original transpose kernels.
 `BSPF_POISSON_PARITY=0` disables all reflection splitting.
 
+CUDA 13.0.2 builds support cuBLAS FP64 fixed-point emulation with automatic
+precision control. Use the separate Leonardo environment and build described
+in [CUDA13_EMULATION.md](CUDA13_EMULATION.md). The requested emulation strategy
+and loaded cuBLAS version are recorded in native results; kernel profiling
+distinguishes actual emulation from cuBLAS's native fallback.
+
 ## Nodal forcing interpolation
 
 For full BSPF nodal forcing, the default `--rhs-assembly auto` now selects
