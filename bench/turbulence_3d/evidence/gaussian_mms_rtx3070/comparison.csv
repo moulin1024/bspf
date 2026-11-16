@@ -1,0 +1,26 @@
+solver,n,plot_n,physical_dofs,dofs,count_kind,warm_solve_s,warm_wall_s,relative_l2,source,wall_timing_source
+FC-Gram PyTorch,17,17,4913,4913,physical_grid,0.027881918009370565,0.02992606395855546,3.6728815259150123,fc/turbulence_n17/result.json,fc/turbulence_n17/result.json
+BSPF CUDA,17,17,4913,4913,physical_grid,0.050025967,0.053055701,0.4123319910404044,bspf/n17_q96/result.json,bspf/n17_q96/result.json
+"MFEM p8, LOR-AMG",17,17,4913,4913,physical_grid,0.011019832,0.011211998,1.61159067038215,mfem_gpu_rhs/e2_p8/result.json,mfem_gpu_rhs/e2_p8/result.json
+NekRS p8,17,17,4913,4913,physical_grid,0.006919158000002312,0.006942072000001076,2.5843451372879938,nekrs/e2_p8/result.json,nekrs/e2_p8/result.json
+Global Chebyshev,17,17,4913,4913,physical_grid,0.048434738,0.051516362,0.41856984052402224,chebyshev/n17_q96/result.json,chebyshev/n17_q96/result.json
+FC-Gram PyTorch,33,33,35937,35937,physical_grid,0.055483882781118155,0.05778372613713145,0.5821478104263013,fc/turbulence_n33/result.json,fc/turbulence_n33/result.json
+BSPF CUDA,33,33,35937,35937,physical_grid,0.070253934,0.074467104,0.1256051022970198,bspf/n33_q96/result.json,bspf/n33_q96/result.json
+"MFEM p8, LOR-AMG",33,33,35937,35937,physical_grid,0.024072227,0.024311573,0.13417331461777385,mfem_gpu_rhs/e4_p8/result.json,mfem_gpu_rhs/e4_p8/result.json
+NekRS p8,33,33,35937,35937,physical_grid,0.008866749999999257,0.008885204999998564,0.312699947222908,nekrs/e4_p8/result.json,nekrs/e4_p8/result.json
+Global Chebyshev,33,33,35937,35937,physical_grid,0.079019303,0.083350269,0.1515530324165484,chebyshev/n33_q96/result.json,chebyshev/n33_q96/result.json
+FC-Gram PyTorch,65,65,274625,274625,physical_grid,0.1856485940515995,0.19356962013989687,0.017709080812569885,fc/turbulence_n65/result.json,fc/turbulence_n65/result.json
+BSPF CUDA,65,65,274625,274625,physical_grid,0.149705779,0.15913427,3.041076488001063e-12,bspf/n65_q98/result.json,bspf/n65_q98/result.json
+"MFEM p8, LOR-AMG",65,65,274625,274625,physical_grid,0.084227462,0.085528301,0.0034607422355224246,mfem_gpu_rhs/e8_p8/result.json,mfem_gpu_rhs/e8_p8/result.json
+NekRS p8,65,65,274625,274625,physical_grid,0.02118650000000244,0.021249260000001158,0.004078633112613617,nekrs/e8_p8/result.json,nekrs/e8_p8/result.json
+Global Chebyshev,65,65,274625,274625,physical_grid,0.140644813,0.148684718,2.9097667539127256e-05,chebyshev/n65_q98/result.json,chebyshev/n65_q98/result.json
+FC-Gram PyTorch,97,97,912673,912673,physical_grid,0.6228728978894651,0.6517690187320113,0.001098742231914628,fc/turbulence_n97/result.json,fc/turbulence_n97/result.json
+BSPF CUDA,97,97,912673,912673,physical_grid,0.529349442,0.558409925,1.883972015116844e-12,bspf/n97_q146/result.json,bspf/n97_q146/result.json
+"MFEM p8, LOR-AMG",97,97,912673,912673,physical_grid,0.241416987,0.244632375,0.00014710695782823197,mfem_gpu_rhs/e12_p8/result.json,mfem_gpu_rhs/e12_p8/result.json
+NekRS p8,97,97,912673,912673,physical_grid,0.05943810399999805,0.059642111999998804,0.00015816923683563769,nekrs/e12_p8/result.json,nekrs/e12_p8/result.json
+Global Chebyshev,97,97,912673,912673,physical_grid,0.512423121,0.541724409,1.9804878161804316e-12,chebyshev/n97_q146/result.json,chebyshev/n97_q146/result.json
+FC-Gram PyTorch,129,129,2146689,2146689,physical_grid,2.25478004058823,2.3656184286810458,0.00011593433130508575,fc/turbulence_n129/result.json,fc/turbulence_n129/result.json
+BSPF CUDA,129,129,2146689,2146689,physical_grid,1.381616032,1.463865587,2.5332822258656816e-12,bspf/n129_q194/result.json,bspf/n129_q194/result.json
+"MFEM p8, LOR-AMG",129,129,2146689,2146689,physical_grid,0.581549057,0.588893233,1.353173553174463e-05,mfem_gpu_rhs/e16_p8/result.json,mfem_gpu_rhs/e16_p8/result.json
+NekRS p8,129,129,2146689,2146689,physical_grid,0.12524147799999952,0.12582034100000072,1.4076307560967063e-05,nekrs/e16_p8/result.json,nekrs/e16_p8/result.json
+Global Chebyshev,129,129,2146689,2146689,physical_grid,1.424004534,1.509847802,2.3197410766341177e-12,chebyshev/n129_q194/result.json,chebyshev/n129_q194/result.json

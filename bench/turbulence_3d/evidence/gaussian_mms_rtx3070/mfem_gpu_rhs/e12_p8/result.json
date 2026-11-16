@@ -1,0 +1,86 @@
+{
+  "backend_requested": "ceed-cuda:/gpu/cuda/gen",
+  "backend_actual": "/gpu/cuda/gen",
+  "gpu": "NVIDIA GeForce RTX 3070",
+  "mfem_version": "MFEM v4.9.0 (release)",
+  "ceed_version": "0.12.0",
+  "precision": "float64",
+  "preconditioner": "LORSolver<FloatHypreBoomerAMG>",
+  "preconditioner_precision": "float32",
+  "operator_precision": "float64",
+  "cg_precision": "float64",
+  "preconditioner_scalar_bytes": 4,
+  "preconditioner_conversion": "CUDA FP64-to-FP32 residual and FP32-to-FP64 correction",
+  "hypre_version": "3.1.0",
+  "hypre_gpu": true,
+  "preconditioner_setup_seconds": 0.721368919,
+  "lor_assembly_seconds": 0.084283009,
+  "amg_setup_seconds": 0.637085219,
+  "lor_nnz": 24137569,
+  "lor_vertex_error": 6.661338147750939e-16,
+  "dimension": 3,
+  "assembly": "PARTIAL",
+  "dofs": 912673,
+  "free_dofs": 857375,
+  "rhs_assembly": "mfem_device_cached_geometry",
+  "rhs_host_device_relative_error": -1,
+  "boundary_initialization": "device_copy",
+  "setup_seconds": 3.61752061,
+  "first_solve_seconds": 0.277958258,
+  "first_iterations": 40,
+  "iterations": 40,
+  "relative_residual": 4.1866032942738364e-14,
+  "min_jacobian": 0.000468222980875298,
+  "warmups": 1,
+  "repeats": 3,
+  "samples_seconds": [
+    0.24458268,
+    0.245418473,
+    0.244632375
+  ],
+  "rhs_samples_seconds": [
+    0.000781519,
+    0.000780177,
+    0.000782852
+  ],
+  "first_linear_seconds": 0.255473727,
+  "linear_samples_seconds": [
+    0.24136123,
+    0.242172837,
+    0.241416987
+  ],
+  "device_used_bytes_observed": {
+    "startup": 2575564800,
+    "operator_assembled": 2739142656,
+    "lor_assembled": 3632529408,
+    "lor_workspace_released": 3328442368,
+    "preconditioner_ready": 3867410432,
+    "first_solve": 3982753792,
+    "residual_checked": 3991142400,
+    "solution_exported": 4001628160
+  },
+  "label": "e12_p8",
+  "elements_per_axis": 12,
+  "degree": 8,
+  "quadrature": 11,
+  "audits": [
+    {
+      "q": 13,
+      "relative_l2": 0.00014710696014937015,
+      "absolute_l2": 8.858437900919929e-05,
+      "volume": 0.9199999999999996,
+      "native_probe_error": 9.992007221626409e-16
+    },
+    {
+      "q": 17,
+      "relative_l2": 0.00014710695782823197,
+      "absolute_l2": 8.858437761146386e-05,
+      "volume": 0.9199999999999999,
+      "native_probe_error": 9.992007221626409e-16
+    }
+  ],
+  "relative_l2": 0.00014710695782823197,
+  "sampling_seconds": 6.703563648741692,
+  "geometry_error": 1.1102230246251565e-15,
+  "warm_median_seconds": 0.244632375
+}

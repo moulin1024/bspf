@@ -1,0 +1,1 @@
+{ global: bspf_amg32_*; local: *; };

@@ -1,0 +1,63 @@
+{
+  "elements_per_axis": 2,
+  "modes_sha256": "c9119da1d12d3bbca43497bcddc5f5b92baf6611cdd047c49866e025812c9949",
+  "elements": 8,
+  "p": 8,
+  "local_nodes": 5832,
+  "unique_dofs": 4913,
+  "free_dofs": 3375,
+  "geometry_error": 2.220446049250313e-16,
+  "preconditioner_setup_s": 0.08367534099999929,
+  "runs": [
+    {
+      "wall_s": 0.040295531999998246,
+      "solve_s": 0.03988332599999822,
+      "iterations": 12,
+      "initial_residual": 28.275963793339596,
+      "final_residual": 3.662628567647351e-12
+    },
+    {
+      "wall_s": 0.006352097000000612,
+      "solve_s": 0.006330155000000559,
+      "iterations": 12,
+      "initial_residual": 28.275963793339596,
+      "final_residual": 3.662628567647351e-12
+    },
+    {
+      "wall_s": 0.007021112000000329,
+      "solve_s": 0.007004660999999857,
+      "iterations": 12,
+      "initial_residual": 28.275963793339596,
+      "final_residual": 3.662628567647351e-12
+    },
+    {
+      "wall_s": 0.006942072000001076,
+      "solve_s": 0.006919158000002312,
+      "iterations": 12,
+      "initial_residual": 28.275963793339596,
+      "final_residual": 3.662628567647351e-12
+    }
+  ],
+  "relative_residual": 1.3741872783911825e-13,
+  "boundary_max_error": 0,
+  "audit": [
+    {
+      "q": 37,
+      "relative_l2": 2.5843451373596493,
+      "absolute_l2": 1.556232342089869,
+      "volume": 0.92,
+      "native_probe_error": 7.549516567451064e-15
+    },
+    {
+      "q": 41,
+      "relative_l2": 2.5843451372879938,
+      "absolute_l2": 1.5562323420974777,
+      "volume": 0.9199999999999997,
+      "native_probe_error": 7.549516567451064e-15
+    }
+  ],
+  "relative_l2": 2.5843451372879938,
+  "gpu_sampling_s": 0.052249705884605646,
+  "warm_wall_s": 0.006942072000001076,
+  "warm_solve_s": 0.006919158000002312
+}

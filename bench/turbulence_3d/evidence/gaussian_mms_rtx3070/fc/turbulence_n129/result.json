@@ -1,0 +1,65 @@
+{
+  "n": 129,
+  "unique_dofs": 2146689,
+  "interior_dofs": 2048383,
+  "field": "turbulence",
+  "degree": 8,
+  "padding_per_side": 25,
+  "setup_s": 3.648381567094475,
+  "warm_solve_s": 2.25478004058823,
+  "warm_wall_s": 2.3656184286810458,
+  "nodal_relative_l2": 0.00010250343828304867,
+  "runs": [
+    {
+      "solve_s": 2.2813399606384337,
+      "wall_s": 2.391996221616864,
+      "iterations": 16,
+      "true_residual": 8.591194966827299e-11,
+      "restarts": 1
+    },
+    {
+      "solve_s": 2.2605906859971583,
+      "wall_s": 2.3713846998289227,
+      "iterations": 16,
+      "true_residual": 8.591194966827299e-11,
+      "restarts": 1
+    },
+    {
+      "solve_s": 2.25478004058823,
+      "wall_s": 2.3656184286810458,
+      "iterations": 16,
+      "true_residual": 8.591194966827299e-11,
+      "restarts": 1
+    },
+    {
+      "solve_s": 2.251989142037928,
+      "wall_s": 2.363995256833732,
+      "iterations": 16,
+      "true_residual": 8.591194966827299e-11,
+      "restarts": 1
+    }
+  ],
+  "checks": {
+    "boundary_max_error": 0.0
+  },
+  "eigenvector_condition": 8.058411035764037,
+  "eigenpair_defect": 4.697772646438818e-15,
+  "device": "NVIDIA GeForce RTX 3070",
+  "torch_version": "2.6.0+cu124",
+  "outer_precision": "float64",
+  "preconditioner_precision": "complex64 (FP32 real/imag)",
+  "krylov": "FGMRES(40)",
+  "data_sha256": "c9119da1d12d3bbca43497bcddc5f5b92baf6611cdd047c49866e025812c9949",
+  "relative_l2": 0.00011593433130508575,
+  "audit_orders": [
+    194,
+    202
+  ],
+  "audit_errors": [
+    0.00011593433033336158,
+    0.00011593433130508575
+  ],
+  "audit_relative_change": 8.381677412008103e-09,
+  "audit_absolute_change": 9.717241659761011e-13,
+  "peak_torch_allocated_bytes": 2013058048
+}

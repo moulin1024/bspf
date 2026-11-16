@@ -1,0 +1,12 @@
+{
+  "repository": "https://github.com/neuraloperator/neuraloperator",
+  "commit": "a6648eeeb60fe0837f2d7d021517a945a159a0c8",
+  "license": "MIT",
+  "files": {
+    "LICENSE": "f02c1d14a81d846021e9dd91b261f0a742be32d1ce2c4b02f5e0c2d36d2c06d0",
+    "fcgram_matrices/FCGram_data_d4_c25.npz": "04da0d0714d27808b9cdefcada5290238b72a8e98c9f69442f7004ebe26a4c1f",
+    "fcgram_matrices/FCGram_data_d6_c25.npz": "a98f20321763ffd92d5d1a6e28b9db12bf6a804848448727763f93c3cf39b306",
+    "fcgram_matrices/FCGram_data_d8_c25.npz": "7911eae1f4def9aea17937a0925749ef2743c75b9eff81e7f01fc0fac6586db3",
+    "fourier_continuation.py": "d23b849e11f177d0e2ab84f18aba107ccc678e0e1dc733fd06e6f37d2505c2ef"
+  }
+}

@@ -1,0 +1,80 @@
+{
+  "gpu": "NVIDIA GeForce RTX 3070",
+  "n": 17,
+  "q": 96,
+  "dofs": 4913,
+  "free_dofs": 3375,
+  "operator_precision": "float64",
+  "cg_precision": "float64",
+  "preconditioner_precision": "float32",
+  "tf32": false,
+  "device_bytes": 106877440,
+  "parity_optimized": true,
+  "shared_contractions": true,
+  "device_setup_s": 0.115640837,
+  "runs": [
+    {
+      "iterations": 16,
+      "residual_replacements": 1,
+      "relative_residual": 2.1903976924634529e-13,
+      "cg_s": 0.090376339,
+      "wall_s": 0.114241791
+    },
+    {
+      "iterations": 16,
+      "residual_replacements": 1,
+      "relative_residual": 2.1903976924634529e-13,
+      "cg_s": 0.050025967,
+      "wall_s": 0.053055701
+    },
+    {
+      "iterations": 16,
+      "residual_replacements": 1,
+      "relative_residual": 2.1903976924634529e-13,
+      "cg_s": 0.052032552,
+      "wall_s": 0.055079008
+    },
+    {
+      "iterations": 16,
+      "residual_replacements": 1,
+      "relative_residual": 2.1903976924634529e-13,
+      "cg_s": 0.049049395,
+      "wall_s": 0.052082406
+    }
+  ],
+  "boundary_error": 0.0,
+  "audits": [
+    {
+      "q": 104,
+      "relative_l2": 0.4123319910404015,
+      "volume": 0.9199999999999976
+    },
+    {
+      "q": 112,
+      "relative_l2": 0.4123319910404044,
+      "volume": 0.9199999999999993
+    }
+  ],
+  "relative_l2": 0.4123319910404044,
+  "axis": {
+    "modes": 4,
+    "period": 1.5,
+    "degree": 8,
+    "n": 17,
+    "nodes": "symmetric_qr",
+    "parity_preserved": true,
+    "node_symmetry_defect": 0.0,
+    "tail_condition": 49797.106066743814,
+    "nodal_condition": 5.22152436659772,
+    "orthogonalization_passes": 3,
+    "orthogonality_defect": 1.5543122344752192e-15,
+    "orthogonality_tolerance": 2.842170943040401e-14,
+    "cardinal_defect": 2.220446049250313e-15
+  },
+  "eigenpair_relative_defect": 6.596024459467873e-16,
+  "preparation_s": 2.2588261966593564,
+  "modes_sha256": "c9119da1d12d3bbca43497bcddc5f5b92baf6611cdd047c49866e025812c9949",
+  "warm_cg_s": 0.050025967,
+  "warm_wall_s": 0.053055701,
+  "binary_sha256": "a083a253382dce3a40c4e7619cbaea3df89039f0898d6e6b7b076b0bb6e2465b"
+}

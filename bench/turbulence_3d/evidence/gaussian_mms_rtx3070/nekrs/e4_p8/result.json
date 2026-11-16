@@ -1,0 +1,63 @@
+{
+  "elements_per_axis": 4,
+  "modes_sha256": "c9119da1d12d3bbca43497bcddc5f5b92baf6611cdd047c49866e025812c9949",
+  "elements": 64,
+  "p": 8,
+  "local_nodes": 46656,
+  "unique_dofs": 35937,
+  "free_dofs": 29791,
+  "geometry_error": 2.220446049250313e-16,
+  "preconditioner_setup_s": 0.1716845609999993,
+  "runs": [
+    {
+      "wall_s": 0.015316993000002554,
+      "solve_s": 0.014880311000002422,
+      "iterations": 13,
+      "initial_residual": 12.10838253746379,
+      "final_residual": 1.5999700602001448e-12
+    },
+    {
+      "wall_s": 0.008885094000000038,
+      "solve_s": 0.008866078000000499,
+      "iterations": 13,
+      "initial_residual": 12.10838253746379,
+      "final_residual": 1.5999700602001448e-12
+    },
+    {
+      "wall_s": 0.008898841000000601,
+      "solve_s": 0.00888033600000071,
+      "iterations": 13,
+      "initial_residual": 12.10838253746379,
+      "final_residual": 1.5999700602001448e-12
+    },
+    {
+      "wall_s": 0.008885204999998564,
+      "solve_s": 0.008866749999999257,
+      "iterations": 13,
+      "initial_residual": 12.10838253746379,
+      "final_residual": 1.5999700602001448e-12
+    }
+  ],
+  "relative_residual": 1.675059649359279e-13,
+  "boundary_max_error": 0,
+  "audit": [
+    {
+      "q": 23,
+      "relative_l2": 0.31269994722457156,
+      "absolute_l2": 0.18830061210555568,
+      "volume": 0.9200000000000004,
+      "native_probe_error": 3.1086244689504383e-15
+    },
+    {
+      "q": 27,
+      "relative_l2": 0.312699947222908,
+      "absolute_l2": 0.1883006121044454,
+      "volume": 0.9200000000000006,
+      "native_probe_error": 3.1086244689504383e-15
+    }
+  ],
+  "relative_l2": 0.312699947222908,
+  "gpu_sampling_s": 0.13618126511573792,
+  "warm_wall_s": 0.008885204999998564,
+  "warm_solve_s": 0.008866749999999257
+}

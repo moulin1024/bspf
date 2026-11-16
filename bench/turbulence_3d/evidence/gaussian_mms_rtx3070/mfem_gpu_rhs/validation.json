@@ -1,0 +1,64 @@
+{
+  "cases": [
+    {
+      "n": 17,
+      "old_full_s": 0.031487742,
+      "new_full_s": 0.011211998,
+      "speedup": 2.808397040384773,
+      "rhs_s": 5.0977e-05,
+      "cg_s": 0.011019832,
+      "relative_solution_change": 2.3138336056398554e-13,
+      "relative_error_change": 4.440892098500626e-16
+    },
+    {
+      "n": 33,
+      "old_full_s": 0.179810506,
+      "new_full_s": 0.024311573,
+      "speedup": 7.396086875991118,
+      "rhs_s": 6.275e-05,
+      "cg_s": 0.024072227,
+      "relative_solution_change": 7.741594773400478e-14,
+      "relative_error_change": 0.0
+    },
+    {
+      "n": 65,
+      "old_full_s": 1.330299093,
+      "new_full_s": 0.085528301,
+      "speedup": 15.553905285690172,
+      "rhs_s": 0.000265766,
+      "cg_s": 0.084227462,
+      "relative_solution_change": 3.9928661376297946e-13,
+      "relative_error_change": 6.661338147750939e-15
+    },
+    {
+      "n": 97,
+      "old_full_s": 4.532580197,
+      "new_full_s": 0.244632375,
+      "speedup": 18.528128981292845,
+      "rhs_s": 0.000781519,
+      "cg_s": 0.241416987,
+      "relative_solution_change": 5.977964618377329e-13,
+      "relative_error_change": 9.914291609902648e-14
+    },
+    {
+      "n": 129,
+      "old_full_s": 10.607753184,
+      "new_full_s": 0.588893233,
+      "speedup": 18.013032905745753,
+      "rhs_s": 0.001736759,
+      "cg_s": 0.581549057,
+      "relative_solution_change": 1.9435680852178144e-12,
+      "relative_error_change": 9.625633623500107e-14
+    }
+  ],
+  "host_device_rhs_checks": {
+    "polynomial_guard": 9.927669776463612e-16,
+    "e2_p8": 1.1451726714268655e-15
+  },
+  "operator_quadrature_relative_error_change": 1.4559077499143314e-08,
+  "modes_sha256": "c9119da1d12d3bbca43497bcddc5f5b92baf6611cdd047c49866e025812c9949",
+  "source_sha256": {
+    "bench/turbulence_3d/mfem_poisson/solver.cpp": "488e169a874fce3bf9719106b521c50b862029c811936870afb5f2f37898c88c",
+    "/tmp/bspf-mfem-poisson3d-fp32/mfem_poisson3d": "40770da6531dfbc57c2dc9ad79bede02ec0f0d42620c5bf40c89febd491de591"
+  }
+}

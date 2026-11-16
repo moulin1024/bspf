@@ -1,0 +1,113 @@
+#include <fstream>
+#include <iomanip>
+#include <set>
+#include "elliptic.hpp"
+
+#ifdef __okl__
+void udfDirichlet(bcData *bc) {}
+#endif
+
+static std::vector<double> reference;
+static bool exported = false;
+static void save(const char *file, const std::vector<double>& v) {
+  std::ofstream f(file, std::ios::binary); f.write((const char*)v.data(),v.size()*sizeof(double));
+  if(!f) throw std::runtime_error("output failed");
+}
+static std::vector<double> read(const char *file, size_t n) {
+  std::vector<double> v(n); std::ifstream f(file,std::ios::binary);
+  f.read((char*)v.data(),n*sizeof(double));
+  if(!f) throw std::runtime_error(std::string("input failed: ")+file);
+  return v;
+}
+void UDF_Setup0(MPI_Comm comm, setupAide &options) {
+  options.setArgs("ELLIPTIC POISSON HELMHOLTZ TYPE", "POISSON");
+}
+void UDF_Setup() {
+  auto mesh=nrs->meshV;
+  auto [x,y,z]=mesh->xyzHost();
+  reference.resize(3*mesh->Nlocal);
+  for(int i=0;i<mesh->Nlocal;++i) {
+    double s=x[i],t=y[i],u=z[i];
+    reference[3*i]=s; reference[3*i+1]=t; reference[3*i+2]=u;
+    auto phi=[](double v){return 4*v*(1-v);};
+    x[i]=s+.08*(1-2*s)*phi(t)*phi(u);
+    y[i]=t-.06*(1-2*t)*phi(s)*phi(u);
+    z[i]=u+.07*(1-2*u)*phi(s)*phi(t);
+  }
+  mesh->o_x.copyFrom(x.data(),mesh->Nlocal); mesh->o_y.copyFrom(y.data(),mesh->Nlocal); mesh->o_z.copyFrom(z.data(),mesh->Nlocal);
+}
+void UDF_ExecuteStep(double time,int tstep) {
+  if(exported) return; exported=true;
+  auto mesh=nrs->meshV;
+  const auto n=mesh->Nlocal;
+  if(platform->comm.mpiCommSize()!=1) throw std::runtime_error("benchmark requires one rank");
+  auto [x,y,z]=mesh->xyzHost();
+  std::vector<double> xyz(3*n);
+  for(int i=0;i<n;++i){xyz[3*i]=x[i];xyz[3*i+1]=y[i];xyz[3*i+2]=z[i];}
+  save("coordinates.bin",xyz); save("reference.bin",reference);
+  // Nek marks element-interior nodes with zero IDs: they never gather.
+  // Give each such local node a distinct negative audit ID (single rank).
+  std::vector<hlong> gid(n);
+  for(int i=0;i<n;++i)gid[i]=mesh->globalIds[i]?mesh->globalIds[i]:-hlong(i)-1;
+  std::set<hlong> ids(gid.begin(),gid.end()),freeIds;
+  for(int i=0;i<n;++i) {
+    bool boundary=false;
+    for(int j=0;j<3;++j) boundary |= reference[3*i+j]<1e-12 || reference[3*i+j]>1-1e-12;
+    if(!boundary)freeIds.insert(gid[i]);
+  }
+  {std::ofstream f("mesh.json"); f<<"{\"elements\":"<<mesh->Nelements<<",\"p\":"<<mesh->N<<",\"local_nodes\":"<<n<<",\"unique_dofs\":"<<ids.size()<<",\"free_dofs\":"<<freeIds.size()<<"}\n";}
+  if(std::getenv("BSPF_EXPORT"))return;
+  auto exact=read("exact.bin",n),force=read("force.bin",n);
+  std::vector<double> lift(n,0);
+  for(int i=0;i<n;++i) {
+    bool b=false;for(int j=0;j<3;++j)b|=reference[3*i+j]<1e-12 || reference[3*i+j]>1-1e-12;
+    if(b)lift[i]=exact[i];
+  }
+  deviceMemory<dfloat> o_lambda(n),o_f(n),o_rhs(n),o_lift(n),o_x(n);
+  occa::memory o_zero;
+  platform->linAlg->fill(n,1.,o_lambda);
+  o_f.copyFrom(force);o_lift.copyFrom(lift);
+  std::vector<int> bc(mesh->Nelements*mesh->Nfaces);
+  for(size_t i=0;i<bc.size();++i)bc[i]=mesh->EToB[i]>0?1:0;
+  platform->device.finish();double start=MPI_Wtime();
+  elliptic solver("elliptic poisson",mesh,n,bc,o_lambda,o_zero);
+  platform->device.finish();double setup=MPI_Wtime()-start;
+  std::ofstream f("timing.json"); f<<std::setprecision(17)<<"{\"preconditioner_setup_s\":"<<setup<<",\"runs\":[";
+  for(int rep=0;rep<4;++rep) {
+    platform->device.finish();start=MPI_Wtime();
+    o_rhs.copyFrom(o_f);o_x.copyFrom(o_lift);
+    platform->linAlg->axmyMany(n,1,n,0,1.,mesh->o_Jw,o_rhs);
+    platform->device.finish();double cgStart=MPI_Wtime();
+    solver.solve(o_lambda,o_zero,o_rhs,o_x);
+    platform->device.finish();double end=MPI_Wtime();
+    if(rep)f<<",";
+    f<<"{\"wall_s\":"<<end-start<<",\"solve_s\":"<<end-cgStart<<",\"iterations\":"<<solver.Niter()<<",\"initial_residual\":"<<solver.initialGuessResidual()<<",\"final_residual\":"<<solver.finalResidual()<<"}";
+  }
+  f<<"]}\n"; f.close();
+  std::vector<double> solution(n);o_x.copyTo(solution);save("solution.bin",solution);
+  // Evaluate one off-node tensor probe per element using Nek's reference nodes.
+  std::vector<double> probes;
+  double target[3]={.213,.371,.627};
+  std::vector<std::vector<double>> B(3,std::vector<double>(mesh->N+1,1));
+  for(int a=0;a<3;++a)for(int i=0;i<=mesh->N;++i)for(int j=0;j<=mesh->N;++j)
+    if(i!=j)B[a][i]*=(2*target[a]-1-mesh->r[j])/(mesh->r[i]-mesh->r[j]);
+  for(int el=0;el<mesh->Nelements;++el){
+    double v=0;int d=mesh->N+1;
+    for(int k=0;k<d;++k)for(int j=0;j<d;++j)for(int i=0;i<d;++i)
+      v+=B[0][i]*B[1][j]*B[2][k]*solution[el*mesh->Np+i+d*(j+d*k)];
+    probes.insert(probes.end(),{double(el),target[0],target[1],target[2],v});
+  }
+  save("probes.bin",probes);
+  // Independent assembled residual, with essential rows omitted.
+  deviceMemory<dfloat> o_Ax(n);solver.Ax(o_lambda,o_zero,o_x,o_Ax);
+  oogs::startFinish(o_Ax,1,n,ogsDfloat,ogsAdd,mesh->oogs);
+  oogs::startFinish(o_rhs,1,n,ogsDfloat,ogsAdd,mesh->oogs);
+  std::vector<double> ax(n),rhs(n);o_Ax.copyTo(ax);o_rhs.copyTo(rhs);
+  std::set<hlong> seen;double r2=0,b2=0,bcerr=0;
+  for(int i=0;i<n;++i) {
+    if(!seen.insert(gid[i]).second)continue;
+    if(freeIds.count(gid[i])){r2+=(ax[i]-rhs[i])*(ax[i]-rhs[i]);b2+=rhs[i]*rhs[i];}
+    else bcerr=std::max(bcerr,std::abs(solution[i]-exact[i]));
+  }
+  std::ofstream r("residual.json");r<<std::setprecision(17)<<"{\"relative_residual\":"<<sqrt(r2/b2)<<",\"boundary_max_error\":"<<bcerr<<"}\n";
+}

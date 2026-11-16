@@ -1,0 +1,74 @@
+{
+  "gpu": "NVIDIA GeForce RTX 3070",
+  "n": 129,
+  "q": 194,
+  "dofs": 2146689,
+  "free_dofs": 2048383,
+  "operator_precision": "float64",
+  "cg_precision": "float64",
+  "preconditioner_precision": "float32",
+  "tf32": false,
+  "device_bytes": 1107167808,
+  "parity_optimized": true,
+  "shared_contractions": true,
+  "device_setup_s": 0.195580809,
+  "runs": [
+    {
+      "iterations": 18,
+      "residual_replacements": 1,
+      "relative_residual": 5.511340515477226e-13,
+      "cg_s": 1.468913613,
+      "wall_s": 1.571972504
+    },
+    {
+      "iterations": 18,
+      "residual_replacements": 1,
+      "relative_residual": 5.511340515477226e-13,
+      "cg_s": 1.425081467,
+      "wall_s": 1.509847802
+    },
+    {
+      "iterations": 18,
+      "residual_replacements": 1,
+      "relative_residual": 5.511340515477226e-13,
+      "cg_s": 1.424004534,
+      "wall_s": 1.513314189
+    },
+    {
+      "iterations": 18,
+      "residual_replacements": 1,
+      "relative_residual": 5.511340515477226e-13,
+      "cg_s": 1.416771136,
+      "wall_s": 1.504969052
+    }
+  ],
+  "boundary_error": 0.0,
+  "audits": [
+    {
+      "q": 202,
+      "relative_l2": 2.319727529134849e-12,
+      "volume": 0.9199999999999985
+    },
+    {
+      "q": 210,
+      "relative_l2": 2.3197410766341177e-12,
+      "volume": 0.9200000000000007
+    }
+  ],
+  "relative_l2": 2.3197410766341177e-12,
+  "axis": {
+    "discretization": "global_chebyshev_galerkin",
+    "degree": 128,
+    "n": 129,
+    "nodes": "chebyshev_lobatto",
+    "cardinal_defect": 2.7711166694643907e-13,
+    "node_symmetry_defect": 1.1102230246251565e-16,
+    "integration_measure": "ordinary physical volume (not Chebyshev-weighted)"
+  },
+  "eigenpair_relative_defect": 1.7758261443739833e-15,
+  "preparation_s": 16.03204032406211,
+  "modes_sha256": "c9119da1d12d3bbca43497bcddc5f5b92baf6611cdd047c49866e025812c9949",
+  "warm_cg_s": 1.424004534,
+  "warm_wall_s": 1.509847802,
+  "binary_sha256": "a083a253382dce3a40c4e7619cbaea3df89039f0898d6e6b7b076b0bb6e2465b"
+}

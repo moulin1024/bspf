@@ -1,0 +1,80 @@
+{
+  "gpu": "NVIDIA GeForce RTX 3070",
+  "n": 97,
+  "q": 146,
+  "dofs": 912673,
+  "free_dofs": 857375,
+  "operator_precision": "float64",
+  "cg_precision": "float64",
+  "preconditioner_precision": "float32",
+  "tf32": false,
+  "device_bytes": 471554240,
+  "parity_optimized": true,
+  "shared_contractions": true,
+  "device_setup_s": 0.146404775,
+  "runs": [
+    {
+      "iterations": 18,
+      "residual_replacements": 1,
+      "relative_residual": 9.22541044084646e-13,
+      "cg_s": 0.557039423,
+      "wall_s": 0.609801854
+    },
+    {
+      "iterations": 18,
+      "residual_replacements": 1,
+      "relative_residual": 9.22541044084646e-13,
+      "cg_s": 0.541584815,
+      "wall_s": 0.574327065
+    },
+    {
+      "iterations": 18,
+      "residual_replacements": 1,
+      "relative_residual": 9.22541044084646e-13,
+      "cg_s": 0.510550931,
+      "wall_s": 0.542602715
+    },
+    {
+      "iterations": 18,
+      "residual_replacements": 1,
+      "relative_residual": 9.22541044084646e-13,
+      "cg_s": 0.529349442,
+      "wall_s": 0.558409925
+    }
+  ],
+  "boundary_error": 0.0,
+  "audits": [
+    {
+      "q": 154,
+      "relative_l2": 1.8839946426490396e-12,
+      "volume": 0.9200000000000009
+    },
+    {
+      "q": 162,
+      "relative_l2": 1.883972015116844e-12,
+      "volume": 0.9199999999999988
+    }
+  ],
+  "relative_l2": 1.883972015116844e-12,
+  "axis": {
+    "modes": 44,
+    "period": 1.5,
+    "degree": 8,
+    "n": 97,
+    "nodes": "symmetric_qr",
+    "parity_preserved": true,
+    "node_symmetry_defect": 0.0,
+    "tail_condition": 1.3296753601364642e+16,
+    "nodal_condition": 10.415084772602384,
+    "orthogonalization_passes": 3,
+    "orthogonality_defect": 5.239280707736771e-15,
+    "orthogonality_tolerance": 2.842170943040401e-14,
+    "cardinal_defect": 1.4210854715202004e-14
+  },
+  "eigenpair_relative_defect": 1.5544992425888625e-15,
+  "preparation_s": 7.52064326684922,
+  "modes_sha256": "c9119da1d12d3bbca43497bcddc5f5b92baf6611cdd047c49866e025812c9949",
+  "warm_cg_s": 0.529349442,
+  "warm_wall_s": 0.558409925,
+  "binary_sha256": "a083a253382dce3a40c4e7619cbaea3df89039f0898d6e6b7b076b0bb6e2465b"
+}

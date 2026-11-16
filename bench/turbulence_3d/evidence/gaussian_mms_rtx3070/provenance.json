@@ -1,0 +1,28 @@
+{
+  "dataset": "nonperiodic_curved_gaussian",
+  "tanh_components": 0,
+  "gaussian_components": 8,
+  "feature_seed": 20261117,
+  "preserved_wave_and_gaussian_arrays_exactly": true,
+  "cpu_tests_passed": 12,
+  "source_sha256": {
+    "bench/turbulence_3d/mms.py": "cfaa46e65ec18011d370b589638973ff7a9fff403208046a26b39364c49cb3c3",
+    "bench/turbulence_3d/poisson_features.py": "de28bff8ef824872a364463331f00024469cbf233893b06225cc896451b1d90e",
+    "bench/turbulence_3d/generate_mixed.py": "5444b85c7f0b8116b5f39ee297843e94c896086eababd479d0e94eae0fd6ac31",
+    "bench/turbulence_3d/run_mixed_suite.py": "0af26a69a4dbaa0d3ca28ad90f631576e97e64b9fad501d6d548d94afe81048f",
+    "bench/turbulence_3d/check_mixed_quadrature.py": "2208374cb9a5770de3f3b27e5ae012083b82615d728ea5257b956a0ffd8db878",
+    "bench/turbulence_3d/bspf_poisson/run.py": "bf59c0d99f3ead78a5cef36f191c2a58695b873e14fb045098bab0ca170c17f4",
+    "bench/turbulence_3d/chebyshev_poisson/run.py": "9e26482a5f0ae07471f6d82afbb109282fb490e879dd3e606159901ee3851cef",
+    "bench/turbulence_3d/chebyshev_poisson/axis.py": "537bc09adb736929cee6539d58ef549211716a4a8e078da8586daf07bd553028",
+    "bench/turbulence_3d/mfem_poisson/run.py": "41e836dea3496683091349e5d3ce2bc15cd6f12d06c21b8f8eab44187a6ba6a2",
+    "bench/turbulence_3d/nekrs_poisson/run.py": "0cbe532e2e4f278fad552832fff18a0c3804b0e6009eae2eba37802660523fb6",
+    "bench/turbulence_3d/nekrs_poisson/poisson.udf": "82c3f1896e8d49a4379dc2f9b24c5346eb5b63b94dd5ab58d5aabbfecd746e1d",
+    "bench/turbulence_3d/fc_poisson/run.py": "323dab9732ae79ec2861b4b1f3e570eb4c2d03de4c25e6358f85d8b2019c69a2",
+    "bench/turbulence_3d/fc_poisson/solver.py": "b38a3f3c6403ba503a2ed838784278748a7c828a1b879ea3a3a19e7d14d8d92f",
+    "bench/turbulence_3d/fc_poisson/report.py": "ceff47c5b135d1d3c217b25dfccfd4f228209111aa827b53643778437057966f",
+    "src/cuda/poisson3d.cu": "f587079a28d6d20a0002603036f0fca5eba9b4552d9a4419b5cedd2386c8b552",
+    "/tmp/bspf-poisson3d-cuda-build/bspf_poisson3d": "a083a253382dce3a40c4e7619cbaea3df89039f0898d6e6b7b076b0bb6e2465b",
+    "/tmp/bspf-mfem-poisson3d-fp32/mfem_poisson3d": "6c8d038f855a6750900ffe5a676fad414c56e5dba1eeace44da3e36e5434e7a1",
+    "/tmp/bspf-nekrs-install/bin/nekrs": "9f6af18602ec7d51bcef2d07664ecac3090a74e225af15e36b46c3fc7f4f3498"
+  }
+}

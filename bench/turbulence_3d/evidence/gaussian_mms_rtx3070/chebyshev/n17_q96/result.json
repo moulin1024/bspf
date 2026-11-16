@@ -1,0 +1,74 @@
+{
+  "gpu": "NVIDIA GeForce RTX 3070",
+  "n": 17,
+  "q": 96,
+  "dofs": 4913,
+  "free_dofs": 3375,
+  "operator_precision": "float64",
+  "cg_precision": "float64",
+  "preconditioner_precision": "float32",
+  "tf32": false,
+  "device_bytes": 106877440,
+  "parity_optimized": true,
+  "shared_contractions": true,
+  "device_setup_s": 0.116363012,
+  "runs": [
+    {
+      "iterations": 16,
+      "residual_replacements": 1,
+      "relative_residual": 1.8997831458630776e-13,
+      "cg_s": 0.091433496,
+      "wall_s": 0.112344883
+    },
+    {
+      "iterations": 16,
+      "residual_replacements": 1,
+      "relative_residual": 1.8997831458630776e-13,
+      "cg_s": 0.04668877,
+      "wall_s": 0.050726576
+    },
+    {
+      "iterations": 16,
+      "residual_replacements": 1,
+      "relative_residual": 1.8997831458630776e-13,
+      "cg_s": 0.051982711,
+      "wall_s": 0.055882053
+    },
+    {
+      "iterations": 16,
+      "residual_replacements": 1,
+      "relative_residual": 1.8997831458630776e-13,
+      "cg_s": 0.048434738,
+      "wall_s": 0.051516362
+    }
+  ],
+  "boundary_error": 0.0,
+  "audits": [
+    {
+      "q": 104,
+      "relative_l2": 0.4185698405240191,
+      "volume": 0.9199999999999976
+    },
+    {
+      "q": 112,
+      "relative_l2": 0.41856984052402224,
+      "volume": 0.9199999999999993
+    }
+  ],
+  "relative_l2": 0.41856984052402224,
+  "axis": {
+    "discretization": "global_chebyshev_galerkin",
+    "degree": 16,
+    "n": 17,
+    "nodes": "chebyshev_lobatto",
+    "cardinal_defect": 3.1086244689504383e-15,
+    "node_symmetry_defect": 0.0,
+    "integration_measure": "ordinary physical volume (not Chebyshev-weighted)"
+  },
+  "eigenpair_relative_defect": 9.817512071543152e-16,
+  "preparation_s": 2.1876374478451908,
+  "modes_sha256": "c9119da1d12d3bbca43497bcddc5f5b92baf6611cdd047c49866e025812c9949",
+  "warm_cg_s": 0.048434738,
+  "warm_wall_s": 0.051516362,
+  "binary_sha256": "a083a253382dce3a40c4e7619cbaea3df89039f0898d6e6b7b076b0bb6e2465b"
+}

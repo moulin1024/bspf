@@ -1,0 +1,416 @@
+{
+  "modes": "/home/moulin/Workspace/bspf/bench/turbulence_3d/evidence/nonperiodic_curved_gaussian/modes.npz",
+  "modes_sha256": "c9119da1d12d3bbca43497bcddc5f5b92baf6611cdd047c49866e025812c9949",
+  "tasks": [
+    {
+      "task": "bspf_17",
+      "status": "passed",
+      "returncode": 0,
+      "elapsed_s": 8.234055519104004,
+      "command": [
+        "/home/moulin/anaconda3/bin/python",
+        "/home/moulin/Workspace/bspf/bench/turbulence_3d/bspf_poisson/run.py",
+        "--n",
+        "17",
+        "--modes",
+        "/home/moulin/Workspace/bspf/bench/turbulence_3d/evidence/nonperiodic_curved_gaussian/modes.npz",
+        "--output",
+        "/home/moulin/Workspace/bspf/bench/turbulence_3d/evidence/gaussian_mms_rtx3070/bspf"
+      ]
+    },
+    {
+      "task": "bspf_33",
+      "status": "passed",
+      "returncode": 0,
+      "elapsed_s": 8.566032648086548,
+      "command": [
+        "/home/moulin/anaconda3/bin/python",
+        "/home/moulin/Workspace/bspf/bench/turbulence_3d/bspf_poisson/run.py",
+        "--n",
+        "33",
+        "--modes",
+        "/home/moulin/Workspace/bspf/bench/turbulence_3d/evidence/nonperiodic_curved_gaussian/modes.npz",
+        "--output",
+        "/home/moulin/Workspace/bspf/bench/turbulence_3d/evidence/gaussian_mms_rtx3070/bspf"
+      ]
+    },
+    {
+      "task": "bspf_65",
+      "status": "passed",
+      "returncode": 0,
+      "elapsed_s": 9.296549320220947,
+      "command": [
+        "/home/moulin/anaconda3/bin/python",
+        "/home/moulin/Workspace/bspf/bench/turbulence_3d/bspf_poisson/run.py",
+        "--n",
+        "65",
+        "--modes",
+        "/home/moulin/Workspace/bspf/bench/turbulence_3d/evidence/nonperiodic_curved_gaussian/modes.npz",
+        "--output",
+        "/home/moulin/Workspace/bspf/bench/turbulence_3d/evidence/gaussian_mms_rtx3070/bspf"
+      ]
+    },
+    {
+      "task": "bspf_97",
+      "status": "passed",
+      "returncode": 0,
+      "elapsed_s": 27.09677505493164,
+      "command": [
+        "/home/moulin/anaconda3/bin/python",
+        "/home/moulin/Workspace/bspf/bench/turbulence_3d/bspf_poisson/run.py",
+        "--n",
+        "97",
+        "--modes",
+        "/home/moulin/Workspace/bspf/bench/turbulence_3d/evidence/nonperiodic_curved_gaussian/modes.npz",
+        "--output",
+        "/home/moulin/Workspace/bspf/bench/turbulence_3d/evidence/gaussian_mms_rtx3070/bspf"
+      ]
+    },
+    {
+      "task": "bspf_129",
+      "status": "passed",
+      "returncode": 0,
+      "elapsed_s": 58.41445255279541,
+      "command": [
+        "/home/moulin/anaconda3/bin/python",
+        "/home/moulin/Workspace/bspf/bench/turbulence_3d/bspf_poisson/run.py",
+        "--n",
+        "129",
+        "--modes",
+        "/home/moulin/Workspace/bspf/bench/turbulence_3d/evidence/nonperiodic_curved_gaussian/modes.npz",
+        "--output",
+        "/home/moulin/Workspace/bspf/bench/turbulence_3d/evidence/gaussian_mms_rtx3070/bspf"
+      ]
+    },
+    {
+      "task": "bspf_145",
+      "status": "passed",
+      "returncode": 0,
+      "elapsed_s": 81.14897179603577,
+      "command": [
+        "/home/moulin/anaconda3/bin/python",
+        "/home/moulin/Workspace/bspf/bench/turbulence_3d/bspf_poisson/run.py",
+        "--n",
+        "145",
+        "--modes",
+        "/home/moulin/Workspace/bspf/bench/turbulence_3d/evidence/nonperiodic_curved_gaussian/modes.npz",
+        "--output",
+        "/home/moulin/Workspace/bspf/bench/turbulence_3d/evidence/gaussian_mms_rtx3070/bspf"
+      ]
+    },
+    {
+      "task": "chebyshev_17",
+      "status": "passed",
+      "returncode": 0,
+      "elapsed_s": 8.207982301712036,
+      "command": [
+        "/home/moulin/anaconda3/bin/python",
+        "/home/moulin/Workspace/bspf/bench/turbulence_3d/chebyshev_poisson/run.py",
+        "--n",
+        "17",
+        "--modes",
+        "/home/moulin/Workspace/bspf/bench/turbulence_3d/evidence/nonperiodic_curved_gaussian/modes.npz",
+        "--output",
+        "/home/moulin/Workspace/bspf/bench/turbulence_3d/evidence/gaussian_mms_rtx3070/chebyshev"
+      ]
+    },
+    {
+      "task": "chebyshev_33",
+      "status": "passed",
+      "returncode": 0,
+      "elapsed_s": 8.458525896072388,
+      "command": [
+        "/home/moulin/anaconda3/bin/python",
+        "/home/moulin/Workspace/bspf/bench/turbulence_3d/chebyshev_poisson/run.py",
+        "--n",
+        "33",
+        "--modes",
+        "/home/moulin/Workspace/bspf/bench/turbulence_3d/evidence/nonperiodic_curved_gaussian/modes.npz",
+        "--output",
+        "/home/moulin/Workspace/bspf/bench/turbulence_3d/evidence/gaussian_mms_rtx3070/chebyshev"
+      ]
+    },
+    {
+      "task": "chebyshev_65",
+      "status": "passed",
+      "returncode": 0,
+      "elapsed_s": 9.048112869262695,
+      "command": [
+        "/home/moulin/anaconda3/bin/python",
+        "/home/moulin/Workspace/bspf/bench/turbulence_3d/chebyshev_poisson/run.py",
+        "--n",
+        "65",
+        "--modes",
+        "/home/moulin/Workspace/bspf/bench/turbulence_3d/evidence/nonperiodic_curved_gaussian/modes.npz",
+        "--output",
+        "/home/moulin/Workspace/bspf/bench/turbulence_3d/evidence/gaussian_mms_rtx3070/chebyshev"
+      ]
+    },
+    {
+      "task": "chebyshev_97",
+      "status": "passed",
+      "returncode": 0,
+      "elapsed_s": 25.990108966827393,
+      "command": [
+        "/home/moulin/anaconda3/bin/python",
+        "/home/moulin/Workspace/bspf/bench/turbulence_3d/chebyshev_poisson/run.py",
+        "--n",
+        "97",
+        "--modes",
+        "/home/moulin/Workspace/bspf/bench/turbulence_3d/evidence/nonperiodic_curved_gaussian/modes.npz",
+        "--output",
+        "/home/moulin/Workspace/bspf/bench/turbulence_3d/evidence/gaussian_mms_rtx3070/chebyshev"
+      ]
+    },
+    {
+      "task": "chebyshev_129",
+      "status": "passed",
+      "returncode": 0,
+      "elapsed_s": 57.93064904212952,
+      "command": [
+        "/home/moulin/anaconda3/bin/python",
+        "/home/moulin/Workspace/bspf/bench/turbulence_3d/chebyshev_poisson/run.py",
+        "--n",
+        "129",
+        "--modes",
+        "/home/moulin/Workspace/bspf/bench/turbulence_3d/evidence/nonperiodic_curved_gaussian/modes.npz",
+        "--output",
+        "/home/moulin/Workspace/bspf/bench/turbulence_3d/evidence/gaussian_mms_rtx3070/chebyshev"
+      ]
+    },
+    {
+      "task": "chebyshev_145",
+      "status": "passed",
+      "returncode": 0,
+      "elapsed_s": 78.77990961074829,
+      "command": [
+        "/home/moulin/anaconda3/bin/python",
+        "/home/moulin/Workspace/bspf/bench/turbulence_3d/chebyshev_poisson/run.py",
+        "--n",
+        "145",
+        "--modes",
+        "/home/moulin/Workspace/bspf/bench/turbulence_3d/evidence/nonperiodic_curved_gaussian/modes.npz",
+        "--output",
+        "/home/moulin/Workspace/bspf/bench/turbulence_3d/evidence/gaussian_mms_rtx3070/chebyshev"
+      ]
+    },
+    {
+      "task": "nekrs_2",
+      "status": "passed",
+      "returncode": 0,
+      "elapsed_s": 44.05019211769104,
+      "command": [
+        "/home/moulin/anaconda3/bin/python",
+        "/home/moulin/Workspace/bspf/bench/turbulence_3d/nekrs_poisson/run.py",
+        "--elements",
+        "2",
+        "--modes",
+        "/home/moulin/Workspace/bspf/bench/turbulence_3d/evidence/nonperiodic_curved_gaussian/modes.npz",
+        "--output",
+        "/home/moulin/Workspace/bspf/bench/turbulence_3d/evidence/gaussian_mms_rtx3070/nekrs"
+      ]
+    },
+    {
+      "task": "nekrs_4",
+      "status": "passed",
+      "returncode": 0,
+      "elapsed_s": 46.8431830406189,
+      "command": [
+        "/home/moulin/anaconda3/bin/python",
+        "/home/moulin/Workspace/bspf/bench/turbulence_3d/nekrs_poisson/run.py",
+        "--elements",
+        "4",
+        "--modes",
+        "/home/moulin/Workspace/bspf/bench/turbulence_3d/evidence/nonperiodic_curved_gaussian/modes.npz",
+        "--output",
+        "/home/moulin/Workspace/bspf/bench/turbulence_3d/evidence/gaussian_mms_rtx3070/nekrs"
+      ]
+    },
+    {
+      "task": "nekrs_8",
+      "status": "passed",
+      "returncode": 0,
+      "elapsed_s": 59.538137674331665,
+      "command": [
+        "/home/moulin/anaconda3/bin/python",
+        "/home/moulin/Workspace/bspf/bench/turbulence_3d/nekrs_poisson/run.py",
+        "--elements",
+        "8",
+        "--modes",
+        "/home/moulin/Workspace/bspf/bench/turbulence_3d/evidence/nonperiodic_curved_gaussian/modes.npz",
+        "--output",
+        "/home/moulin/Workspace/bspf/bench/turbulence_3d/evidence/gaussian_mms_rtx3070/nekrs"
+      ]
+    },
+    {
+      "task": "nekrs_12",
+      "status": "passed",
+      "returncode": 0,
+      "elapsed_s": 81.31742525100708,
+      "command": [
+        "/home/moulin/anaconda3/bin/python",
+        "/home/moulin/Workspace/bspf/bench/turbulence_3d/nekrs_poisson/run.py",
+        "--elements",
+        "12",
+        "--modes",
+        "/home/moulin/Workspace/bspf/bench/turbulence_3d/evidence/nonperiodic_curved_gaussian/modes.npz",
+        "--output",
+        "/home/moulin/Workspace/bspf/bench/turbulence_3d/evidence/gaussian_mms_rtx3070/nekrs"
+      ]
+    },
+    {
+      "task": "nekrs_16",
+      "status": "passed",
+      "returncode": 0,
+      "elapsed_s": 126.23833870887756,
+      "command": [
+        "/home/moulin/anaconda3/bin/python",
+        "/home/moulin/Workspace/bspf/bench/turbulence_3d/nekrs_poisson/run.py",
+        "--elements",
+        "16",
+        "--modes",
+        "/home/moulin/Workspace/bspf/bench/turbulence_3d/evidence/nonperiodic_curved_gaussian/modes.npz",
+        "--output",
+        "/home/moulin/Workspace/bspf/bench/turbulence_3d/evidence/gaussian_mms_rtx3070/nekrs"
+      ]
+    },
+    {
+      "task": "nekrs_18",
+      "status": "passed",
+      "returncode": 0,
+      "elapsed_s": 166.4077923297882,
+      "command": [
+        "/home/moulin/anaconda3/bin/python",
+        "/home/moulin/Workspace/bspf/bench/turbulence_3d/nekrs_poisson/run.py",
+        "--elements",
+        "18",
+        "--modes",
+        "/home/moulin/Workspace/bspf/bench/turbulence_3d/evidence/nonperiodic_curved_gaussian/modes.npz",
+        "--output",
+        "/home/moulin/Workspace/bspf/bench/turbulence_3d/evidence/gaussian_mms_rtx3070/nekrs"
+      ]
+    },
+    {
+      "task": "mfem",
+      "status": "passed",
+      "returncode": 0,
+      "elapsed_s": 690.4401752948761,
+      "command": [
+        "/home/moulin/anaconda3/bin/python",
+        "/home/moulin/Workspace/bspf/bench/turbulence_3d/mfem_poisson/run.py",
+        "--binary",
+        "/tmp/bspf-mfem-poisson3d-fp32/mfem_poisson3d",
+        "--modes",
+        "/home/moulin/Workspace/bspf/bench/turbulence_3d/evidence/nonperiodic_curved_gaussian/modes.npz",
+        "--output",
+        "/home/moulin/Workspace/bspf/bench/turbulence_3d/evidence/gaussian_mms_rtx3070/mfem",
+        "--preconditioner",
+        "lor-amg-fp32",
+        "--cases",
+        "2:8,4:8,8:8,12:8,16:8,18:8"
+      ]
+    },
+    {
+      "task": "fc_17",
+      "status": "passed",
+      "returncode": 0,
+      "elapsed_s": 3.6867074966430664,
+      "command": [
+        "/tmp/bspf-fc-torch/bin/python",
+        "/home/moulin/Workspace/bspf/bench/turbulence_3d/fc_poisson/run.py",
+        "--n",
+        "17",
+        "--modes",
+        "/home/moulin/Workspace/bspf/bench/turbulence_3d/evidence/nonperiodic_curved_gaussian/modes.npz",
+        "--audit",
+        "--out",
+        "/home/moulin/Workspace/bspf/bench/turbulence_3d/evidence/gaussian_mms_rtx3070/fc/turbulence_n17"
+      ]
+    },
+    {
+      "task": "fc_33",
+      "status": "passed",
+      "returncode": 0,
+      "elapsed_s": 3.774022340774536,
+      "command": [
+        "/tmp/bspf-fc-torch/bin/python",
+        "/home/moulin/Workspace/bspf/bench/turbulence_3d/fc_poisson/run.py",
+        "--n",
+        "33",
+        "--modes",
+        "/home/moulin/Workspace/bspf/bench/turbulence_3d/evidence/nonperiodic_curved_gaussian/modes.npz",
+        "--audit",
+        "--out",
+        "/home/moulin/Workspace/bspf/bench/turbulence_3d/evidence/gaussian_mms_rtx3070/fc/turbulence_n33"
+      ]
+    },
+    {
+      "task": "fc_65",
+      "status": "passed",
+      "returncode": 0,
+      "elapsed_s": 4.760421991348267,
+      "command": [
+        "/tmp/bspf-fc-torch/bin/python",
+        "/home/moulin/Workspace/bspf/bench/turbulence_3d/fc_poisson/run.py",
+        "--n",
+        "65",
+        "--modes",
+        "/home/moulin/Workspace/bspf/bench/turbulence_3d/evidence/nonperiodic_curved_gaussian/modes.npz",
+        "--audit",
+        "--out",
+        "/home/moulin/Workspace/bspf/bench/turbulence_3d/evidence/gaussian_mms_rtx3070/fc/turbulence_n65"
+      ]
+    },
+    {
+      "task": "fc_97",
+      "status": "passed",
+      "returncode": 0,
+      "elapsed_s": 11.42974328994751,
+      "command": [
+        "/tmp/bspf-fc-torch/bin/python",
+        "/home/moulin/Workspace/bspf/bench/turbulence_3d/fc_poisson/run.py",
+        "--n",
+        "97",
+        "--modes",
+        "/home/moulin/Workspace/bspf/bench/turbulence_3d/evidence/nonperiodic_curved_gaussian/modes.npz",
+        "--audit",
+        "--out",
+        "/home/moulin/Workspace/bspf/bench/turbulence_3d/evidence/gaussian_mms_rtx3070/fc/turbulence_n97"
+      ]
+    },
+    {
+      "task": "fc_129",
+      "status": "passed",
+      "returncode": 0,
+      "elapsed_s": 27.857481241226196,
+      "command": [
+        "/tmp/bspf-fc-torch/bin/python",
+        "/home/moulin/Workspace/bspf/bench/turbulence_3d/fc_poisson/run.py",
+        "--n",
+        "129",
+        "--modes",
+        "/home/moulin/Workspace/bspf/bench/turbulence_3d/evidence/nonperiodic_curved_gaussian/modes.npz",
+        "--audit",
+        "--out",
+        "/home/moulin/Workspace/bspf/bench/turbulence_3d/evidence/gaussian_mms_rtx3070/fc/turbulence_n129"
+      ]
+    },
+    {
+      "task": "fc_145",
+      "status": "passed",
+      "returncode": 0,
+      "elapsed_s": 33.71134853363037,
+      "command": [
+        "/tmp/bspf-fc-torch/bin/python",
+        "/home/moulin/Workspace/bspf/bench/turbulence_3d/fc_poisson/run.py",
+        "--n",
+        "145",
+        "--modes",
+        "/home/moulin/Workspace/bspf/bench/turbulence_3d/evidence/nonperiodic_curved_gaussian/modes.npz",
+        "--audit",
+        "--out",
+        "/home/moulin/Workspace/bspf/bench/turbulence_3d/evidence/gaussian_mms_rtx3070/fc/turbulence_n145"
+      ]
+    }
+  ]
+}

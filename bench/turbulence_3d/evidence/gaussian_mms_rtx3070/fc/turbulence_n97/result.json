@@ -1,0 +1,65 @@
+{
+  "n": 97,
+  "unique_dofs": 912673,
+  "interior_dofs": 857375,
+  "field": "turbulence",
+  "degree": 8,
+  "padding_per_side": 25,
+  "setup_s": 1.5978875788860023,
+  "warm_solve_s": 0.6228728978894651,
+  "warm_wall_s": 0.6517690187320113,
+  "nodal_relative_l2": 0.000956416954781971,
+  "runs": [
+    {
+      "solve_s": 0.656233177985996,
+      "wall_s": 0.6851662592962384,
+      "iterations": 16,
+      "true_residual": 7.415468808952045e-11,
+      "restarts": 1
+    },
+    {
+      "solve_s": 0.6228382028639317,
+      "wall_s": 0.6517690187320113,
+      "iterations": 16,
+      "true_residual": 7.415468808952045e-11,
+      "restarts": 1
+    },
+    {
+      "solve_s": 0.6241302648559213,
+      "wall_s": 0.6522722588852048,
+      "iterations": 16,
+      "true_residual": 7.415468808952045e-11,
+      "restarts": 1
+    },
+    {
+      "solve_s": 0.6228728978894651,
+      "wall_s": 0.651667756959796,
+      "iterations": 16,
+      "true_residual": 7.415468808952045e-11,
+      "restarts": 1
+    }
+  ],
+  "checks": {
+    "boundary_max_error": 0.0
+  },
+  "eigenvector_condition": 8.02020103296631,
+  "eigenpair_defect": 3.3835149157067093e-15,
+  "device": "NVIDIA GeForce RTX 3070",
+  "torch_version": "2.6.0+cu124",
+  "outer_precision": "float64",
+  "preconditioner_precision": "complex64 (FP32 real/imag)",
+  "krylov": "FGMRES(40)",
+  "data_sha256": "c9119da1d12d3bbca43497bcddc5f5b92baf6611cdd047c49866e025812c9949",
+  "relative_l2": 0.001098742231914628,
+  "audit_orders": [
+    146,
+    154
+  ],
+  "audit_errors": [
+    0.0010987422899957024,
+    0.001098742231914628
+  ],
+  "audit_relative_change": 5.286141987454878e-08,
+  "audit_absolute_change": 5.808107445513799e-11,
+  "peak_torch_allocated_bytes": 889737216
+}
