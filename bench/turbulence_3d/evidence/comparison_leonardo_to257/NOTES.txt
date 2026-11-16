@@ -1,0 +1,24 @@
+Saved Leonardo Poisson comparison, capped at 257^3.
+
+Reproduce:
+  python bench/turbulence_3d/plot_leonardo_comparison.py
+Dependencies: Python 3, NumPy, Matplotlib.
+
+DOFs are n^3 unique physical nodal values, including prescribed boundary nodes.
+Interior free nodal values number (n-2)^3. Element-local duplicate nodes,
+quadrature points, and FC continuation padding are not counted as physical DOFs.
+Matching DOFs does not imply matching approximation spaces or accuracy.
+
+Errors are the saved independently audited relative physical L2 errors.
+Times are medians of three warm full solves, including RHS/lifting, linear solve
+and recovery; excluding setup/assembly, JIT, analytic sampling, I/O and audits.
+All runs use one A100. Outer solves/operators are FP64; preconditioners FP32.
+FC-Gram uses a 1e-10 solver tolerance; the other solvers use 1e-12.
+Lines connect measured resolutions; they do not imply measured intermediate data.
+
+comparison.csv preserves the saved results and local source paths.
+MFEM hash cells are empty in the original summary; no hash has been inferred.
+The final additional MFEM operator-quadrature check planned at 385^3 did not
+complete. Reported per-case error audits are distinct from that additional check.
+All included NekRS measurements predate the abandoned 64-bit cubature patch.
+No 385^3 results or reference-solver repair are included in this comparison.
