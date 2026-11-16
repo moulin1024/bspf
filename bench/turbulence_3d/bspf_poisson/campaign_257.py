@@ -26,17 +26,23 @@ def main():
     p.add_argument('--modes',type=Path,required=True)
     p.add_argument('--output',type=Path,required=True)
     p.add_argument('--trials',type=int,default=3)
+    p.add_argument('--basis',choices=['bspf','chebyshev'],default='bspf')
     p.add_argument('--baseline-emulation',choices=['native','performant','eager'])
     p.add_argument('--candidate-emulation',choices=['native','performant','eager'])
     args=p.parse_args()
     if args.trials<3:p.error('At least three alternating trials required')
     args.output.mkdir(parents=True,exist_ok=False)
     previous=json.loads((args.case/'result.json').read_text())
-    if previous['n']!=257 or previous['q']!=386 or previous.get('rhs_assembly')!='nodal-mass':
-        raise ValueError('Expected the fixed 257^3, q=386 precomputed-mass benchmark')
+    if previous['n']!=257 or previous['q']!=386:
+        raise ValueError('Expected the fixed 257^3, q=386 benchmark')
+    preassembled=previous.get('rhs_assembly')=='nodal-mass'
+    if args.basis=='bspf' and not preassembled:
+        raise ValueError('Expected the BSPF precomputed-mass benchmark')
+    if args.basis=='chebyshev' and previous['axis']['discretization']!='global_chebyshev_galerkin':
+        raise ValueError('Expected the Chebyshev Galerkin benchmark')
     if previous['modes_sha256']!=sha(args.modes):raise ValueError('MMS changed')
     env=os.environ.copy();env['LD_LIBRARY_PATH']=os.environ['BSPF_NATIVE_LIBRARY_PATH']
-    report=dict(n=257,q=386,input_sha256=sha(args.case/'input.bin'),modes_sha256=sha(args.modes),
+    report=dict(n=257,q=386,basis=args.basis,input_sha256=sha(args.case/'input.bin'),modes_sha256=sha(args.modes),
                 optimization_environment={k:v for k,v in env.items() if k.startswith('BSPF_POISSON_')},
                 binary_sha256={k:sha(v) for k,v in [('baseline',args.baseline),('candidate',args.candidate)]},
                 runs={'baseline':[],'candidate':[]},comparison=[],
@@ -56,7 +62,7 @@ def main():
             with (directory/'native.log').open('w') as log:
                 subprocess.run(command,env=run_env,stdout=log,stderr=subprocess.STDOUT,check=True)
             data=json.loads(prefix.with_suffix('.json').read_text())
-            if not data['preassembled_load'] or data['operator_precision']!='float64':raise RuntimeError('Changed solve configuration')
+            if data['preassembled_load']!=preassembled or data['operator_precision']!='float64':raise RuntimeError('Changed solve configuration')
             if any(r['relative_residual']>1e-11 for r in data['runs']):raise RuntimeError('Failed true residual')
             data['process_s']=time.perf_counter()-start
             report['runs'][name].append(data)
@@ -80,7 +86,10 @@ def main():
     medians={name:float(np.median(v)) for name,v in samples.items()}
     report.update(warm_samples_s=samples,median_s=medians,speedup=medians['baseline']/medians['candidate'])
     # Independent physical error integrals, never used by the solver/stopping.
-    axis=HybridAxis(124,degree=8,nodes='symmetric_qr')
+    if args.basis=='bspf':axis=HybridAxis(124,degree=8,nodes='symmetric_qr')
+    else:
+        from chebyshev_poisson.axis import ChebyshevAxis
+        axis=ChebyshevAxis(257)
     sampler=Sampler(args.modes)
     report['audits']=[audit(axis,outputs['candidate'].reshape(257,257,257),sampler,q,False) for q in [394,402]]
     old_error=previous['relative_l2']

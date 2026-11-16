@@ -40,7 +40,59 @@ and the same native CUDA executable. Both methods therefore use:
 * Independent physical L2 error integration at max(96,q+8) and eight more points
   per direction, using the physical Jacobian determinant.
 
-## Reproduction
+## Leonardo optimized CUDA 13 run
+
+Chebyshev uses the same optimized native backend as BSPF: tiled cyclic
+transposes, shared gradient contractions, and eight reflection sectors with
+fused metric application. Sector eligibility is checked against basis and
+metric symmetries; unsupported inputs retain the general operator. The
+Chebyshev discretization and direct Gauss-point forcing are unchanged.
+
+Submit the polynomial validation, 17--257 sweep and alternating same-GPU
+257-cubed comparison with:
+
+```sh
+sbatch bench/turbulence_3d/leonardo/chebyshev_cuda13.slurm
+```
+
+This uses `leonardo/env_cuda13.sh`, CUDA 13.0.2 and cuBLAS 13.1.0.3. The
+`performant` FP64 emulation strategy allows cuBLAS to choose native kernels;
+it does not establish that emulated kernels were used. The FP64 operator and
+CG tolerance remain unchanged, with the existing FP32 preconditioner.
+
+The CPU identities now cover 16, 17, 65, 145, 193 and 257 nodes (seven tests
+including the spectrum check). Derivative checks allow degree- and
+matrix-norm-scaled roundoff for cancellation near zero. Cardinal interpolation,
+Legendre reproduction and mass integration retain their original tolerances.
+
+Job **64626778** completed on one Leonardo A100. The fixed-input 257-cubed
+comparison alternates three invocations of each executable, each with one
+warmup and three measured solves. The pooled median improved from **1.385736 s
+to 0.635640 s (2.180x)**; both took 18 CG iterations. The relative solution
+difference was 5.44e-14, the operator-probe difference 1.48e-12, and the
+preconditioner probe was bitwise identical. Independent physical L2 audits at
+394 and 402 Gauss points per axis both gave 3.0681e-12. This compares the frozen
+preoptimization executable with the optimized CUDA 13 executable; it does not
+isolate a CUDA-version or emulation speedup.
+
+| Nodes/axis | Optimized warm solve (s) | Relative physical L2 |
+|---:|---:|---:|
+| 17 | 0.024949 | 4.186e-01 |
+| 33 | 0.025118 | 1.516e-01 |
+| 65 | 0.026847 | 2.910e-05 |
+| 97 | 0.045172 | 1.983e-12 |
+| 129 | 0.082038 | 2.319e-12 |
+| 193 | 0.236040 | 2.683e-12 |
+| 257 | 0.635040 | 3.068e-12 |
+
+All seven sweep cases have zero nodal boundary error and true residual below
+1e-12. The polynomial guard has L2 error 2.4343e-13 and an independent CPU
+operator discrepancy of 1.89e-15. Results and comparison details are in
+[`../evidence/chebyshev_cuda13_64626778/`](../evidence/chebyshev_cuda13_64626778/),
+with updated PNG/PDF plots in
+[`../evidence/comparison_leonardo_to257/`](../evidence/comparison_leonardo_to257/).
+
+## Historical reproduction on RTX 3070
 
 Build the existing native backend once with
 `bash bench/turbulence_3d/bspf_poisson/build.sh`. On this machine use the CuPy

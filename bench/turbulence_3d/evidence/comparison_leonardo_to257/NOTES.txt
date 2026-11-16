@@ -4,11 +4,20 @@ BSPF update: CUDA 13.0.2 / cuBLAS 13.1.0.3, sweep job 64625526.
 Seven BSPF resolutions are rerun with the optimized reflection-sector operator,
 full BSPF nodal forcing and the preassembled nodal-mass RHS. Emulation strategy
 is "performant", with automatic mantissa selection preserving FP64 accuracy;
-cuBLAS may select native kernels. Other solvers retain their saved measurements.
+cuBLAS may select native kernels. FC-Gram, MFEM and NekRS retain saved measurements.
 The previous BSPF curve used direct Gauss forcing, so coarse-grid error changes
 also reflect the switch to nodal forcing, not just the backend optimization.
 Mass-factor construction and load application are preprocessing; the native
 warm solves reuse the assembled load. They include lifting, CG and recovery.
+
+Chebyshev update: CUDA 13.0.2 / cuBLAS 13.1.0.3, sweep job 64626778.
+Seven resolutions use the same optimized native backend, including reflection
+sectors, fused metric application and tiled transposes. Direct Gauss-point
+forcing, polynomial trial space and quadrature are unchanged. The warm timing
+includes RHS projection. All seven cases passed residual, boundary and
+independent physical L2 audits; the polynomial guard passed CPU operator and
+preconditioner checks. Emulation strategy is "performant", with the same native
+fallback caveat as BSPF.
 
 Reproduce:
   python bench/turbulence_3d/plot_leonardo_comparison.py
@@ -16,6 +25,9 @@ Dependencies: Python 3, NumPy, Matplotlib.
 
 To import this complete BSPF sweep again before redrawing:
   python bench/turbulence_3d/plot_leonardo_comparison.py --bspf-dir bench/turbulence_3d/evidence/cuda13_sweep_64625526/bspf
+
+To import the Chebyshev sweep:
+  python bench/turbulence_3d/plot_leonardo_comparison.py --chebyshev-dir bench/turbulence_3d/evidence/chebyshev_cuda13_64626778/chebyshev
 
 DOFs are n^3 unique physical nodal values, including prescribed boundary nodes.
 Interior free nodal values number (n-2)^3. Element-local duplicate nodes,

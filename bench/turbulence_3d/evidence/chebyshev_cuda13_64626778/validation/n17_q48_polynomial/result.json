@@ -1,0 +1,92 @@
+{
+  "gpu": "NVIDIA A100-SXM-64GB",
+  "n": 17,
+  "q": 48,
+  "dofs": 4913,
+  "free_dofs": 3375,
+  "operator_precision": "float64",
+  "cg_precision": "float64",
+  "preconditioner_precision": "float32",
+  "tf32": false,
+  "device_bytes": 551384064,
+  "cublas_version": 130100,
+  "fp64_emulation": "performant",
+  "parity_optimized": true,
+  "shared_contractions": true,
+  "fused_tensor_layout": true,
+  "device_setup_s": 0.113640673,
+  "runs": [
+    {
+      "iterations": 15,
+      "residual_replacements": 1,
+      "relative_residual": 3.1152674978615425e-13,
+      "cg_s": 0.025654294,
+      "wall_s": 0.027419806
+    },
+    {
+      "iterations": 15,
+      "residual_replacements": 1,
+      "relative_residual": 3.1152674978615425e-13,
+      "cg_s": 0.022925806,
+      "wall_s": 0.024304579
+    },
+    {
+      "iterations": 15,
+      "residual_replacements": 1,
+      "relative_residual": 3.1152674978615425e-13,
+      "cg_s": 0.022931679,
+      "wall_s": 0.024305599
+    },
+    {
+      "iterations": 15,
+      "residual_replacements": 1,
+      "relative_residual": 3.1152674978615425e-13,
+      "cg_s": 0.022906923,
+      "wall_s": 0.024284364
+    }
+  ],
+  "preassembled_load": false,
+  "octant_optimized": true,
+  "cpu_reference_check": {
+    "operator_relative_error": 1.8893358553043492e-15,
+    "preconditioner_relative_error": 1.8568913115851974e-07,
+    "energy": 2972.454494621366,
+    "preconditioned_energy": 6451.34456136293
+  },
+  "boundary_error": 0.0,
+  "audits": [
+    {
+      "q": 96,
+      "relative_l2": 2.4341623698406486e-13,
+      "volume": 0.919999999999999
+    },
+    {
+      "q": 104,
+      "relative_l2": 2.4342878748229393e-13,
+      "volume": 0.920000000000001
+    }
+  ],
+  "relative_l2": 2.4342878748229393e-13,
+  "axis": {
+    "discretization": "global_chebyshev_galerkin",
+    "degree": 16,
+    "n": 17,
+    "nodes": "chebyshev_lobatto",
+    "cardinal_defect": 3.1086244689504383e-15,
+    "node_symmetry_defect": 0.0,
+    "integration_measure": "ordinary physical volume (not Chebyshev-weighted)"
+  },
+  "eigenpair_relative_defect": 1.022066200392931e-15,
+  "preparation_s": 3.487886155024171,
+  "modes_sha256": "c9119da1d12d3bbca43497bcddc5f5b92baf6611cdd047c49866e025812c9949",
+  "forcing_mode": "quadrature",
+  "forcing_spline_degree": null,
+  "volume_forcing_samples": 110592,
+  "rhs_assembly": "quadrature",
+  "rhs_mass_setup_s": 0.0,
+  "rhs_mass_apply_s": 0.0,
+  "rhs_mass_bytes": 0,
+  "warm_cg_s": 0.022925806,
+  "warm_wall_s": 0.024304579,
+  "binary_sha256": "2cca3c32a24e1a58162a45f94b7753630cd9c3b7eec9541b1a5bc5cd18708351"
+}

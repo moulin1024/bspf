@@ -27,16 +27,18 @@ STYLES = [
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--bspf-dir',type=Path,help='Replace BSPF rows with a complete seven-resolution sweep, then redraw')
+    parser.add_argument('--chebyshev-dir',type=Path,help='Replace Chebyshev rows with a complete seven-resolution sweep, then redraw')
     args=parser.parse_args()
     with (OUT / "comparison.csv").open(newline="") as handle:
         reader=csv.DictReader(handle);fieldnames=reader.fieldnames
         rows = list(reader)
     expected = [17, 33, 65, 97, 129, 193, 257]
-    if args.bspf_dir:
+    for solver,directory in [('bspf',args.bspf_dir),('chebyshev',args.chebyshev_dir)]:
+        if directory is None:continue
         replacements={}
         for n in expected:
             q=max(96,(3*n+1)//2)
-            path=args.bspf_dir/f'n{n}_q{q}/result.json'
+            path=directory/f'n{n}_q{q}/result.json'
             result=json.loads(path.read_text())
             assert result['n']==n and result['q']==q
             assert result['boundary_error']==0
@@ -48,15 +50,17 @@ def main():
             replacements[n]=(path,result)
         # Validate every replacement before changing the saved comparison.
         for row in rows:
-            if row['solver']!='bspf':continue
+            if row['solver']!=solver:continue
             path,result=replacements[int(row['n'])]
             assert result['modes_sha256']==row['modes_sha256']
             row.update(relative_l2=result['relative_l2'],warm_full_solve_s=result['warm_wall_s'],
                        source=str(path.resolve().relative_to(OUT.parents[3])))
+    if args.bspf_dir or args.chebyshev_dir:
         with (OUT/'comparison.csv').open('w',newline='') as handle:
             writer=csv.DictWriter(handle,fieldnames=fieldnames,lineterminator='\n')
             writer.writeheader();writer.writerows(rows)
     cuda13=any(r['solver']=='bspf' and 'cuda13_sweep_' in r['source'] for r in rows)
+    cheb_cuda13=any(r['solver']=='chebyshev' and 'chebyshev_cuda13_' in r['source'] for r in rows)
     assert len(rows) == len(expected) * len(STYLES)
     for row in rows:
         row["n"] = int(row["n"])
@@ -76,6 +80,7 @@ def main():
         fig, ax = plt.subplots(figsize=(8.2, 6.3))
         for key, label, color, marker, linestyle in STYLES:
             if key=='bspf' and cuda13:label='BSPF Galerkin (CUDA 13)'
+            if key=='chebyshev' and cheb_cuda13:label='Chebyshev Galerkin (CUDA 13)'
             data = sorted((r for r in rows if r["solver"] == key), key=lambda r: r["n"])
             assert [r["n"] for r in data] == expected
             x = [r["n"] ** 3 if metric == "dof" else r["warm_full_solve_s"] for r in data]
@@ -94,7 +99,9 @@ def main():
         fig.text(0.12, 0.035, "Time: median of 3 warm full solves; excludes setup, JIT, sampling and error audits.",
                  fontsize=8.5)
         if cuda13:
-            fig.text(0.12,0.012,"BSPF: full nodal forcing, preassembled mass RHS; other curves retain saved configurations.",fontsize=8)
+            note=("BSPF: nodal forcing + mass RHS; Chebyshev: Gauss forcing; other curves retain saved configurations."
+                  if cheb_cuda13 else "BSPF: full nodal forcing, preassembled mass RHS; other curves retain saved configurations.")
+            fig.text(0.12,0.012,note,fontsize=8)
         fig.tight_layout(rect=(0, 0.09, 1, 1))
         for extension in ("png", "pdf"):
             path = OUT / f"accuracy_{metric}.{extension}"

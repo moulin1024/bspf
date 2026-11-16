@@ -9,23 +9,30 @@ path=Path(__file__).resolve().parents[2]/'bench/turbulence_3d/chebyshev_poisson/
 spec=importlib.util.spec_from_file_location('chebyshev_test_axis',path)
 mod=importlib.util.module_from_spec(spec);spec.loader.exec_module(mod)
 
-@pytest.mark.parametrize('n',[16,17,65,145])
+@pytest.mark.parametrize('n',[16,17,65,145,193,257])
 def test_polynomial_space_and_reflection(n):
     a=mod.ChebyshevAxis(n)
     z,w=leggauss(n+3);s=(z+1)/2
     B,D,D2=a.evaluate(s,2)
     assert np.max(abs(a.evaluate(a.x,0)[0]-np.eye(n)))<1e-11
     assert np.max(abs(B-B[::-1,::-1]))<1e-11
-    assert np.max(abs(D+D[::-1,::-1]))<1e-9
+    # Endpoint derivatives grow with degree; an absolute 1e-9 bound rejects
+    # ordinary evaluation roundoff at high orders. Scale by the table size
+    # and derivative magnitude while still testing the reflection identity.
+    assert np.max(abs(D+D[::-1,::-1])) < 64*np.finfo(float).eps*n*np.max(abs(D))
     # Legendre recurrence/derivatives are independent of the Chebyshev construction.
     for degree in [0,1,3,n-1]:
         p=Legendre.basis(degree);v=p(2*a.x-1)
         assert np.max(abs(B@v-p(z)))<1e-11
-        assert np.max(abs(D@v-2*p.deriv()(z)))/max(1,np.max(abs(2*p.deriv()(z))))<2e-10
+        # Clenshaw evaluation and differentiation incur degree-dependent
+        # cancellation, especially when the exact derivative is zero.
+        reference=2*p.deriv()(z)
+        bound=2e-10*np.max(abs(reference))+8*n*np.finfo(float).eps*la.norm(D,np.inf)*np.max(abs(v))
+        assert np.max(abs(D@v-reference))<bound
         # Endpoint second derivatives grow like n^4: cancellation on constants
         # needs a norm-scaled roundoff allowance (D2 is not used by the weak solver).
         reference=4*p.deriv(2)(z)
-        bound=2e-10*np.max(abs(reference))+64*np.finfo(float).eps*la.norm(D2,np.inf)*np.max(abs(v))
+        bound=2e-10*np.max(abs(reference))+8*n*np.finfo(float).eps*la.norm(D2,np.inf)*np.max(abs(v))
         assert np.max(abs(D2@v-reference))<bound
     # Ordinary (unweighted) mass integration must give the Legendre norm.
     p=Legendre.basis(n-1);v=p(2*a.x-1)
