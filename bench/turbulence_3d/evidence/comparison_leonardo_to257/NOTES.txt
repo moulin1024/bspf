@@ -22,3 +22,12 @@ The final additional MFEM operator-quadrature check planned at 385^3 did not
 complete. Reported per-case error audits are distinct from that additional check.
 All included NekRS measurements predate the abandoned 64-bit cubature patch.
 No 385^3 results or reference-solver repair are included in this comparison.
+
+MMS schematic:
+  python bench/turbulence_3d/plot_leonardo_mms.py
+Uses the tracked nonperiodic_curved_gaussian/modes.npz with an exact SHA-256 check.
+The Q2 map is taken directly from mms.CurvedBox. Gaussian centers, widths and
+signs are taken directly from the saved NPZ. There are eight blobs and no tanh.
+The combined panel is a component overlay, not a color plot of the total field:
+face colors show the plane-wave component; ellipsoids show individual Gaussian
+half-amplitude surfaces. The scalar Poisson field is wave u_x plus the Gaussians.
