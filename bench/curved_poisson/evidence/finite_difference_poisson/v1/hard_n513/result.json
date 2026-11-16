@@ -1,0 +1,30 @@
+{
+  "n": 513,
+  "kind": "hard",
+  "id": "hard_n513",
+  "status": "validated",
+  "method": "native_fd4",
+  "geometry_setup_seconds": 0.2036742500058608,
+  "sampling_seconds": 14.040659374993993,
+  "forcing_samples": 261121,
+  "binary_sha256": "336be0e1eee34a7929cf723f740ab960102d6f2cd91eedf4000302a0f112c681",
+  "source_sha256": "8a98fbe594b8c1874b2a7edf7e9ee96cd6964160e09d55217118ebb8d9e5ef17",
+  "solve_seconds": 0.397012541,
+  "setup_seconds": 0.005946792,
+  "iterations": 25,
+  "relative_residual": 9.568498885251109e-13,
+  "converged": true,
+  "solve_calls": 1,
+  "warmups": 0,
+  "nodal_max_error": 0.0038697605832113124,
+  "l2_relative": 0.0005964023317682075,
+  "quadrature_errors": [
+    0.000597381568125689,
+    0.0005964023317682075
+  ],
+  "quadrature_orders": [
+    640,
+    768
+  ],
+  "quadrature_stable": true
+}

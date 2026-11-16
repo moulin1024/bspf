@@ -1,0 +1,44 @@
+{
+  "n": 248,
+  "q": 496,
+  "kernel": "modal",
+  "guard": false,
+  "forcing_source": "direct",
+  "same_nodes": false,
+  "hard": true,
+  "id": "modal_n248_q496",
+  "status": "validated",
+  "setup_seconds": 8.732500124999206,
+  "quadrature_kind": "Gauss-Legendre",
+  "integration_solution_node_max_difference": null,
+  "forcing_sample_count": 246016,
+  "forcing_interpolation_inside_timer": false,
+  "sampling_seconds": 12.036097791991779,
+  "binary_sha256": "fa3bd0a9cfec12f5596b5743a71784dcbe84accc7a533d2e86ca414dadb5dc43",
+  "solve_calls": 1,
+  "warmups": 0,
+  "load_seconds": 0.008243417,
+  "solve_seconds": 0.236263958,
+  "iterations": 47,
+  "relative_residual": 1.2472326883362762e-15,
+  "preconditioned_defect": 6.739682668428531e-15,
+  "refinements": 1,
+  "peak_rss_bytes": 91947008,
+  "rhs_weighting_inside_timer": true,
+  "defect_history": [
+    3.179711032369693e-13,
+    6.739682668428531e-15
+  ],
+  "l2_relative": 7.541351456146748e-06,
+  "quadrature_errors": [
+    7.541351456032544e-06,
+    7.541351456146748e-06
+  ],
+  "quadrature_orders": [
+    640,
+    768
+  ],
+  "quadrature_stable": true,
+  "audit_quadrature_order": 640,
+  "audit_preconditioned_defect": 7.970637249311163e-13
+}

@@ -1,0 +1,816 @@
+{
+  "rows": [
+    {
+      "id": "nektar_e8_p14_mms",
+      "method": "nektar",
+      "elements_per_axis": 8,
+      "degree": 14,
+      "guard": false,
+      "quadrature": 40,
+      "status": "validated",
+      "preprocessing_seconds": 5.800238665993675,
+      "geometry_max_error": 3.552713678800501e-15,
+      "timing": {
+        "solve_calls": 1,
+        "setup_seconds": 2.150041875,
+        "first_solve_seconds": 0.004596917,
+        "native_l2": 0.20663563784857564,
+        "local_coefficients": 14400,
+        "batch": 1,
+        "samples_seconds": [
+          0.004596917
+        ],
+        "solve_seconds": 0.004596917
+      },
+      "l2_relative": 0.1914153944881053,
+      "error_quadrature_values": [
+        0.1914153947936772,
+        0.1914153944881053
+      ],
+      "error_quadrature_stable": true
+    },
+    {
+      "id": "nektar_e8_p18_mms",
+      "method": "nektar",
+      "elements_per_axis": 8,
+      "degree": 18,
+      "guard": false,
+      "quadrature": 40,
+      "status": "validated",
+      "preprocessing_seconds": 5.663388082990423,
+      "geometry_max_error": 3.552713678800501e-15,
+      "timing": {
+        "solve_calls": 1,
+        "setup_seconds": 4.134273084,
+        "first_solve_seconds": 0.006087792,
+        "native_l2": 0.13989984405257508,
+        "local_coefficients": 23104,
+        "batch": 1,
+        "samples_seconds": [
+          0.006087792
+        ],
+        "solve_seconds": 0.006087792
+      },
+      "l2_relative": 0.129595160829244,
+      "error_quadrature_values": [
+        0.12959516128987822,
+        0.129595160829244
+      ],
+      "error_quadrature_stable": true
+    },
+    {
+      "id": "nektar_e8_p20_mms",
+      "method": "nektar",
+      "elements_per_axis": 8,
+      "degree": 20,
+      "guard": false,
+      "quadrature": 40,
+      "status": "validated",
+      "preprocessing_seconds": 5.94285075001244,
+      "geometry_max_error": 3.552713678800501e-15,
+      "timing": {
+        "solve_calls": 1,
+        "setup_seconds": 11.011277,
+        "first_solve_seconds": 0.016099458,
+        "native_l2": 0.11157773433737428,
+        "local_coefficients": 28224,
+        "batch": 1,
+        "samples_seconds": [
+          0.016099458
+        ],
+        "solve_seconds": 0.016099458
+      },
+      "l2_relative": 0.10335916816201506,
+      "error_quadrature_values": [
+        0.10335916874316352,
+        0.10335916816201506
+      ],
+      "error_quadrature_stable": true
+    },
+    {
+      "id": "nektar_e8_p22_mms",
+      "method": "nektar",
+      "elements_per_axis": 8,
+      "degree": 22,
+      "guard": false,
+      "quadrature": 40,
+      "status": "validated",
+      "preprocessing_seconds": 7.687356833004742,
+      "geometry_max_error": 3.552713678800501e-15,
+      "timing": {
+        "solve_calls": 1,
+        "setup_seconds": 10.228545333,
+        "first_solve_seconds": 0.01304125,
+        "native_l2": 0.08592031002743733,
+        "local_coefficients": 33856,
+        "batch": 1,
+        "samples_seconds": [
+          0.01304125
+        ],
+        "solve_seconds": 0.01304125
+      },
+      "l2_relative": 0.07959158199216748,
+      "error_quadrature_values": [
+        0.079591582750175,
+        0.07959158199216748
+      ],
+      "error_quadrature_stable": true
+    },
+    {
+      "id": "nektar_e8_p26_mms",
+      "method": "nektar",
+      "elements_per_axis": 8,
+      "degree": 26,
+      "guard": false,
+      "quadrature": 40,
+      "status": "validated",
+      "preprocessing_seconds": 8.808259249999537,
+      "geometry_max_error": 3.552713678800501e-15,
+      "timing": {
+        "solve_calls": 1,
+        "setup_seconds": 284.579835708,
+        "first_solve_seconds": 0.034342542,
+        "native_l2": 0.040969875335184085,
+        "local_coefficients": 46656,
+        "batch": 1,
+        "samples_seconds": [
+          0.034342542
+        ],
+        "solve_seconds": 0.034342542
+      },
+      "l2_relative": 0.03795199090799004,
+      "error_quadrature_values": [
+        0.03795199250548623,
+        0.03795199090799004
+      ],
+      "error_quadrature_stable": true
+    },
+    {
+      "id": "nektar_e8_p28_mms",
+      "method": "nektar",
+      "elements_per_axis": 8,
+      "degree": 28,
+      "guard": false,
+      "quadrature": 40,
+      "status": "validated",
+      "preprocessing_seconds": 8.033397499995772,
+      "geometry_max_error": 3.552713678800501e-15,
+      "timing": {
+        "solve_calls": 1,
+        "setup_seconds": 336.033729792,
+        "first_solve_seconds": 0.072155166,
+        "native_l2": 0.023792192256171744,
+        "local_coefficients": 53824,
+        "batch": 1,
+        "samples_seconds": [
+          0.072155166
+        ],
+        "solve_seconds": 0.072155166
+      },
+      "l2_relative": 0.022039455697339304,
+      "error_quadrature_values": [
+        0.022039458451095208,
+        0.022039455697339304
+      ],
+      "error_quadrature_stable": true
+    },
+    {
+      "id": "nektar_e8_p30_mms",
+      "method": "nektar",
+      "elements_per_axis": 8,
+      "degree": 30,
+      "guard": false,
+      "quadrature": 40,
+      "status": "validated",
+      "preprocessing_seconds": 7.932194458000595,
+      "geometry_max_error": 3.552713678800501e-15,
+      "timing": {
+        "solve_calls": 1,
+        "setup_seconds": 28.064297875,
+        "first_solve_seconds": 0.052879333,
+        "native_l2": 0.011712299487987143,
+        "local_coefficients": 61504,
+        "batch": 1,
+        "samples_seconds": [
+          0.052879333
+        ],
+        "solve_seconds": 0.052879333
+      },
+      "l2_relative": 0.010849054425651806,
+      "error_quadrature_values": [
+        0.010849060026076211,
+        0.010849054425651806
+      ],
+      "error_quadrature_stable": true
+    },
+    {
+      "id": "nektar_e8_p32_mms",
+      "method": "nektar",
+      "elements_per_axis": 8,
+      "degree": 32,
+      "guard": false,
+      "quadrature": 40,
+      "status": "validated",
+      "preprocessing_seconds": 7.818918000004487,
+      "geometry_max_error": 3.552713678800501e-15,
+      "timing": {
+        "solve_calls": 1,
+        "setup_seconds": 34.397036458,
+        "first_solve_seconds": 0.085695708,
+        "native_l2": 0.004823799883179089,
+        "local_coefficients": 69696,
+        "batch": 1,
+        "samples_seconds": [
+          0.085695708
+        ],
+        "solve_seconds": 0.085695708
+      },
+      "l2_relative": 0.004467145593126974,
+      "error_quadrature_values": [
+        0.00446715923788691,
+        0.004467145593126974
+      ],
+      "error_quadrature_stable": true
+    },
+    {
+      "id": "nektar_e8_p34_mms",
+      "method": "nektar",
+      "elements_per_axis": 8,
+      "degree": 34,
+      "guard": false,
+      "quadrature": 40,
+      "status": "validated",
+      "preprocessing_seconds": 7.823470999996061,
+      "geometry_max_error": 3.552713678800501e-15,
+      "timing": {
+        "solve_calls": 1,
+        "setup_seconds": 43.397264584,
+        "first_solve_seconds": 0.110774916,
+        "native_l2": 0.0016721383138174775,
+        "local_coefficients": 78400,
+        "batch": 1,
+        "samples_seconds": [
+          0.110774916
+        ],
+        "solve_seconds": 0.110774916
+      },
+      "l2_relative": 0.0015451152595904135,
+      "error_quadrature_values": [
+        0.0015451549273200666,
+        0.0015451152595904135
+      ],
+      "error_quadrature_stable": true
+    },
+    {
+      "id": "nektar_e8_p36_mms",
+      "method": "nektar",
+      "elements_per_axis": 8,
+      "degree": 36,
+      "guard": false,
+      "quadrature": 40,
+      "status": "validated",
+      "preprocessing_seconds": 8.049824958012323,
+      "geometry_max_error": 3.552713678800501e-15,
+      "timing": {
+        "solve_calls": 1,
+        "setup_seconds": 54.115257625,
+        "first_solve_seconds": 0.155646583,
+        "native_l2": 0.0005026436391245332,
+        "local_coefficients": 87616,
+        "batch": 1,
+        "samples_seconds": [
+          0.155646583
+        ],
+        "solve_seconds": 0.155646583
+      },
+      "l2_relative": 0.0004539026673215437,
+      "error_quadrature_values": [
+        0.0004540367540881806,
+        0.0004539026673215437
+      ],
+      "error_quadrature_stable": true
+    },
+    {
+      "id": "nektar_e8_p38_mms",
+      "method": "nektar",
+      "elements_per_axis": 8,
+      "degree": 38,
+      "guard": false,
+      "quadrature": 42,
+      "status": "validated",
+      "preprocessing_seconds": 8.667146957988734,
+      "geometry_max_error": 3.552713678800501e-15,
+      "timing": {
+        "solve_calls": 1,
+        "setup_seconds": 72.878198292,
+        "first_solve_seconds": 0.290793458,
+        "native_l2": 0.00012635502442260468,
+        "local_coefficients": 97344,
+        "batch": 1,
+        "samples_seconds": [
+          0.290793458
+        ],
+        "solve_seconds": 0.290793458
+      },
+      "l2_relative": 0.00011475907151672316,
+      "error_quadrature_values": [
+        0.00011477710052188548,
+        0.00011475907151672316
+      ],
+      "error_quadrature_stable": true
+    },
+    {
+      "id": "nektar_e8_p40_mms",
+      "method": "nektar",
+      "elements_per_axis": 8,
+      "degree": 40,
+      "guard": false,
+      "quadrature": 44,
+      "status": "validated",
+      "preprocessing_seconds": 9.660971416989923,
+      "geometry_max_error": 3.774758283725532e-15,
+      "timing": {
+        "solve_calls": 1,
+        "setup_seconds": 94.425174625,
+        "first_solve_seconds": 0.4595975,
+        "native_l2": 2.769388165360237e-05,
+        "local_coefficients": 107584,
+        "batch": 1,
+        "samples_seconds": [
+          0.4595975
+        ],
+        "solve_seconds": 0.4595975
+      },
+      "l2_relative": 2.5260773261070835e-05,
+      "error_quadrature_values": [
+        2.5262971681042383e-05,
+        2.5260773261070835e-05
+      ],
+      "error_quadrature_stable": true
+    },
+    {
+      "id": "nektar_e16_p6_mms",
+      "method": "nektar",
+      "elements_per_axis": 16,
+      "degree": 6,
+      "guard": false,
+      "quadrature": 24,
+      "status": "validated",
+      "preprocessing_seconds": 11.539022333003231,
+      "geometry_max_error": 3.3306690738754696e-15,
+      "timing": {
+        "solve_calls": 1,
+        "setup_seconds": 0.52785575,
+        "first_solve_seconds": 0.00211275,
+        "native_l2": 0.23828646795081398,
+        "local_coefficients": 12544,
+        "batch": 1,
+        "samples_seconds": [
+          0.00211275
+        ],
+        "solve_seconds": 0.00211275
+      },
+      "l2_relative": 0.22073493982722936,
+      "error_quadrature_values": [
+        0.22073493983210016,
+        0.22073493982722936
+      ],
+      "error_quadrature_stable": true
+    },
+    {
+      "id": "nektar_e16_p8_mms",
+      "method": "nektar",
+      "elements_per_axis": 16,
+      "degree": 8,
+      "guard": false,
+      "quadrature": 24,
+      "status": "validated",
+      "preprocessing_seconds": 11.512436666991562,
+      "geometry_max_error": 3.3306690738754696e-15,
+      "timing": {
+        "solve_calls": 1,
+        "setup_seconds": 0.953254041,
+        "first_solve_seconds": 0.003458792,
+        "native_l2": 0.1661004037442648,
+        "local_coefficients": 20736,
+        "batch": 1,
+        "samples_seconds": [
+          0.003458792
+        ],
+        "solve_seconds": 0.003458792
+      },
+      "l2_relative": 0.15386590127861385,
+      "error_quadrature_values": [
+        0.1538659012857852,
+        0.15386590127861385
+      ],
+      "error_quadrature_stable": true
+    },
+    {
+      "id": "nektar_e16_p10_mms",
+      "method": "nektar",
+      "elements_per_axis": 16,
+      "degree": 10,
+      "guard": false,
+      "quadrature": 24,
+      "status": "validated",
+      "preprocessing_seconds": 11.966343916006736,
+      "geometry_max_error": 3.3306690738754696e-15,
+      "timing": {
+        "solve_calls": 1,
+        "setup_seconds": 1.666639917,
+        "first_solve_seconds": 0.005128834,
+        "native_l2": 0.10571896442266586,
+        "local_coefficients": 30976,
+        "batch": 1,
+        "samples_seconds": [
+          0.005128834
+        ],
+        "solve_seconds": 0.005128834
+      },
+      "l2_relative": 0.09793199040024919,
+      "error_quadrature_values": [
+        0.09793199041167919,
+        0.09793199040024919
+      ],
+      "error_quadrature_stable": true
+    },
+    {
+      "id": "nektar_e16_p14_mms",
+      "method": "nektar",
+      "elements_per_axis": 16,
+      "degree": 14,
+      "guard": false,
+      "quadrature": 24,
+      "status": "validated",
+      "preprocessing_seconds": 12.177981041997555,
+      "geometry_max_error": 3.3306690738754696e-15,
+      "timing": {
+        "solve_calls": 1,
+        "setup_seconds": 4.337870667,
+        "first_solve_seconds": 0.012686792,
+        "native_l2": 0.023165106588264366,
+        "local_coefficients": 57600,
+        "batch": 1,
+        "samples_seconds": [
+          0.012686792
+        ],
+        "solve_seconds": 0.012686792
+      },
+      "l2_relative": 0.02145880084050086,
+      "error_quadrature_values": [
+        0.021458800893161253,
+        0.02145880084050086
+      ],
+      "error_quadrature_stable": true
+    },
+    {
+      "id": "nektar_e16_p18_mms",
+      "method": "nektar",
+      "elements_per_axis": 16,
+      "degree": 18,
+      "guard": false,
+      "quadrature": 24,
+      "status": "validated",
+      "preprocessing_seconds": 11.478507667008671,
+      "geometry_max_error": 3.3306690738754696e-15,
+      "timing": {
+        "solve_calls": 1,
+        "setup_seconds": 9.037676459,
+        "first_solve_seconds": 0.026026209,
+        "native_l2": 0.0017116631211203483,
+        "local_coefficients": 92416,
+        "batch": 1,
+        "samples_seconds": [
+          0.026026209
+        ],
+        "solve_seconds": 0.026026209
+      },
+      "l2_relative": 0.0015851760663316435,
+      "error_quadrature_values": [
+        0.0015851767925051928,
+        0.0015851760663316435
+      ],
+      "error_quadrature_stable": true
+    },
+    {
+      "id": "nektar_e16_p20_mms",
+      "method": "nektar",
+      "elements_per_axis": 16,
+      "degree": 20,
+      "guard": false,
+      "quadrature": 24,
+      "status": "validated",
+      "preprocessing_seconds": 11.349679749997449,
+      "geometry_max_error": 3.3306690738754696e-15,
+      "timing": {
+        "solve_calls": 1,
+        "setup_seconds": 12.843011208,
+        "first_solve_seconds": 0.034223541,
+        "native_l2": 0.00032297428530305127,
+        "local_coefficients": 112896,
+        "batch": 1,
+        "samples_seconds": [
+          0.034223541
+        ],
+        "solve_seconds": 0.034223541
+      },
+      "l2_relative": 0.0002969376129322711,
+      "error_quadrature_values": [
+        0.0002969416250244517,
+        0.0002969376129322711
+      ],
+      "error_quadrature_stable": true
+    },
+    {
+      "id": "nektar_e16_p21_mms",
+      "method": "nektar",
+      "elements_per_axis": 16,
+      "degree": 21,
+      "guard": false,
+      "quadrature": 25,
+      "status": "validated",
+      "preprocessing_seconds": 12.311410042006173,
+      "geometry_max_error": 3.4416913763379853e-15,
+      "timing": {
+        "solve_calls": 1,
+        "setup_seconds": 15.689451708,
+        "first_solve_seconds": 0.045823417,
+        "native_l2": 0.00011215792171104725,
+        "local_coefficients": 123904,
+        "batch": 1,
+        "samples_seconds": [
+          0.045823417
+        ],
+        "solve_seconds": 0.045823417
+      },
+      "l2_relative": 0.00010401497549841048,
+      "error_quadrature_values": [
+        0.0001040141103432304,
+        0.00010401497549841048
+      ],
+      "error_quadrature_stable": true
+    },
+    {
+      "id": "nektar_e16_p22_mms",
+      "method": "nektar",
+      "elements_per_axis": 16,
+      "degree": 22,
+      "guard": false,
+      "quadrature": 26,
+      "status": "validated",
+      "preprocessing_seconds": 13.227839083992876,
+      "geometry_max_error": 3.552713678800501e-15,
+      "timing": {
+        "solve_calls": 1,
+        "setup_seconds": 19.998788166,
+        "first_solve_seconds": 0.077545334,
+        "native_l2": 4.867385956854029e-05,
+        "local_coefficients": 135424,
+        "batch": 1,
+        "samples_seconds": [
+          0.077545334
+        ],
+        "solve_seconds": 0.077545334
+      },
+      "l2_relative": 4.4846336164981415e-05,
+      "error_quadrature_values": [
+        4.484659606912539e-05,
+        4.4846336164981415e-05
+      ],
+      "error_quadrature_stable": true
+    },
+    {
+      "id": "nektar_e16_p23_mms",
+      "method": "nektar",
+      "elements_per_axis": 16,
+      "degree": 23,
+      "guard": false,
+      "quadrature": 27,
+      "status": "validated",
+      "preprocessing_seconds": 14.317543790995842,
+      "geometry_max_error": 3.4416913763379853e-15,
+      "timing": {
+        "solve_calls": 1,
+        "setup_seconds": 25.439432958,
+        "first_solve_seconds": 0.117207125,
+        "native_l2": 1.504904938150219e-05,
+        "local_coefficients": 147456,
+        "batch": 1,
+        "samples_seconds": [
+          0.117207125
+        ],
+        "solve_seconds": 0.117207125
+      },
+      "l2_relative": 1.3952193629323251e-05,
+      "error_quadrature_values": [
+        1.3952142468309009e-05,
+        1.3952193629323251e-05
+      ],
+      "error_quadrature_stable": true
+    },
+    {
+      "id": "nektar_e16_p25_mms",
+      "method": "nektar",
+      "elements_per_axis": 16,
+      "degree": 25,
+      "guard": false,
+      "quadrature": 29,
+      "status": "validated",
+      "preprocessing_seconds": 17.108773708998342,
+      "geometry_max_error": 3.3306690738754696e-15,
+      "timing": {
+        "solve_calls": 1,
+        "setup_seconds": 37.339418125,
+        "first_solve_seconds": 0.138517292,
+        "native_l2": 1.6877176194913249e-06,
+        "local_coefficients": 173056,
+        "batch": 1,
+        "samples_seconds": [
+          0.138517292
+        ],
+        "solve_seconds": 0.138517292
+      },
+      "l2_relative": 1.5643056942500987e-06,
+      "error_quadrature_values": [
+        1.5643030641805215e-06,
+        1.5643056942500987e-06
+      ],
+      "error_quadrature_stable": true
+    },
+    {
+      "id": "nektar_e16_p26_mms",
+      "method": "nektar",
+      "elements_per_axis": 16,
+      "degree": 26,
+      "guard": false,
+      "quadrature": 30,
+      "status": "validated",
+      "preprocessing_seconds": 18.65067104199261,
+      "geometry_max_error": 3.3306690738754696e-15,
+      "timing": {
+        "solve_calls": 1,
+        "setup_seconds": 45.989826291,
+        "first_solve_seconds": 0.212228917,
+        "native_l2": 6.294555710203002e-07,
+        "local_coefficients": 186624,
+        "batch": 1,
+        "samples_seconds": [
+          0.212228917
+        ],
+        "solve_seconds": 0.212228917
+      },
+      "l2_relative": 5.814172001801391e-07,
+      "error_quadrature_values": [
+        5.814179298142623e-07,
+        5.814172001801391e-07
+      ],
+      "error_quadrature_stable": true
+    },
+    {
+      "id": "nektar_e16_p27_mms",
+      "method": "nektar",
+      "elements_per_axis": 16,
+      "degree": 27,
+      "guard": false,
+      "quadrature": 31,
+      "status": "validated",
+      "preprocessing_seconds": 18.875666000007186,
+      "geometry_max_error": 3.3306690738754696e-15,
+      "timing": {
+        "solve_calls": 1,
+        "setup_seconds": 55.10155625,
+        "first_solve_seconds": 0.422012917,
+        "native_l2": 1.60760462715411e-07,
+        "local_coefficients": 200704,
+        "batch": 1,
+        "samples_seconds": [
+          0.422012917
+        ],
+        "solve_seconds": 0.422012917
+      },
+      "l2_relative": 1.4897499828960677e-07,
+      "error_quadrature_values": [
+        1.4897487961272477e-07,
+        1.4897499828960677e-07
+      ],
+      "error_quadrature_stable": true
+    },
+    {
+      "id": "nektar_e16_p28_mms",
+      "method": "nektar",
+      "elements_per_axis": 16,
+      "degree": 28,
+      "guard": false,
+      "quadrature": 32,
+      "status": "validated",
+      "preprocessing_seconds": 19.986375959008,
+      "geometry_max_error": 3.3306690738754696e-15,
+      "timing": {
+        "solve_calls": 1,
+        "setup_seconds": 62.119705916,
+        "first_solve_seconds": 0.305852333,
+        "native_l2": 5.5806875224675127e-08,
+        "local_coefficients": 215296,
+        "batch": 1,
+        "samples_seconds": [
+          0.305852333
+        ],
+        "solve_seconds": 0.305852333
+      },
+      "l2_relative": 5.1585330672871354e-08,
+      "error_quadrature_values": [
+        5.1585362876237146e-08,
+        5.1585330672871354e-08
+      ],
+      "error_quadrature_stable": true
+    },
+    {
+      "id": "nektar_e16_p29_mms",
+      "method": "nektar",
+      "elements_per_axis": 16,
+      "degree": 29,
+      "guard": false,
+      "quadrature": 33,
+      "status": "validated",
+      "preprocessing_seconds": 21.61229520800407,
+      "geometry_max_error": 3.3306690738754696e-15,
+      "timing": {
+        "solve_calls": 1,
+        "setup_seconds": 73.786071875,
+        "first_solve_seconds": 0.302365125,
+        "native_l2": 1.3180171093489044e-08,
+        "local_coefficients": 230400,
+        "batch": 1,
+        "samples_seconds": [
+          0.302365125
+        ],
+        "solve_seconds": 0.302365125
+      },
+      "l2_relative": 1.2212072366440975e-08,
+      "error_quadrature_values": [
+        1.221206762642068e-08,
+        1.2212072366440975e-08
+      ],
+      "error_quadrature_stable": true
+    },
+    {
+      "id": "nektar_e16_p30_mms",
+      "method": "nektar",
+      "elements_per_axis": 16,
+      "degree": 30,
+      "guard": false,
+      "quadrature": 34,
+      "status": "validated",
+      "preprocessing_seconds": 22.349484374994063,
+      "geometry_max_error": 3.552713678800501e-15,
+      "timing": {
+        "solve_calls": 1,
+        "setup_seconds": 86.569236791,
+        "first_solve_seconds": 0.401606041,
+        "native_l2": 4.266315348558701e-09,
+        "local_coefficients": 246016,
+        "batch": 1,
+        "samples_seconds": [
+          0.401606041
+        ],
+        "solve_seconds": 0.401606041
+      },
+      "l2_relative": 3.9456401192114555e-09,
+      "error_quadrature_values": [
+        3.9456414475625205e-09,
+        3.9456401192114555e-09
+      ],
+      "error_quadrature_stable": true
+    },
+    {
+      "id": "nektar_e16_p31_mms",
+      "method": "nektar",
+      "elements_per_axis": 16,
+      "degree": 31,
+      "guard": false,
+      "quadrature": 35,
+      "status": "validated",
+      "preprocessing_seconds": 22.422985624987632,
+      "geometry_max_error": 3.4416913763379853e-15,
+      "timing": {
+        "solve_calls": 1,
+        "setup_seconds": 104.770588208,
+        "first_solve_seconds": 0.450378333,
+        "native_l2": 9.405278852920473e-10,
+        "local_coefficients": 262144,
+        "batch": 1,
+        "samples_seconds": [
+          0.450378333
+        ],
+        "solve_seconds": 0.450378333
+      },
+      "l2_relative": 8.713494331439679e-10,
+      "error_quadrature_values": [
+        8.713493011538877e-10,
+        8.713494331439679e-10
+      ],
+      "error_quadrature_stable": true
+    }
+  ]
+}

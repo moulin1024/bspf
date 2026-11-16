@@ -1,0 +1,30 @@
+{
+  "n": 33,
+  "kind": "guard",
+  "id": "guard_n33",
+  "status": "validated",
+  "method": "native_fd4",
+  "geometry_setup_seconds": 0.0009686659905128181,
+  "sampling_seconds": 1.6375008272007108e-05,
+  "forcing_samples": 961,
+  "binary_sha256": "336be0e1eee34a7929cf723f740ab960102d6f2cd91eedf4000302a0f112c681",
+  "source_sha256": "8a98fbe594b8c1874b2a7edf7e9ee96cd6964160e09d55217118ebb8d9e5ef17",
+  "solve_seconds": 0.000966083,
+  "setup_seconds": 0.000535375,
+  "iterations": 17,
+  "relative_residual": 6.002234391338007e-13,
+  "converged": true,
+  "solve_calls": 1,
+  "warmups": 0,
+  "nodal_max_error": 1.2605002286392164e-07,
+  "l2_relative": 4.203747454490415e-08,
+  "quadrature_errors": [
+    4.203747159293531e-08,
+    4.203747454490415e-08
+  ],
+  "quadrature_orders": [
+    100,
+    140
+  ],
+  "quadrature_stable": true
+}

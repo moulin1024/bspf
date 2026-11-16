@@ -1,0 +1,46 @@
+{
+  "n": 184,
+  "q": 368,
+  "kernel": "modal",
+  "guard": false,
+  "forcing_source": "nodal",
+  "same_nodes": false,
+  "hard": true,
+  "id": "modal_n184_q368_nodal_rhs",
+  "status": "validated",
+  "setup_seconds": 0.30709129199385643,
+  "quadrature_kind": "Gauss-Legendre",
+  "integration_solution_node_max_difference": null,
+  "forcing_sample_count": 33856,
+  "forcing_interpolation_inside_timer": true,
+  "sampling_seconds": 1.9332913329999428,
+  "binary_sha256": "65237333c07f001542402d74eb626092deff2f0842c22f037327a247ac23ec9e",
+  "solve_calls": 1,
+  "warmups": 0,
+  "load_seconds": 0.004364208,
+  "solve_seconds": 0.11536825,
+  "iterations": 47,
+  "relative_residual": 9.863520215048573e-16,
+  "preconditioned_defect": 7.8545372217026e-15,
+  "refinements": 1,
+  "peak_rss_bytes": 53657600,
+  "rhs_weighting_inside_timer": true,
+  "defect_history": [
+    2.0208658140632557e-13,
+    7.8545372217026e-15
+  ],
+  "l2_relative": 0.6226671230887209,
+  "quadrature_errors": [
+    0.6226671230886754,
+    0.6226671230887209
+  ],
+  "quadrature_orders": [
+    640,
+    768
+  ],
+  "quadrature_stable": true,
+  "forcing_interpolation_relative_l2": 0.47867134193161687,
+  "audit_quadrature_order": 640,
+  "audit_preconditioned_defect": 5.087894187870212e-13,
+  "analytic_rhs_preconditioned_defect": 0.40758136117428395
+}

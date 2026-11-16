@@ -1,0 +1,12 @@
+/build/
+__pycache__/
+*.pyc
+*.bin
+*.npz
+*.npy
+*.log
+/benchmarks/nonconformal_bspf_opt/poisson_single
+/benchmarks/nonconformal_bspf_opt/poisson_nodal
+/benchmarks/finite_difference_poisson/fd4
+/benchmarks/standard_poisson/build/
+!*.png

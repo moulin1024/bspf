@@ -1,0 +1,239 @@
+{
+  "rows": [
+    {
+      "id": "nektar_e8_p8_mms",
+      "method": "nektar",
+      "elements_per_axis": 8,
+      "degree": 8,
+      "guard": false,
+      "quadrature": 40,
+      "status": "validated",
+      "preprocessing_seconds": 7.853147000001627,
+      "geometry_max_error": 3.552713678800501e-15,
+      "timing": {
+        "solve_calls": 1,
+        "setup_seconds": 0.833612708,
+        "first_solve_seconds": 0.001466417,
+        "native_l2": 0.3412953004512292,
+        "local_coefficients": 5184,
+        "batch": 1,
+        "samples_seconds": [
+          0.001466417
+        ],
+        "solve_seconds": 0.001466417
+      },
+      "l2_relative": 0.3161564091581367,
+      "error_quadrature_values": [
+        0.31615640933098543,
+        0.3161564091581367
+      ],
+      "error_quadrature_stable": true
+    },
+    {
+      "id": "nektar_e8_p12_mms",
+      "method": "nektar",
+      "elements_per_axis": 8,
+      "degree": 12,
+      "guard": false,
+      "quadrature": 40,
+      "status": "validated",
+      "preprocessing_seconds": 7.981382666999707,
+      "geometry_max_error": 3.552713678800501e-15,
+      "timing": {
+        "solve_calls": 1,
+        "setup_seconds": 2.033638458,
+        "first_solve_seconds": 0.002296875,
+        "native_l2": 0.24491866261422526,
+        "local_coefficients": 10816,
+        "batch": 1,
+        "samples_seconds": [
+          0.002296875
+        ],
+        "solve_seconds": 0.002296875
+      },
+      "l2_relative": 0.2268786018483088,
+      "error_quadrature_values": [
+        0.22687860210214747,
+        0.2268786018483088
+      ],
+      "error_quadrature_stable": true
+    },
+    {
+      "id": "nektar_e8_p16_mms",
+      "method": "nektar",
+      "elements_per_axis": 8,
+      "degree": 16,
+      "guard": false,
+      "quadrature": 40,
+      "status": "validated",
+      "preprocessing_seconds": 7.779538125003455,
+      "geometry_max_error": 3.552713678800501e-15,
+      "timing": {
+        "solve_calls": 1,
+        "setup_seconds": 4.217444791,
+        "first_solve_seconds": 0.005139667,
+        "native_l2": 0.17188824828318805,
+        "local_coefficients": 18496,
+        "batch": 1,
+        "samples_seconds": [
+          0.005139667
+        ],
+        "solve_seconds": 0.005139667
+      },
+      "l2_relative": 0.15922739575045464,
+      "error_quadrature_values": [
+        0.15922739612210157,
+        0.15922739575045464
+      ],
+      "error_quadrature_stable": true
+    },
+    {
+      "id": "nektar_e8_p24_mms",
+      "method": "nektar",
+      "elements_per_axis": 8,
+      "degree": 24,
+      "guard": false,
+      "quadrature": 40,
+      "status": "validated",
+      "preprocessing_seconds": 7.839033666001342,
+      "geometry_max_error": 3.552713678800501e-15,
+      "timing": {
+        "solve_calls": 1,
+        "setup_seconds": 13.482167625,
+        "first_solve_seconds": 0.016182667,
+        "native_l2": 0.06204256624020353,
+        "local_coefficients": 40000,
+        "batch": 1,
+        "samples_seconds": [
+          0.016182667
+        ],
+        "solve_seconds": 0.016182667
+      },
+      "l2_relative": 0.05747257844142013,
+      "error_quadrature_values": [
+        0.05747257949435762,
+        0.05747257844142013
+      ],
+      "error_quadrature_stable": true
+    },
+    {
+      "id": "nektar_e16_p12_mms",
+      "method": "nektar",
+      "elements_per_axis": 16,
+      "degree": 12,
+      "guard": false,
+      "quadrature": 24,
+      "status": "validated",
+      "preprocessing_seconds": 11.487277291998907,
+      "geometry_max_error": 3.3306690738754696e-15,
+      "timing": {
+        "solve_calls": 1,
+        "setup_seconds": 2.67650375,
+        "first_solve_seconds": 0.010631834,
+        "native_l2": 0.05635027164892697,
+        "local_coefficients": 43264,
+        "batch": 1,
+        "samples_seconds": [
+          0.010631834
+        ],
+        "solve_seconds": 0.010631834
+      },
+      "l2_relative": 0.052199654362344576,
+      "error_quadrature_values": [
+        0.05219965438393747,
+        0.052199654362344576
+      ],
+      "error_quadrature_stable": true
+    },
+    {
+      "id": "nektar_e16_p16_mms",
+      "method": "nektar",
+      "elements_per_axis": 16,
+      "degree": 16,
+      "guard": false,
+      "quadrature": 24,
+      "status": "validated",
+      "preprocessing_seconds": 11.143697874998907,
+      "geometry_max_error": 3.3306690738754696e-15,
+      "timing": {
+        "solve_calls": 1,
+        "setup_seconds": 6.319647833,
+        "first_solve_seconds": 0.024948375,
+        "native_l2": 0.007188145838742576,
+        "local_coefficients": 73984,
+        "batch": 1,
+        "samples_seconds": [
+          0.024948375
+        ],
+        "solve_seconds": 0.024948375
+      },
+      "l2_relative": 0.006658595017165645,
+      "error_quadrature_values": [
+        0.0066585951874702665,
+        0.006658595017165645
+      ],
+      "error_quadrature_stable": true
+    },
+    {
+      "id": "nektar_e16_p24_mms",
+      "method": "nektar",
+      "elements_per_axis": 16,
+      "degree": 24,
+      "guard": false,
+      "quadrature": 28,
+      "status": "validated",
+      "preprocessing_seconds": 15.359806792002928,
+      "geometry_max_error": 3.552713678800501e-15,
+      "timing": {
+        "solve_calls": 1,
+        "setup_seconds": 30.283754292,
+        "first_solve_seconds": 0.151255833,
+        "native_l2": 6.044171785868435e-06,
+        "local_coefficients": 160000,
+        "batch": 1,
+        "samples_seconds": [
+          0.151255833
+        ],
+        "solve_seconds": 0.151255833
+      },
+      "l2_relative": 5.577143440440708e-06,
+      "error_quadrature_values": [
+        5.577158108926341e-06,
+        5.577143440440708e-06
+      ],
+      "error_quadrature_stable": true
+    },
+    {
+      "id": "nektar_e16_p32_mms",
+      "method": "nektar",
+      "elements_per_axis": 16,
+      "degree": 32,
+      "guard": false,
+      "quadrature": 36,
+      "status": "validated",
+      "preprocessing_seconds": 25.810459999993327,
+      "geometry_max_error": 3.4416913763379853e-15,
+      "timing": {
+        "solve_calls": 1,
+        "setup_seconds": 122.165692417,
+        "first_solve_seconds": 0.685890291,
+        "native_l2": 2.8433394438890485e-10,
+        "local_coefficients": 278784,
+        "batch": 1,
+        "samples_seconds": [
+          0.685890291
+        ],
+        "solve_seconds": 0.685890291
+      },
+      "l2_relative": 2.63061466845345e-10,
+      "error_quadrature_values": [
+        2.6306150090621796e-10,
+        2.63061466845345e-10
+      ],
+      "error_quadrature_stable": true
+    }
+  ],
+  "mms": "../mms.json",
+  "protocol": "Unmodified Nektar++ DirectStaticCond + SumFac, one single-thread native solve/configuration, no warmup, setup excluded; quadrature bandwidth increased consistently for the new MMS",
+  "status": "complete"
+}

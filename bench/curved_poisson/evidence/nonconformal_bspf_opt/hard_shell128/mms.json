@@ -1,0 +1,36 @@
+{
+  "seed": 20261115,
+  "shell_min": 4,
+  "shell_max": 128,
+  "parent_length": 2.0,
+  "rms": 1.0,
+  "spectrum": "shell energy k^(-5/3)",
+  "verification": {
+    "scalar_slope": -1.6666666666666665,
+    "kinetic_energy_slope": -1.6666666666666672,
+    "scalar_shell_max_relative_error": 3.4416913763379853e-15,
+    "kinetic_shell_max_relative_error": 3.4416913763379853e-15,
+    "scalar_rms": 1.0000000000000002,
+    "velocity_rms": 1.0000000000000002,
+    "scalar_mean": 1.734723475976807e-18,
+    "divergence_rms": 1.3351026786066266e-13,
+    "divergence_relative_to_gradient": 1.4845307698845979e-15,
+    "poisson_forcing_relative_residual": 5.982910761852439e-15,
+    "grid_evaluator_relative_errors": {
+      "scalar": 3.074240268438413e-15,
+      "scalar_x": 1.5215382892349503e-14,
+      "scalar_y": 1.298693909697462e-14,
+      "forcing": 1.6759421436508066e-14
+    },
+    "direct_mode_sum_relative_errors": {
+      "scalar": 5.021324972521758e-15,
+      "scalar_x": 3.059932337158894e-14,
+      "scalar_y": 1.1857390318834366e-14,
+      "forcing": 1.3845527185966125e-14
+    },
+    "pde_solve_calls": 0
+  },
+  "geometry": "unchanged four-cubic-edge Coons patch",
+  "quadrature_policy": "q=2*n",
+  "description": "Doubled maximum physical wavenumber; randomized phases and amplitudes; no boundary damping or tanh"
+}

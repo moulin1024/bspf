@@ -1,0 +1,3396 @@
+{
+  "direct": [
+    {
+      "n": 96,
+      "q": 192,
+      "kernel": "modal",
+      "guard": false,
+      "hard": true,
+      "id": "modal_n96_q192",
+      "status": "audit_failed",
+      "setup_seconds": 0.1370856659996207,
+      "sampling_seconds": 2.664212583003973,
+      "binary_sha256": "fa3bd0a9cfec12f5596b5743a71784dcbe84accc7a533d2e86ca414dadb5dc43",
+      "solve_calls": 1,
+      "warmups": 0,
+      "load_seconds": 0.001767458,
+      "solve_seconds": 0.017765917,
+      "iterations": 44,
+      "relative_residual": 9.558679078456627e-16,
+      "preconditioned_defect": 3.877858781470227e-15,
+      "refinements": 1,
+      "peak_rss_bytes": 8634368,
+      "rhs_weighting_inside_timer": true,
+      "defect_history": [
+        1.2848269008803166e-13,
+        3.877858781470227e-15
+      ],
+      "l2_relative": 0.22163349568847898,
+      "quadrature_errors": [
+        0.22163349568847665,
+        0.22163349568847898
+      ],
+      "quadrature_orders": [
+        640,
+        768
+      ],
+      "quadrature_stable": true,
+      "audit_quadrature_order": 640,
+      "audit_preconditioned_defect": 0.000333668154043164,
+      "source_result": "evidence/nonconformal_bspf_opt/hard_shell128/modal_n96_q192/result.json",
+      "reused": true
+    },
+    {
+      "n": 104,
+      "q": 208,
+      "kernel": "modal",
+      "guard": false,
+      "forcing_source": "direct",
+      "same_nodes": false,
+      "hard": true,
+      "id": "modal_n104_q208",
+      "status": "audit_failed",
+      "setup_seconds": 0.5013589579903055,
+      "quadrature_kind": "Gauss-Legendre",
+      "integration_solution_node_max_difference": null,
+      "forcing_sample_count": 43264,
+      "forcing_interpolation_inside_timer": false,
+      "sampling_seconds": 2.278199249994941,
+      "binary_sha256": "fa3bd0a9cfec12f5596b5743a71784dcbe84accc7a533d2e86ca414dadb5dc43",
+      "solve_calls": 1,
+      "warmups": 0,
+      "load_seconds": 0.002336792,
+      "solve_seconds": 0.019534209,
+      "iterations": 45,
+      "relative_residual": 7.417510976659873e-16,
+      "preconditioned_defect": 4.0674151175036964e-15,
+      "refinements": 1,
+      "peak_rss_bytes": 10551296,
+      "rhs_weighting_inside_timer": true,
+      "defect_history": [
+        1.1835820068539563e-13,
+        4.0674151175036964e-15
+      ],
+      "l2_relative": 0.20417434414174818,
+      "quadrature_errors": [
+        0.20417434414174632,
+        0.20417434414174818
+      ],
+      "quadrature_orders": [
+        640,
+        768
+      ],
+      "quadrature_stable": true,
+      "audit_quadrature_order": 640,
+      "audit_preconditioned_defect": 6.834513617148031e-08,
+      "source_result": "evidence/nonconformal_bspf_opt/hard_shell128/fine_sweep_v1/bspf/modal_n104_q208/result.json",
+      "reused": false
+    },
+    {
+      "n": 112,
+      "q": 224,
+      "kernel": "modal",
+      "guard": false,
+      "forcing_source": "direct",
+      "same_nodes": false,
+      "hard": true,
+      "id": "modal_n112_q224",
+      "status": "validated",
+      "setup_seconds": 0.9004470840009162,
+      "quadrature_kind": "Gauss-Legendre",
+      "integration_solution_node_max_difference": null,
+      "forcing_sample_count": 50176,
+      "forcing_interpolation_inside_timer": false,
+      "sampling_seconds": 2.77641983400099,
+      "binary_sha256": "fa3bd0a9cfec12f5596b5743a71784dcbe84accc7a533d2e86ca414dadb5dc43",
+      "solve_calls": 1,
+      "warmups": 0,
+      "load_seconds": 0.001706083,
+      "solve_seconds": 0.026086542,
+      "iterations": 45,
+      "relative_residual": 8.5939865890744e-16,
+      "preconditioned_defect": 4.729289879408664e-15,
+      "refinements": 1,
+      "peak_rss_bytes": 21643264,
+      "rhs_weighting_inside_timer": true,
+      "defect_history": [
+        1.3577604048717036e-13,
+        4.729289879408664e-15
+      ],
+      "l2_relative": 0.18495312229624838,
+      "quadrature_errors": [
+        0.18495312229624522,
+        0.18495312229624838
+      ],
+      "quadrature_orders": [
+        640,
+        768
+      ],
+      "quadrature_stable": true,
+      "audit_quadrature_order": 640,
+      "audit_preconditioned_defect": 1.892996483550662e-12,
+      "source_result": "evidence/nonconformal_bspf_opt/hard_shell128/fine_sweep_v1/bspf/modal_n112_q224/result.json",
+      "reused": false
+    },
+    {
+      "n": 120,
+      "q": 240,
+      "kernel": "modal",
+      "guard": false,
+      "forcing_source": "direct",
+      "same_nodes": false,
+      "hard": true,
+      "id": "modal_n120_q240",
+      "status": "validated",
+      "setup_seconds": 0.9914754170022206,
+      "quadrature_kind": "Gauss-Legendre",
+      "integration_solution_node_max_difference": null,
+      "forcing_sample_count": 57600,
+      "forcing_interpolation_inside_timer": false,
+      "sampling_seconds": 3.1699891249882057,
+      "binary_sha256": "fa3bd0a9cfec12f5596b5743a71784dcbe84accc7a533d2e86ca414dadb5dc43",
+      "solve_calls": 1,
+      "warmups": 0,
+      "load_seconds": 0.002014542,
+      "solve_seconds": 0.030782125,
+      "iterations": 45,
+      "relative_residual": 1.0958815282815717e-15,
+      "preconditioned_defect": 5.450852962436225e-15,
+      "refinements": 1,
+      "peak_rss_bytes": 24870912,
+      "rhs_weighting_inside_timer": true,
+      "defect_history": [
+        2.0361765116450594e-13,
+        5.450852962436225e-15
+      ],
+      "l2_relative": 0.17147424529027022,
+      "quadrature_errors": [
+        0.1714742452902669,
+        0.17147424529027022
+      ],
+      "quadrature_orders": [
+        640,
+        768
+      ],
+      "quadrature_stable": true,
+      "audit_quadrature_order": 640,
+      "audit_preconditioned_defect": 4.079420545201556e-13,
+      "source_result": "evidence/nonconformal_bspf_opt/hard_shell128/fine_sweep_v1/bspf/modal_n120_q240/result.json",
+      "reused": false
+    },
+    {
+      "n": 128,
+      "q": 256,
+      "kernel": "modal",
+      "guard": false,
+      "hard": true,
+      "id": "modal_n128_q256",
+      "status": "validated",
+      "setup_seconds": 0.15939099999377504,
+      "sampling_seconds": 4.6246767090051435,
+      "binary_sha256": "fa3bd0a9cfec12f5596b5743a71784dcbe84accc7a533d2e86ca414dadb5dc43",
+      "solve_calls": 1,
+      "warmups": 0,
+      "load_seconds": 0.003057042,
+      "solve_seconds": 0.0392855,
+      "iterations": 46,
+      "relative_residual": 9.994343636781393e-16,
+      "preconditioned_defect": 6.1801182599296126e-15,
+      "refinements": 1,
+      "peak_rss_bytes": 10207232,
+      "rhs_weighting_inside_timer": true,
+      "defect_history": [
+        2.3776497347474113e-13,
+        6.1801182599296126e-15
+      ],
+      "l2_relative": 0.15643665619714622,
+      "quadrature_errors": [
+        0.15643665619714275,
+        0.15643665619714622
+      ],
+      "quadrature_orders": [
+        640,
+        768
+      ],
+      "quadrature_stable": true,
+      "audit_quadrature_order": 640,
+      "audit_preconditioned_defect": 8.934627732986381e-13,
+      "source_result": "evidence/nonconformal_bspf_opt/hard_shell128/modal_n128_q256/result.json",
+      "reused": true
+    },
+    {
+      "n": 136,
+      "q": 272,
+      "kernel": "modal",
+      "guard": false,
+      "forcing_source": "direct",
+      "same_nodes": false,
+      "hard": true,
+      "id": "modal_n136_q272",
+      "status": "validated",
+      "setup_seconds": 1.6970165829989128,
+      "quadrature_kind": "Gauss-Legendre",
+      "integration_solution_node_max_difference": null,
+      "forcing_sample_count": 73984,
+      "forcing_interpolation_inside_timer": false,
+      "sampling_seconds": 3.8568649999942863,
+      "binary_sha256": "fa3bd0a9cfec12f5596b5743a71784dcbe84accc7a533d2e86ca414dadb5dc43",
+      "solve_calls": 1,
+      "warmups": 0,
+      "load_seconds": 0.0025995,
+      "solve_seconds": 0.04281225,
+      "iterations": 47,
+      "relative_residual": 8.17527447196083e-16,
+      "preconditioned_defect": 4.511162691653383e-15,
+      "refinements": 1,
+      "peak_rss_bytes": 23396352,
+      "rhs_weighting_inside_timer": true,
+      "defect_history": [
+        1.2861316736377268e-13,
+        4.511162691653383e-15
+      ],
+      "l2_relative": 0.13953542910451375,
+      "quadrature_errors": [
+        0.13953542910451028,
+        0.13953542910451375
+      ],
+      "quadrature_orders": [
+        640,
+        768
+      ],
+      "quadrature_stable": true,
+      "audit_quadrature_order": 640,
+      "audit_preconditioned_defect": 3.6173586931358426e-13,
+      "source_result": "evidence/nonconformal_bspf_opt/hard_shell128/fine_sweep_v1/bspf/modal_n136_q272/result.json",
+      "reused": false
+    },
+    {
+      "n": 144,
+      "q": 288,
+      "kernel": "modal",
+      "guard": false,
+      "forcing_source": "direct",
+      "same_nodes": false,
+      "hard": true,
+      "id": "modal_n144_q288",
+      "status": "validated",
+      "setup_seconds": 1.5763555419980548,
+      "quadrature_kind": "Gauss-Legendre",
+      "integration_solution_node_max_difference": null,
+      "forcing_sample_count": 82944,
+      "forcing_interpolation_inside_timer": false,
+      "sampling_seconds": 4.448837249990902,
+      "binary_sha256": "fa3bd0a9cfec12f5596b5743a71784dcbe84accc7a533d2e86ca414dadb5dc43",
+      "solve_calls": 1,
+      "warmups": 0,
+      "load_seconds": 0.00322225,
+      "solve_seconds": 0.060791792,
+      "iterations": 47,
+      "relative_residual": 8.354005909552689e-16,
+      "preconditioned_defect": 6.3228109794799495e-15,
+      "refinements": 1,
+      "peak_rss_bytes": 33685504,
+      "rhs_weighting_inside_timer": true,
+      "defect_history": [
+        1.471313228958908e-13,
+        6.3228109794799495e-15
+      ],
+      "l2_relative": 0.12524067240702186,
+      "quadrature_errors": [
+        0.12524067240701858,
+        0.12524067240702186
+      ],
+      "quadrature_orders": [
+        640,
+        768
+      ],
+      "quadrature_stable": true,
+      "audit_quadrature_order": 640,
+      "audit_preconditioned_defect": 1.0756239924295904e-12,
+      "source_result": "evidence/nonconformal_bspf_opt/hard_shell128/fine_sweep_v1/bspf/modal_n144_q288/result.json",
+      "reused": false
+    },
+    {
+      "n": 152,
+      "q": 304,
+      "kernel": "modal",
+      "guard": false,
+      "forcing_source": "direct",
+      "same_nodes": false,
+      "hard": true,
+      "id": "modal_n152_q304",
+      "status": "validated",
+      "setup_seconds": 1.9607933329971274,
+      "quadrature_kind": "Gauss-Legendre",
+      "integration_solution_node_max_difference": null,
+      "forcing_sample_count": 92416,
+      "forcing_interpolation_inside_timer": false,
+      "sampling_seconds": 4.9271236669883365,
+      "binary_sha256": "fa3bd0a9cfec12f5596b5743a71784dcbe84accc7a533d2e86ca414dadb5dc43",
+      "solve_calls": 1,
+      "warmups": 0,
+      "load_seconds": 0.003645666,
+      "solve_seconds": 0.062361375,
+      "iterations": 47,
+      "relative_residual": 9.330041114016861e-16,
+      "preconditioned_defect": 1.0311544778590331e-14,
+      "refinements": 1,
+      "peak_rss_bytes": 37175296,
+      "rhs_weighting_inside_timer": true,
+      "defect_history": [
+        1.6807713878848114e-13,
+        1.0311544778590331e-14
+      ],
+      "l2_relative": 0.11082657843193494,
+      "quadrature_errors": [
+        0.11082657843193122,
+        0.11082657843193494
+      ],
+      "quadrature_orders": [
+        640,
+        768
+      ],
+      "quadrature_stable": true,
+      "audit_quadrature_order": 640,
+      "audit_preconditioned_defect": 6.113496826692716e-13,
+      "source_result": "evidence/nonconformal_bspf_opt/hard_shell128/fine_sweep_v1/bspf/modal_n152_q304/result.json",
+      "reused": false
+    },
+    {
+      "n": 160,
+      "q": 320,
+      "kernel": "modal",
+      "guard": false,
+      "hard": true,
+      "id": "modal_n160_q320",
+      "status": "validated",
+      "setup_seconds": 2.886247166999965,
+      "sampling_seconds": 7.3496775410021655,
+      "binary_sha256": "fa3bd0a9cfec12f5596b5743a71784dcbe84accc7a533d2e86ca414dadb5dc43",
+      "solve_calls": 1,
+      "warmups": 0,
+      "load_seconds": 0.004433458,
+      "solve_seconds": 0.072809959,
+      "iterations": 47,
+      "relative_residual": 9.07405383393888e-16,
+      "preconditioned_defect": 5.747710047344469e-15,
+      "refinements": 1,
+      "peak_rss_bytes": 27262976,
+      "rhs_weighting_inside_timer": true,
+      "defect_history": [
+        1.934820142224641e-13,
+        5.747710047344469e-15
+      ],
+      "l2_relative": 0.09886279495421856,
+      "quadrature_errors": [
+        0.09886279495421534,
+        0.09886279495421856
+      ],
+      "quadrature_orders": [
+        640,
+        768
+      ],
+      "quadrature_stable": true,
+      "audit_quadrature_order": 640,
+      "audit_preconditioned_defect": 9.051963254056715e-13,
+      "source_result": "evidence/nonconformal_bspf_opt/hard_shell128/modal_n160_q320/result.json",
+      "reused": true
+    },
+    {
+      "n": 168,
+      "q": 336,
+      "kernel": "modal",
+      "guard": false,
+      "forcing_source": "direct",
+      "same_nodes": false,
+      "hard": true,
+      "id": "modal_n168_q336",
+      "status": "validated",
+      "setup_seconds": 2.7309327089897124,
+      "quadrature_kind": "Gauss-Legendre",
+      "integration_solution_node_max_difference": null,
+      "forcing_sample_count": 112896,
+      "forcing_interpolation_inside_timer": false,
+      "sampling_seconds": 6.024433790997136,
+      "binary_sha256": "fa3bd0a9cfec12f5596b5743a71784dcbe84accc7a533d2e86ca414dadb5dc43",
+      "solve_calls": 1,
+      "warmups": 0,
+      "load_seconds": 0.004424042,
+      "solve_seconds": 0.065271125,
+      "iterations": 47,
+      "relative_residual": 9.814405304324342e-16,
+      "preconditioned_defect": 4.971307237848714e-15,
+      "refinements": 1,
+      "peak_rss_bytes": 28999680,
+      "rhs_weighting_inside_timer": true,
+      "defect_history": [
+        2.019111467461315e-13,
+        4.971307237848714e-15
+      ],
+      "l2_relative": 0.08334454067094307,
+      "quadrature_errors": [
+        0.08334454067094044,
+        0.08334454067094307
+      ],
+      "quadrature_orders": [
+        640,
+        768
+      ],
+      "quadrature_stable": true,
+      "audit_quadrature_order": 640,
+      "audit_preconditioned_defect": 9.794758479078553e-13,
+      "source_result": "evidence/nonconformal_bspf_opt/hard_shell128/fine_sweep_v1/bspf/modal_n168_q336/result.json",
+      "reused": false
+    },
+    {
+      "n": 176,
+      "q": 352,
+      "kernel": "modal",
+      "guard": false,
+      "forcing_source": "direct",
+      "same_nodes": false,
+      "hard": true,
+      "id": "modal_n176_q352",
+      "status": "validated",
+      "setup_seconds": 3.1288487919955514,
+      "quadrature_kind": "Gauss-Legendre",
+      "integration_solution_node_max_difference": null,
+      "forcing_sample_count": 123904,
+      "forcing_interpolation_inside_timer": false,
+      "sampling_seconds": 6.991294750012457,
+      "binary_sha256": "fa3bd0a9cfec12f5596b5743a71784dcbe84accc7a533d2e86ca414dadb5dc43",
+      "solve_calls": 1,
+      "warmups": 0,
+      "load_seconds": 0.004457542,
+      "solve_seconds": 0.079038666,
+      "iterations": 47,
+      "relative_residual": 1.5360524914206322e-14,
+      "preconditioned_defect": 1.736340049534552e-14,
+      "refinements": 1,
+      "peak_rss_bytes": 49037312,
+      "rhs_weighting_inside_timer": true,
+      "defect_history": [
+        2.309986120990058e-13,
+        1.736340049534552e-14
+      ],
+      "l2_relative": 0.07174417116311256,
+      "quadrature_errors": [
+        0.07174417116312083,
+        0.07174417116311256
+      ],
+      "quadrature_orders": [
+        640,
+        768
+      ],
+      "quadrature_stable": true,
+      "audit_quadrature_order": 640,
+      "audit_preconditioned_defect": 5.743305777379653e-13,
+      "source_result": "evidence/nonconformal_bspf_opt/hard_shell128/fine_sweep_v1/bspf/modal_n176_q352/result.json",
+      "reused": false
+    },
+    {
+      "n": 184,
+      "q": 368,
+      "kernel": "modal",
+      "guard": false,
+      "forcing_source": "direct",
+      "same_nodes": false,
+      "hard": true,
+      "id": "modal_n184_q368",
+      "status": "validated",
+      "setup_seconds": 3.360198082998977,
+      "quadrature_kind": "Gauss-Legendre",
+      "integration_solution_node_max_difference": null,
+      "forcing_sample_count": 135424,
+      "forcing_interpolation_inside_timer": false,
+      "sampling_seconds": 7.25881099999242,
+      "binary_sha256": "fa3bd0a9cfec12f5596b5743a71784dcbe84accc7a533d2e86ca414dadb5dc43",
+      "solve_calls": 1,
+      "warmups": 0,
+      "load_seconds": 0.00475225,
+      "solve_seconds": 0.079676,
+      "iterations": 47,
+      "relative_residual": 9.988297790795211e-16,
+      "preconditioned_defect": 1.4827758065964828e-14,
+      "refinements": 1,
+      "peak_rss_bytes": 29622272,
+      "rhs_weighting_inside_timer": true,
+      "defect_history": [
+        2.2236688393394144e-13,
+        1.4827758065964828e-14
+      ],
+      "l2_relative": 0.05948853271637631,
+      "quadrature_errors": [
+        0.05948853271637261,
+        0.05948853271637631
+      ],
+      "quadrature_orders": [
+        640,
+        768
+      ],
+      "quadrature_stable": true,
+      "audit_quadrature_order": 640,
+      "audit_preconditioned_defect": 9.88324302196991e-13,
+      "source_result": "evidence/nonconformal_bspf_opt/hard_shell128/fine_sweep_v1/bspf/modal_n184_q368/result.json",
+      "reused": false
+    },
+    {
+      "n": 192,
+      "q": 384,
+      "kernel": "modal",
+      "guard": false,
+      "hard": true,
+      "id": "modal_n192_q384",
+      "status": "validated",
+      "setup_seconds": 0.43956183300178964,
+      "sampling_seconds": 10.670291208996787,
+      "binary_sha256": "fa3bd0a9cfec12f5596b5743a71784dcbe84accc7a533d2e86ca414dadb5dc43",
+      "solve_calls": 1,
+      "warmups": 0,
+      "load_seconds": 0.006391167,
+      "solve_seconds": 0.130416417,
+      "iterations": 47,
+      "relative_residual": 9.916402453601103e-16,
+      "preconditioned_defect": 6.388199602987889e-15,
+      "refinements": 1,
+      "peak_rss_bytes": 43286528,
+      "rhs_weighting_inside_timer": true,
+      "defect_history": [
+        2.3756296166005533e-13,
+        6.388199602987889e-15
+      ],
+      "l2_relative": 0.04963854699835145,
+      "quadrature_errors": [
+        0.049638546998348264,
+        0.04963854699835145
+      ],
+      "quadrature_orders": [
+        640,
+        768
+      ],
+      "quadrature_stable": true,
+      "audit_quadrature_order": 640,
+      "audit_preconditioned_defect": 4.00322576291431e-13,
+      "source_result": "evidence/nonconformal_bspf_opt/hard_shell128/modal_n192_q384/result.json",
+      "reused": true
+    },
+    {
+      "n": 200,
+      "q": 400,
+      "kernel": "modal",
+      "guard": false,
+      "forcing_source": "direct",
+      "same_nodes": false,
+      "hard": true,
+      "id": "modal_n200_q400",
+      "status": "validated",
+      "setup_seconds": 4.285684165995917,
+      "quadrature_kind": "Gauss-Legendre",
+      "integration_solution_node_max_difference": null,
+      "forcing_sample_count": 160000,
+      "forcing_interpolation_inside_timer": false,
+      "sampling_seconds": 8.445052834009402,
+      "binary_sha256": "fa3bd0a9cfec12f5596b5743a71784dcbe84accc7a533d2e86ca414dadb5dc43",
+      "solve_calls": 1,
+      "warmups": 0,
+      "load_seconds": 0.005677375,
+      "solve_seconds": 0.104811834,
+      "iterations": 47,
+      "relative_residual": 1.033353582223702e-15,
+      "preconditioned_defect": 5.619793661886282e-15,
+      "refinements": 1,
+      "peak_rss_bytes": 52150272,
+      "rhs_weighting_inside_timer": true,
+      "defect_history": [
+        2.4585674254728066e-13,
+        5.619793661886282e-15
+      ],
+      "l2_relative": 0.03591112466280913,
+      "quadrature_errors": [
+        0.03591112466280664,
+        0.03591112466280913
+      ],
+      "quadrature_orders": [
+        640,
+        768
+      ],
+      "quadrature_stable": true,
+      "audit_quadrature_order": 640,
+      "audit_preconditioned_defect": 7.829763999911019e-13,
+      "source_result": "evidence/nonconformal_bspf_opt/hard_shell128/fine_sweep_v1/bspf/modal_n200_q400/result.json",
+      "reused": false
+    },
+    {
+      "n": 208,
+      "q": 416,
+      "kernel": "modal",
+      "guard": false,
+      "forcing_source": "direct",
+      "same_nodes": false,
+      "hard": true,
+      "id": "modal_n208_q416",
+      "status": "validated",
+      "setup_seconds": 4.965879250012222,
+      "quadrature_kind": "Gauss-Legendre",
+      "integration_solution_node_max_difference": null,
+      "forcing_sample_count": 173056,
+      "forcing_interpolation_inside_timer": false,
+      "sampling_seconds": 8.918109167003422,
+      "binary_sha256": "fa3bd0a9cfec12f5596b5743a71784dcbe84accc7a533d2e86ca414dadb5dc43",
+      "solve_calls": 1,
+      "warmups": 0,
+      "load_seconds": 0.006157208,
+      "solve_seconds": 0.112001375,
+      "iterations": 47,
+      "relative_residual": 1.0877508744193303e-15,
+      "preconditioned_defect": 6.369883300896074e-15,
+      "refinements": 1,
+      "peak_rss_bytes": 42057728,
+      "rhs_weighting_inside_timer": true,
+      "defect_history": [
+        2.5790959257597053e-13,
+        6.369883300896074e-15
+      ],
+      "l2_relative": 0.02685076317947198,
+      "quadrature_errors": [
+        0.026850763179470084,
+        0.02685076317947198
+      ],
+      "quadrature_orders": [
+        640,
+        768
+      ],
+      "quadrature_stable": true,
+      "audit_quadrature_order": 640,
+      "audit_preconditioned_defect": 3.838251445223432e-13,
+      "source_result": "evidence/nonconformal_bspf_opt/hard_shell128/fine_sweep_v1/bspf/modal_n208_q416/result.json",
+      "reused": false
+    },
+    {
+      "n": 216,
+      "q": 432,
+      "kernel": "modal",
+      "guard": false,
+      "forcing_source": "direct",
+      "same_nodes": false,
+      "hard": true,
+      "id": "modal_n216_q432",
+      "status": "validated",
+      "setup_seconds": 5.800647708005272,
+      "quadrature_kind": "Gauss-Legendre",
+      "integration_solution_node_max_difference": null,
+      "forcing_sample_count": 186624,
+      "forcing_interpolation_inside_timer": false,
+      "sampling_seconds": 9.692218915995909,
+      "binary_sha256": "fa3bd0a9cfec12f5596b5743a71784dcbe84accc7a533d2e86ca414dadb5dc43",
+      "solve_calls": 1,
+      "warmups": 0,
+      "load_seconds": 0.006731958,
+      "solve_seconds": 0.135439333,
+      "iterations": 47,
+      "relative_residual": 1.0908275139125908e-15,
+      "preconditioned_defect": 1.0014297425068367e-14,
+      "refinements": 1,
+      "peak_rss_bytes": 70582272,
+      "rhs_weighting_inside_timer": true,
+      "defect_history": [
+        2.701615294255184e-13,
+        1.0014297425068367e-14
+      ],
+      "l2_relative": 0.01709005280504537,
+      "quadrature_errors": [
+        0.01709005280504415,
+        0.01709005280504537
+      ],
+      "quadrature_orders": [
+        640,
+        768
+      ],
+      "quadrature_stable": true,
+      "audit_quadrature_order": 640,
+      "audit_preconditioned_defect": 8.5035397734855e-13,
+      "source_result": "evidence/nonconformal_bspf_opt/hard_shell128/fine_sweep_v1/bspf/modal_n216_q432/result.json",
+      "reused": false
+    },
+    {
+      "n": 224,
+      "q": 448,
+      "kernel": "modal",
+      "guard": false,
+      "hard": true,
+      "id": "modal_n224_q448",
+      "status": "validated",
+      "setup_seconds": 9.350032750000537,
+      "sampling_seconds": 14.43282187499426,
+      "binary_sha256": "fa3bd0a9cfec12f5596b5743a71784dcbe84accc7a533d2e86ca414dadb5dc43",
+      "solve_calls": 1,
+      "warmups": 0,
+      "load_seconds": 0.008580708,
+      "solve_seconds": 0.200958125,
+      "iterations": 47,
+      "relative_residual": 1.0542484503170702e-15,
+      "preconditioned_defect": 7.831357567452258e-15,
+      "refinements": 1,
+      "peak_rss_bytes": 79577088,
+      "rhs_weighting_inside_timer": true,
+      "defect_history": [
+        2.883816329318111e-13,
+        7.831357567452258e-15
+      ],
+      "l2_relative": 0.009597033074675293,
+      "quadrature_errors": [
+        0.009597033074674556,
+        0.009597033074675293
+      ],
+      "quadrature_orders": [
+        640,
+        768
+      ],
+      "quadrature_stable": true,
+      "audit_quadrature_order": 640,
+      "audit_preconditioned_defect": 6.182757723597546e-13,
+      "source_result": "evidence/nonconformal_bspf_opt/hard_shell128/modal_n224_q448/result.json",
+      "reused": true
+    },
+    {
+      "n": 232,
+      "q": 464,
+      "kernel": "modal",
+      "guard": false,
+      "forcing_source": "direct",
+      "same_nodes": false,
+      "hard": true,
+      "id": "modal_n232_q464",
+      "status": "validated",
+      "setup_seconds": 8.090459832994384,
+      "quadrature_kind": "Gauss-Legendre",
+      "integration_solution_node_max_difference": null,
+      "forcing_sample_count": 215296,
+      "forcing_interpolation_inside_timer": false,
+      "sampling_seconds": 11.52849170799891,
+      "binary_sha256": "fa3bd0a9cfec12f5596b5743a71784dcbe84accc7a533d2e86ca414dadb5dc43",
+      "solve_calls": 1,
+      "warmups": 0,
+      "load_seconds": 0.006970791,
+      "solve_seconds": 0.170736875,
+      "iterations": 47,
+      "relative_residual": 1.1892168480356166e-15,
+      "preconditioned_defect": 7.540989747815692e-15,
+      "refinements": 1,
+      "peak_rss_bytes": 73859072,
+      "rhs_weighting_inside_timer": true,
+      "defect_history": [
+        2.984626395632809e-13,
+        7.540989747815692e-15
+      ],
+      "l2_relative": 0.0027486910726793523,
+      "quadrature_errors": [
+        0.0027486910726791576,
+        0.0027486910726793523
+      ],
+      "quadrature_orders": [
+        640,
+        768
+      ],
+      "quadrature_stable": true,
+      "audit_quadrature_order": 640,
+      "audit_preconditioned_defect": 5.299433967408756e-13,
+      "source_result": "evidence/nonconformal_bspf_opt/hard_shell128/fine_sweep_v1/bspf/modal_n232_q464/result.json",
+      "reused": false
+    },
+    {
+      "n": 240,
+      "q": 480,
+      "kernel": "modal",
+      "guard": false,
+      "forcing_source": "direct",
+      "same_nodes": false,
+      "hard": true,
+      "id": "modal_n240_q480",
+      "status": "validated",
+      "setup_seconds": 10.050308124991716,
+      "quadrature_kind": "Gauss-Legendre",
+      "integration_solution_node_max_difference": null,
+      "forcing_sample_count": 230400,
+      "forcing_interpolation_inside_timer": false,
+      "sampling_seconds": 12.786054624986718,
+      "binary_sha256": "fa3bd0a9cfec12f5596b5743a71784dcbe84accc7a533d2e86ca414dadb5dc43",
+      "solve_calls": 1,
+      "warmups": 0,
+      "load_seconds": 0.007949125,
+      "solve_seconds": 0.220478625,
+      "iterations": 47,
+      "relative_residual": 1.1187999207900939e-15,
+      "preconditioned_defect": 4.92966147337565e-15,
+      "refinements": 1,
+      "peak_rss_bytes": 94224384,
+      "rhs_weighting_inside_timer": true,
+      "defect_history": [
+        3.1636187680269676e-13,
+        4.92966147337565e-15
+      ],
+      "l2_relative": 0.00029212970007882094,
+      "quadrature_errors": [
+        0.0002921297000788297,
+        0.00029212970007882094
+      ],
+      "quadrature_orders": [
+        640,
+        768
+      ],
+      "quadrature_stable": true,
+      "audit_quadrature_order": 640,
+      "audit_preconditioned_defect": 2.9798679263581245e-13,
+      "source_result": "evidence/nonconformal_bspf_opt/hard_shell128/fine_sweep_v1/bspf/modal_n240_q480/result.json",
+      "reused": false
+    },
+    {
+      "n": 248,
+      "q": 496,
+      "kernel": "modal",
+      "guard": false,
+      "forcing_source": "direct",
+      "same_nodes": false,
+      "hard": true,
+      "id": "modal_n248_q496",
+      "status": "validated",
+      "setup_seconds": 8.732500124999206,
+      "quadrature_kind": "Gauss-Legendre",
+      "integration_solution_node_max_difference": null,
+      "forcing_sample_count": 246016,
+      "forcing_interpolation_inside_timer": false,
+      "sampling_seconds": 12.036097791991779,
+      "binary_sha256": "fa3bd0a9cfec12f5596b5743a71784dcbe84accc7a533d2e86ca414dadb5dc43",
+      "solve_calls": 1,
+      "warmups": 0,
+      "load_seconds": 0.008243417,
+      "solve_seconds": 0.236263958,
+      "iterations": 47,
+      "relative_residual": 1.2472326883362762e-15,
+      "preconditioned_defect": 6.739682668428531e-15,
+      "refinements": 1,
+      "peak_rss_bytes": 91947008,
+      "rhs_weighting_inside_timer": true,
+      "defect_history": [
+        3.179711032369693e-13,
+        6.739682668428531e-15
+      ],
+      "l2_relative": 7.541351456146748e-06,
+      "quadrature_errors": [
+        7.541351456032544e-06,
+        7.541351456146748e-06
+      ],
+      "quadrature_orders": [
+        640,
+        768
+      ],
+      "quadrature_stable": true,
+      "audit_quadrature_order": 640,
+      "audit_preconditioned_defect": 7.970637249311163e-13,
+      "source_result": "evidence/nonconformal_bspf_opt/hard_shell128/fine_sweep_v1/bspf/modal_n248_q496/result.json",
+      "reused": false
+    },
+    {
+      "n": 256,
+      "q": 512,
+      "kernel": "modal",
+      "guard": false,
+      "hard": true,
+      "id": "modal_n256_q512",
+      "status": "validated",
+      "setup_seconds": 1.511630499997409,
+      "sampling_seconds": 19.246289624999918,
+      "binary_sha256": "fa3bd0a9cfec12f5596b5743a71784dcbe84accc7a533d2e86ca414dadb5dc43",
+      "solve_calls": 1,
+      "warmups": 0,
+      "load_seconds": 0.011137042,
+      "solve_seconds": 0.328508875,
+      "iterations": 47,
+      "relative_residual": 1.1307409190935224e-15,
+      "preconditioned_defect": 7.690268499971349e-15,
+      "refinements": 1,
+      "peak_rss_bytes": 91389952,
+      "rhs_weighting_inside_timer": true,
+      "defect_history": [
+        3.3122278670905314e-13,
+        7.690268499971349e-15
+      ],
+      "l2_relative": 8.119525932242128e-08,
+      "quadrature_errors": [
+        8.119525930516493e-08,
+        8.119525932242128e-08
+      ],
+      "quadrature_orders": [
+        640,
+        768
+      ],
+      "quadrature_stable": true,
+      "audit_quadrature_order": 640,
+      "audit_preconditioned_defect": 4.849430523826827e-13,
+      "source_result": "evidence/nonconformal_bspf_opt/hard_shell128/modal_n256_q512/result.json",
+      "reused": true
+    },
+    {
+      "n": 264,
+      "q": 528,
+      "kernel": "modal",
+      "guard": false,
+      "forcing_source": "direct",
+      "same_nodes": false,
+      "hard": true,
+      "id": "modal_n264_q528",
+      "status": "validated",
+      "setup_seconds": 7.642046875000233,
+      "quadrature_kind": "Gauss-Legendre",
+      "integration_solution_node_max_difference": null,
+      "forcing_sample_count": 278784,
+      "forcing_interpolation_inside_timer": false,
+      "sampling_seconds": 14.0755455000035,
+      "binary_sha256": "fa3bd0a9cfec12f5596b5743a71784dcbe84accc7a533d2e86ca414dadb5dc43",
+      "solve_calls": 1,
+      "warmups": 0,
+      "load_seconds": 0.011180625,
+      "solve_seconds": 0.286763042,
+      "iterations": 47,
+      "relative_residual": 1.1531651247329389e-15,
+      "preconditioned_defect": 6.964650674331924e-15,
+      "refinements": 1,
+      "peak_rss_bytes": 98189312,
+      "rhs_weighting_inside_timer": true,
+      "defect_history": [
+        3.4576091240597344e-13,
+        6.964650674331924e-15
+      ],
+      "l2_relative": 4.3993230082501605e-10,
+      "quadrature_errors": [
+        4.3993239144222584e-10,
+        4.3993230082501605e-10
+      ],
+      "quadrature_orders": [
+        640,
+        768
+      ],
+      "quadrature_stable": true,
+      "audit_quadrature_order": 640,
+      "audit_preconditioned_defect": 8.792651530680371e-13,
+      "source_result": "evidence/nonconformal_bspf_opt/hard_shell128/fine_sweep_v1/bspf/modal_n264_q528/result.json",
+      "reused": false
+    },
+    {
+      "n": 272,
+      "q": 544,
+      "kernel": "modal",
+      "guard": false,
+      "forcing_source": "direct",
+      "same_nodes": false,
+      "hard": true,
+      "id": "modal_n272_q544",
+      "status": "validated",
+      "setup_seconds": 8.305635458003962,
+      "quadrature_kind": "Gauss-Legendre",
+      "integration_solution_node_max_difference": null,
+      "forcing_sample_count": 295936,
+      "forcing_interpolation_inside_timer": false,
+      "sampling_seconds": 14.779565499993623,
+      "binary_sha256": "fa3bd0a9cfec12f5596b5743a71784dcbe84accc7a533d2e86ca414dadb5dc43",
+      "solve_calls": 1,
+      "warmups": 0,
+      "load_seconds": 0.016728584,
+      "solve_seconds": 0.30916225,
+      "iterations": 47,
+      "relative_residual": 1.2369852814062186e-15,
+      "preconditioned_defect": 8.310910578653487e-15,
+      "refinements": 1,
+      "peak_rss_bytes": 103055360,
+      "rhs_weighting_inside_timer": true,
+      "defect_history": [
+        3.523642010791774e-13,
+        8.310910578653487e-15
+      ],
+      "l2_relative": 6.82454000328891e-13,
+      "quadrature_errors": [
+        6.824868994878202e-13,
+        6.82454000328891e-13
+      ],
+      "quadrature_orders": [
+        640,
+        768
+      ],
+      "quadrature_stable": true,
+      "audit_quadrature_order": 640,
+      "audit_preconditioned_defect": 4.760343273208413e-13,
+      "source_result": "evidence/nonconformal_bspf_opt/hard_shell128/fine_sweep_v1/bspf/modal_n272_q544/result.json",
+      "reused": false
+    },
+    {
+      "n": 280,
+      "q": 560,
+      "kernel": "modal",
+      "guard": false,
+      "forcing_source": "direct",
+      "same_nodes": false,
+      "hard": true,
+      "id": "modal_n280_q560",
+      "status": "validated",
+      "setup_seconds": 8.486986042000353,
+      "quadrature_kind": "Gauss-Legendre",
+      "integration_solution_node_max_difference": null,
+      "forcing_sample_count": 313600,
+      "forcing_interpolation_inside_timer": false,
+      "sampling_seconds": 15.801798499989673,
+      "binary_sha256": "fa3bd0a9cfec12f5596b5743a71784dcbe84accc7a533d2e86ca414dadb5dc43",
+      "solve_calls": 1,
+      "warmups": 0,
+      "load_seconds": 0.011012917,
+      "solve_seconds": 0.318482,
+      "iterations": 47,
+      "relative_residual": 1.2179751091799915e-15,
+      "preconditioned_defect": 7.221286211876334e-15,
+      "refinements": 1,
+      "peak_rss_bytes": 87277568,
+      "rhs_weighting_inside_timer": true,
+      "defect_history": [
+        3.56259468921687e-13,
+        7.221286211876334e-15
+      ],
+      "l2_relative": 5.133980152937584e-13,
+      "quadrature_errors": [
+        5.133888618393534e-13,
+        5.133980152937584e-13
+      ],
+      "quadrature_orders": [
+        640,
+        768
+      ],
+      "quadrature_stable": true,
+      "audit_quadrature_order": 640,
+      "audit_preconditioned_defect": 3.1065995971484116e-13,
+      "source_result": "evidence/nonconformal_bspf_opt/hard_shell128/fine_sweep_v1/bspf/modal_n280_q560/result.json",
+      "reused": false
+    },
+    {
+      "n": 288,
+      "q": 576,
+      "kernel": "modal",
+      "guard": false,
+      "hard": true,
+      "id": "modal_n288_q576",
+      "status": "validated",
+      "setup_seconds": 14.873203874994942,
+      "sampling_seconds": 22.401631624998117,
+      "binary_sha256": "fa3bd0a9cfec12f5596b5743a71784dcbe84accc7a533d2e86ca414dadb5dc43",
+      "solve_calls": 1,
+      "warmups": 0,
+      "load_seconds": 0.014719625,
+      "solve_seconds": 0.42159925,
+      "iterations": 47,
+      "relative_residual": 1.2765002084182993e-15,
+      "preconditioned_defect": 1.273512145825378e-14,
+      "refinements": 1,
+      "peak_rss_bytes": 124862464,
+      "rhs_weighting_inside_timer": true,
+      "defect_history": [
+        3.6119001170625564e-13,
+        1.273512145825378e-14
+      ],
+      "l2_relative": 2.290313972128884e-13,
+      "quadrature_errors": [
+        2.290755245883469e-13,
+        2.290313972128884e-13
+      ],
+      "quadrature_orders": [
+        640,
+        768
+      ],
+      "quadrature_stable": true,
+      "audit_quadrature_order": 640,
+      "audit_preconditioned_defect": 5.017014211871529e-13,
+      "source_result": "evidence/nonconformal_bspf_opt/hard_shell128/modal_n288_q576/result.json",
+      "reused": true
+    }
+  ],
+  "nodal": [
+    {
+      "n": 96,
+      "q": 192,
+      "kernel": "modal",
+      "guard": false,
+      "forcing_source": "nodal",
+      "same_nodes": false,
+      "hard": true,
+      "id": "modal_n96_q192_nodal_rhs",
+      "status": "validated",
+      "setup_seconds": 0.09186812500411179,
+      "quadrature_kind": "Gauss-Legendre",
+      "integration_solution_node_max_difference": null,
+      "forcing_sample_count": 9216,
+      "forcing_interpolation_inside_timer": true,
+      "sampling_seconds": 0.8090594169989345,
+      "binary_sha256": "65237333c07f001542402d74eb626092deff2f0842c22f037327a247ac23ec9e",
+      "solve_calls": 1,
+      "warmups": 0,
+      "load_seconds": 0.001787083,
+      "solve_seconds": 0.0140815,
+      "iterations": 37,
+      "relative_residual": 8.711874439808964e-14,
+      "preconditioned_defect": 6.980460487100974e-15,
+      "refinements": 0,
+      "peak_rss_bytes": 8519680,
+      "rhs_weighting_inside_timer": true,
+      "defect_history": [
+        6.980460487100974e-15
+      ],
+      "l2_relative": 66.78102846748556,
+      "quadrature_errors": [
+        66.78102846748061,
+        66.78102846748556
+      ],
+      "quadrature_orders": [
+        640,
+        768
+      ],
+      "quadrature_stable": true,
+      "forcing_interpolation_relative_l2": 1.2193383539165228,
+      "audit_quadrature_order": 640,
+      "audit_preconditioned_defect": 4.8185743604554956e-14,
+      "analytic_rhs_preconditioned_defect": 1.0311929182330584,
+      "source_result": "evidence/nonconformal_bspf_opt/hard_shell128/modal_n96_q192_nodal_rhs/result.json",
+      "reused": true
+    },
+    {
+      "n": 104,
+      "q": 208,
+      "kernel": "modal",
+      "guard": false,
+      "forcing_source": "nodal",
+      "same_nodes": false,
+      "hard": true,
+      "id": "modal_n104_q208_nodal_rhs",
+      "status": "validated",
+      "setup_seconds": 0.07468550000339746,
+      "quadrature_kind": "Gauss-Legendre",
+      "integration_solution_node_max_difference": null,
+      "forcing_sample_count": 10816,
+      "forcing_interpolation_inside_timer": true,
+      "sampling_seconds": 0.5759188330121106,
+      "binary_sha256": "65237333c07f001542402d74eb626092deff2f0842c22f037327a247ac23ec9e",
+      "solve_calls": 1,
+      "warmups": 0,
+      "load_seconds": 0.001539083,
+      "solve_seconds": 0.018297333,
+      "iterations": 38,
+      "relative_residual": 6.555101528702598e-14,
+      "preconditioned_defect": 1.3269589154718861e-14,
+      "refinements": 0,
+      "peak_rss_bytes": 17793024,
+      "rhs_weighting_inside_timer": true,
+      "defect_history": [
+        1.3269589154718861e-14
+      ],
+      "l2_relative": 28.58710396452426,
+      "quadrature_errors": [
+        28.587103964522168,
+        28.58710396452426
+      ],
+      "quadrature_orders": [
+        640,
+        768
+      ],
+      "quadrature_stable": true,
+      "forcing_interpolation_relative_l2": 1.182179430661727,
+      "audit_quadrature_order": 640,
+      "audit_preconditioned_defect": 5.609784625861767e-14,
+      "analytic_rhs_preconditioned_defect": 1.0260656573854499,
+      "source_result": "evidence/nonconformal_bspf_opt/hard_shell128/fine_sweep_v1/bspf/modal_n104_q208_nodal_rhs/result.json",
+      "reused": false
+    },
+    {
+      "n": 112,
+      "q": 224,
+      "kernel": "modal",
+      "guard": false,
+      "forcing_source": "nodal",
+      "same_nodes": false,
+      "hard": true,
+      "id": "modal_n112_q224_nodal_rhs",
+      "status": "validated",
+      "setup_seconds": 0.09249679200001992,
+      "quadrature_kind": "Gauss-Legendre",
+      "integration_solution_node_max_difference": null,
+      "forcing_sample_count": 12544,
+      "forcing_interpolation_inside_timer": true,
+      "sampling_seconds": 0.70157079200726,
+      "binary_sha256": "65237333c07f001542402d74eb626092deff2f0842c22f037327a247ac23ec9e",
+      "solve_calls": 1,
+      "warmups": 0,
+      "load_seconds": 0.001883667,
+      "solve_seconds": 0.020241917,
+      "iterations": 38,
+      "relative_residual": 7.648933832743588e-14,
+      "preconditioned_defect": 2.0987026550214865e-14,
+      "refinements": 0,
+      "peak_rss_bytes": 18415616,
+      "rhs_weighting_inside_timer": true,
+      "defect_history": [
+        2.0987026550214865e-14
+      ],
+      "l2_relative": 13.64434400966314,
+      "quadrature_errors": [
+        13.644344009662134,
+        13.64434400966314
+      ],
+      "quadrature_orders": [
+        640,
+        768
+      ],
+      "quadrature_stable": true,
+      "forcing_interpolation_relative_l2": 1.1176981648207145,
+      "audit_quadrature_order": 640,
+      "audit_preconditioned_defect": 8.000481208049548e-14,
+      "analytic_rhs_preconditioned_defect": 1.0424309134124432,
+      "source_result": "evidence/nonconformal_bspf_opt/hard_shell128/fine_sweep_v1/bspf/modal_n112_q224_nodal_rhs/result.json",
+      "reused": false
+    },
+    {
+      "n": 120,
+      "q": 240,
+      "kernel": "modal",
+      "guard": false,
+      "forcing_source": "nodal",
+      "same_nodes": false,
+      "hard": true,
+      "id": "modal_n120_q240_nodal_rhs",
+      "status": "validated",
+      "setup_seconds": 0.11025008300202899,
+      "quadrature_kind": "Gauss-Legendre",
+      "integration_solution_node_max_difference": null,
+      "forcing_sample_count": 14400,
+      "forcing_interpolation_inside_timer": true,
+      "sampling_seconds": 0.8569937919965014,
+      "binary_sha256": "65237333c07f001542402d74eb626092deff2f0842c22f037327a247ac23ec9e",
+      "solve_calls": 1,
+      "warmups": 0,
+      "load_seconds": 0.001900708,
+      "solve_seconds": 0.024540875,
+      "iterations": 38,
+      "relative_residual": 9.575270089782276e-14,
+      "preconditioned_defect": 8.399021274900808e-14,
+      "refinements": 0,
+      "peak_rss_bytes": 23281664,
+      "rhs_weighting_inside_timer": true,
+      "defect_history": [
+        8.399021274900808e-14
+      ],
+      "l2_relative": 3.2468479776436476,
+      "quadrature_errors": [
+        3.2468479776434087,
+        3.2468479776436476
+      ],
+      "quadrature_orders": [
+        640,
+        768
+      ],
+      "quadrature_stable": true,
+      "forcing_interpolation_relative_l2": 1.0860670861807453,
+      "audit_quadrature_order": 640,
+      "audit_preconditioned_defect": 1.4674690024851608e-13,
+      "analytic_rhs_preconditioned_defect": 0.9313842393677076,
+      "source_result": "evidence/nonconformal_bspf_opt/hard_shell128/fine_sweep_v1/bspf/modal_n120_q240_nodal_rhs/result.json",
+      "reused": false
+    },
+    {
+      "n": 128,
+      "q": 256,
+      "kernel": "modal",
+      "guard": false,
+      "forcing_source": "nodal",
+      "same_nodes": false,
+      "hard": true,
+      "id": "modal_n128_q256_nodal_rhs",
+      "status": "validated",
+      "setup_seconds": 0.18696779099991545,
+      "quadrature_kind": "Gauss-Legendre",
+      "integration_solution_node_max_difference": null,
+      "forcing_sample_count": 16384,
+      "forcing_interpolation_inside_timer": true,
+      "sampling_seconds": 1.169653749995632,
+      "binary_sha256": "65237333c07f001542402d74eb626092deff2f0842c22f037327a247ac23ec9e",
+      "solve_calls": 1,
+      "warmups": 0,
+      "load_seconds": 0.002827666,
+      "solve_seconds": 0.04088475,
+      "iterations": 46,
+      "relative_residual": 1.0090237663857845e-15,
+      "preconditioned_defect": 8.830687749774139e-15,
+      "refinements": 1,
+      "peak_rss_bytes": 14024704,
+      "rhs_weighting_inside_timer": true,
+      "defect_history": [
+        1.8660977476946695e-13,
+        8.830687749774139e-15
+      ],
+      "l2_relative": 1.013987996956873,
+      "quadrature_errors": [
+        1.0139879969568,
+        1.013987996956873
+      ],
+      "quadrature_orders": [
+        640,
+        768
+      ],
+      "quadrature_stable": true,
+      "forcing_interpolation_relative_l2": 1.024199767463431,
+      "audit_quadrature_order": 640,
+      "audit_preconditioned_defect": 3.145963417688958e-13,
+      "analytic_rhs_preconditioned_defect": 0.5760679003308594,
+      "source_result": "evidence/nonconformal_bspf_opt/hard_shell128/modal_n128_q256_nodal_rhs/result.json",
+      "reused": true
+    },
+    {
+      "n": 136,
+      "q": 272,
+      "kernel": "modal",
+      "guard": false,
+      "forcing_source": "nodal",
+      "same_nodes": false,
+      "hard": true,
+      "id": "modal_n136_q272_nodal_rhs",
+      "status": "validated",
+      "setup_seconds": 0.1392102910031099,
+      "quadrature_kind": "Gauss-Legendre",
+      "integration_solution_node_max_difference": null,
+      "forcing_sample_count": 18496,
+      "forcing_interpolation_inside_timer": true,
+      "sampling_seconds": 1.0055973330017878,
+      "binary_sha256": "65237333c07f001542402d74eb626092deff2f0842c22f037327a247ac23ec9e",
+      "solve_calls": 1,
+      "warmups": 0,
+      "load_seconds": 0.002758667,
+      "solve_seconds": 0.044488916,
+      "iterations": 46,
+      "relative_residual": 1.063096281349471e-15,
+      "preconditioned_defect": 1.034894080959523e-14,
+      "refinements": 1,
+      "peak_rss_bytes": 27328512,
+      "rhs_weighting_inside_timer": true,
+      "defect_history": [
+        1.999884583372748e-13,
+        1.034894080959523e-14
+      ],
+      "l2_relative": 1.1284850221312006,
+      "quadrature_errors": [
+        1.128485022131119,
+        1.1284850221312006
+      ],
+      "quadrature_orders": [
+        640,
+        768
+      ],
+      "quadrature_stable": true,
+      "forcing_interpolation_relative_l2": 0.9590504385973184,
+      "audit_quadrature_order": 640,
+      "audit_preconditioned_defect": 2.7013442850231756e-13,
+      "analytic_rhs_preconditioned_defect": 0.65166934579195,
+      "source_result": "evidence/nonconformal_bspf_opt/hard_shell128/fine_sweep_v1/bspf/modal_n136_q272_nodal_rhs/result.json",
+      "reused": false
+    },
+    {
+      "n": 144,
+      "q": 288,
+      "kernel": "modal",
+      "guard": false,
+      "forcing_source": "nodal",
+      "same_nodes": false,
+      "hard": true,
+      "id": "modal_n144_q288_nodal_rhs",
+      "status": "validated",
+      "setup_seconds": 0.15829362500517163,
+      "quadrature_kind": "Gauss-Legendre",
+      "integration_solution_node_max_difference": null,
+      "forcing_sample_count": 20736,
+      "forcing_interpolation_inside_timer": true,
+      "sampling_seconds": 1.118765416991664,
+      "binary_sha256": "65237333c07f001542402d74eb626092deff2f0842c22f037327a247ac23ec9e",
+      "solve_calls": 1,
+      "warmups": 0,
+      "load_seconds": 0.002712125,
+      "solve_seconds": 0.050454125,
+      "iterations": 47,
+      "relative_residual": 8.197160881658045e-16,
+      "preconditioned_defect": 1.7313313601234738e-14,
+      "refinements": 1,
+      "peak_rss_bytes": 32604160,
+      "rhs_weighting_inside_timer": true,
+      "defect_history": [
+        1.278867884237535e-13,
+        1.7313313601234738e-14
+      ],
+      "l2_relative": 0.7835103985733785,
+      "quadrature_errors": [
+        0.783510398573322,
+        0.7835103985733785
+      ],
+      "quadrature_orders": [
+        640,
+        768
+      ],
+      "quadrature_stable": true,
+      "forcing_interpolation_relative_l2": 0.8789009573470938,
+      "audit_quadrature_order": 640,
+      "audit_preconditioned_defect": 6.525883277264799e-13,
+      "analytic_rhs_preconditioned_defect": 0.49972742553604116,
+      "source_result": "evidence/nonconformal_bspf_opt/hard_shell128/fine_sweep_v1/bspf/modal_n144_q288_nodal_rhs/result.json",
+      "reused": false
+    },
+    {
+      "n": 152,
+      "q": 304,
+      "kernel": "modal",
+      "guard": false,
+      "forcing_source": "nodal",
+      "same_nodes": false,
+      "hard": true,
+      "id": "modal_n152_q304_nodal_rhs",
+      "status": "validated",
+      "setup_seconds": 0.1678920420090435,
+      "quadrature_kind": "Gauss-Legendre",
+      "integration_solution_node_max_difference": null,
+      "forcing_sample_count": 23104,
+      "forcing_interpolation_inside_timer": true,
+      "sampling_seconds": 1.2014975830097683,
+      "binary_sha256": "65237333c07f001542402d74eb626092deff2f0842c22f037327a247ac23ec9e",
+      "solve_calls": 1,
+      "warmups": 0,
+      "load_seconds": 0.003047583,
+      "solve_seconds": 0.054077125,
+      "iterations": 47,
+      "relative_residual": 9.131653889167475e-16,
+      "preconditioned_defect": 5.411193738585035e-15,
+      "refinements": 1,
+      "peak_rss_bytes": 29425664,
+      "rhs_weighting_inside_timer": true,
+      "defect_history": [
+        1.536363832567439e-13,
+        5.411193738585035e-15
+      ],
+      "l2_relative": 0.6510850092562127,
+      "quadrature_errors": [
+        0.6510850092561661,
+        0.6510850092562127
+      ],
+      "quadrature_orders": [
+        640,
+        768
+      ],
+      "quadrature_stable": true,
+      "forcing_interpolation_relative_l2": 0.8087028979393373,
+      "audit_quadrature_order": 640,
+      "audit_preconditioned_defect": 4.612232835893592e-13,
+      "analytic_rhs_preconditioned_defect": 0.42382485022702004,
+      "source_result": "evidence/nonconformal_bspf_opt/hard_shell128/fine_sweep_v1/bspf/modal_n152_q304_nodal_rhs/result.json",
+      "reused": false
+    },
+    {
+      "n": 160,
+      "q": 320,
+      "kernel": "modal",
+      "guard": false,
+      "forcing_source": "nodal",
+      "same_nodes": false,
+      "hard": true,
+      "id": "modal_n160_q320_nodal_rhs",
+      "status": "validated",
+      "setup_seconds": 0.2731357090015081,
+      "quadrature_kind": "Gauss-Legendre",
+      "integration_solution_node_max_difference": null,
+      "forcing_sample_count": 25600,
+      "forcing_interpolation_inside_timer": true,
+      "sampling_seconds": 1.822655208001379,
+      "binary_sha256": "65237333c07f001542402d74eb626092deff2f0842c22f037327a247ac23ec9e",
+      "solve_calls": 1,
+      "warmups": 0,
+      "load_seconds": 0.004588375,
+      "solve_seconds": 0.07324275,
+      "iterations": 47,
+      "relative_residual": 9.201067212699174e-16,
+      "preconditioned_defect": 1.8367315653095532e-14,
+      "refinements": 1,
+      "peak_rss_bytes": 21790720,
+      "rhs_weighting_inside_timer": true,
+      "defect_history": [
+        1.7523141144838249e-13,
+        1.8367315653095532e-14
+      ],
+      "l2_relative": 0.6521905521836213,
+      "quadrature_errors": [
+        0.6521905521835746,
+        0.6521905521836213
+      ],
+      "quadrature_orders": [
+        640,
+        768
+      ],
+      "quadrature_stable": true,
+      "forcing_interpolation_relative_l2": 0.7404599723885651,
+      "audit_quadrature_order": 640,
+      "audit_preconditioned_defect": 6.802496792352832e-13,
+      "analytic_rhs_preconditioned_defect": 0.4164396207100227,
+      "source_result": "evidence/nonconformal_bspf_opt/hard_shell128/modal_n160_q320_nodal_rhs/result.json",
+      "reused": true
+    },
+    {
+      "n": 168,
+      "q": 336,
+      "kernel": "modal",
+      "guard": false,
+      "forcing_source": "nodal",
+      "same_nodes": false,
+      "hard": true,
+      "id": "modal_n168_q336_nodal_rhs",
+      "status": "validated",
+      "setup_seconds": 0.2635670829913579,
+      "quadrature_kind": "Gauss-Legendre",
+      "integration_solution_node_max_difference": null,
+      "forcing_sample_count": 28224,
+      "forcing_interpolation_inside_timer": true,
+      "sampling_seconds": 1.5524742499983404,
+      "binary_sha256": "65237333c07f001542402d74eb626092deff2f0842c22f037327a247ac23ec9e",
+      "solve_calls": 1,
+      "warmups": 0,
+      "load_seconds": 0.003878834,
+      "solve_seconds": 0.071056167,
+      "iterations": 47,
+      "relative_residual": 9.859932636445223e-16,
+      "preconditioned_defect": 7.591822443539864e-15,
+      "refinements": 1,
+      "peak_rss_bytes": 39108608,
+      "rhs_weighting_inside_timer": true,
+      "defect_history": [
+        1.78085019954825e-13,
+        7.591822443539864e-15
+      ],
+      "l2_relative": 0.7546045046552404,
+      "quadrature_errors": [
+        0.7546045046551857,
+        0.7546045046552404
+      ],
+      "quadrature_orders": [
+        640,
+        768
+      ],
+      "quadrature_stable": true,
+      "forcing_interpolation_relative_l2": 0.638420451684415,
+      "audit_quadrature_order": 640,
+      "audit_preconditioned_defect": 8.381543957773429e-13,
+      "analytic_rhs_preconditioned_defect": 0.49524688154921265,
+      "source_result": "evidence/nonconformal_bspf_opt/hard_shell128/fine_sweep_v1/bspf/modal_n168_q336_nodal_rhs/result.json",
+      "reused": false
+    },
+    {
+      "n": 176,
+      "q": 352,
+      "kernel": "modal",
+      "guard": false,
+      "forcing_source": "nodal",
+      "same_nodes": false,
+      "hard": true,
+      "id": "modal_n176_q352_nodal_rhs",
+      "status": "validated",
+      "setup_seconds": 0.24045354199188296,
+      "quadrature_kind": "Gauss-Legendre",
+      "integration_solution_node_max_difference": null,
+      "forcing_sample_count": 30976,
+      "forcing_interpolation_inside_timer": true,
+      "sampling_seconds": 1.6138584170112154,
+      "binary_sha256": "65237333c07f001542402d74eb626092deff2f0842c22f037327a247ac23ec9e",
+      "solve_calls": 1,
+      "warmups": 0,
+      "load_seconds": 0.004620375,
+      "solve_seconds": 0.093882875,
+      "iterations": 47,
+      "relative_residual": 2.779236167457561e-13,
+      "preconditioned_defect": 3.1349802566086036e-13,
+      "refinements": 0,
+      "peak_rss_bytes": 46825472,
+      "rhs_weighting_inside_timer": true,
+      "defect_history": [
+        3.1349802566086036e-13
+      ],
+      "l2_relative": 0.7787692919705246,
+      "quadrature_errors": [
+        0.7787692919704703,
+        0.7787692919705246
+      ],
+      "quadrature_orders": [
+        640,
+        768
+      ],
+      "quadrature_stable": true,
+      "forcing_interpolation_relative_l2": 1.4266028642527637,
+      "audit_quadrature_order": 640,
+      "audit_preconditioned_defect": 6.808037724248909e-13,
+      "analytic_rhs_preconditioned_defect": 0.483890177405848,
+      "source_result": "evidence/nonconformal_bspf_opt/hard_shell128/fine_sweep_v1/bspf/modal_n176_q352_nodal_rhs/result.json",
+      "reused": false
+    },
+    {
+      "n": 184,
+      "q": 368,
+      "kernel": "modal",
+      "guard": false,
+      "forcing_source": "nodal",
+      "same_nodes": false,
+      "hard": true,
+      "id": "modal_n184_q368_nodal_rhs",
+      "status": "validated",
+      "setup_seconds": 0.30709129199385643,
+      "quadrature_kind": "Gauss-Legendre",
+      "integration_solution_node_max_difference": null,
+      "forcing_sample_count": 33856,
+      "forcing_interpolation_inside_timer": true,
+      "sampling_seconds": 1.9332913329999428,
+      "binary_sha256": "65237333c07f001542402d74eb626092deff2f0842c22f037327a247ac23ec9e",
+      "solve_calls": 1,
+      "warmups": 0,
+      "load_seconds": 0.004364208,
+      "solve_seconds": 0.11536825,
+      "iterations": 47,
+      "relative_residual": 9.863520215048573e-16,
+      "preconditioned_defect": 7.8545372217026e-15,
+      "refinements": 1,
+      "peak_rss_bytes": 53657600,
+      "rhs_weighting_inside_timer": true,
+      "defect_history": [
+        2.0208658140632557e-13,
+        7.8545372217026e-15
+      ],
+      "l2_relative": 0.6226671230887209,
+      "quadrature_errors": [
+        0.6226671230886754,
+        0.6226671230887209
+      ],
+      "quadrature_orders": [
+        640,
+        768
+      ],
+      "quadrature_stable": true,
+      "forcing_interpolation_relative_l2": 0.47867134193161687,
+      "audit_quadrature_order": 640,
+      "audit_preconditioned_defect": 5.087894187870212e-13,
+      "analytic_rhs_preconditioned_defect": 0.40758136117428395,
+      "source_result": "evidence/nonconformal_bspf_opt/hard_shell128/fine_sweep_v1/bspf/modal_n184_q368_nodal_rhs/result.json",
+      "reused": false
+    },
+    {
+      "n": 192,
+      "q": 384,
+      "kernel": "modal",
+      "guard": false,
+      "forcing_source": "nodal",
+      "same_nodes": false,
+      "hard": true,
+      "id": "modal_n192_q384_nodal_rhs",
+      "status": "validated",
+      "setup_seconds": 0.4236989999990328,
+      "quadrature_kind": "Gauss-Legendre",
+      "integration_solution_node_max_difference": null,
+      "forcing_sample_count": 36864,
+      "forcing_interpolation_inside_timer": true,
+      "sampling_seconds": 2.563335416998598,
+      "binary_sha256": "65237333c07f001542402d74eb626092deff2f0842c22f037327a247ac23ec9e",
+      "solve_calls": 1,
+      "warmups": 0,
+      "load_seconds": 0.006121333,
+      "solve_seconds": 0.114962875,
+      "iterations": 47,
+      "relative_residual": 1.0719921846539414e-15,
+      "preconditioned_defect": 7.246953785005086e-15,
+      "refinements": 1,
+      "peak_rss_bytes": 28917760,
+      "rhs_weighting_inside_timer": true,
+      "defect_history": [
+        2.2960416048417774e-13,
+        7.246953785005086e-15
+      ],
+      "l2_relative": 0.4064402414501471,
+      "quadrature_errors": [
+        0.40644024145011726,
+        0.4064402414501471
+      ],
+      "quadrature_orders": [
+        640,
+        768
+      ],
+      "quadrature_stable": true,
+      "forcing_interpolation_relative_l2": 0.41793571386791173,
+      "audit_quadrature_order": 640,
+      "audit_preconditioned_defect": 2.9809073379330034e-13,
+      "analytic_rhs_preconditioned_defect": 0.2788966305481627,
+      "source_result": "evidence/nonconformal_bspf_opt/hard_shell128/modal_n192_q384_nodal_rhs/result.json",
+      "reused": true
+    },
+    {
+      "n": 200,
+      "q": 400,
+      "kernel": "modal",
+      "guard": false,
+      "forcing_source": "nodal",
+      "same_nodes": false,
+      "hard": true,
+      "id": "modal_n200_q400_nodal_rhs",
+      "status": "validated",
+      "setup_seconds": 0.3277808749990072,
+      "quadrature_kind": "Gauss-Legendre",
+      "integration_solution_node_max_difference": null,
+      "forcing_sample_count": 40000,
+      "forcing_interpolation_inside_timer": true,
+      "sampling_seconds": 2.0300890840007924,
+      "binary_sha256": "65237333c07f001542402d74eb626092deff2f0842c22f037327a247ac23ec9e",
+      "solve_calls": 1,
+      "warmups": 0,
+      "load_seconds": 0.005272666,
+      "solve_seconds": 0.113531292,
+      "iterations": 47,
+      "relative_residual": 1.0499812877305214e-15,
+      "preconditioned_defect": 5.802612315525309e-15,
+      "refinements": 1,
+      "peak_rss_bytes": 54427648,
+      "rhs_weighting_inside_timer": true,
+      "defect_history": [
+        2.4491976542813626e-13,
+        5.802612315525309e-15
+      ],
+      "l2_relative": 0.16921532572730316,
+      "quadrature_errors": [
+        0.16921532572729092,
+        0.16921532572730316
+      ],
+      "quadrature_orders": [
+        640,
+        768
+      ],
+      "quadrature_stable": true,
+      "forcing_interpolation_relative_l2": 0.3097602444664366,
+      "audit_quadrature_order": 640,
+      "audit_preconditioned_defect": 4.430996208905412e-13,
+      "analytic_rhs_preconditioned_defect": 0.11842924026464077,
+      "source_result": "evidence/nonconformal_bspf_opt/hard_shell128/fine_sweep_v1/bspf/modal_n200_q400_nodal_rhs/result.json",
+      "reused": false
+    },
+    {
+      "n": 208,
+      "q": 416,
+      "kernel": "modal",
+      "guard": false,
+      "forcing_source": "nodal",
+      "same_nodes": false,
+      "hard": true,
+      "id": "modal_n208_q416_nodal_rhs",
+      "status": "validated",
+      "setup_seconds": 0.4184318330080714,
+      "quadrature_kind": "Gauss-Legendre",
+      "integration_solution_node_max_difference": null,
+      "forcing_sample_count": 43264,
+      "forcing_interpolation_inside_timer": true,
+      "sampling_seconds": 2.2305855000013253,
+      "binary_sha256": "65237333c07f001542402d74eb626092deff2f0842c22f037327a247ac23ec9e",
+      "solve_calls": 1,
+      "warmups": 0,
+      "load_seconds": 0.005459208,
+      "solve_seconds": 0.109506833,
+      "iterations": 47,
+      "relative_residual": 1.0691356921212147e-15,
+      "preconditioned_defect": 8.457699123943294e-15,
+      "refinements": 1,
+      "peak_rss_bytes": 40550400,
+      "rhs_weighting_inside_timer": true,
+      "defect_history": [
+        2.5592074778562307e-13,
+        8.457699123943294e-15
+      ],
+      "l2_relative": 0.1307658792647351,
+      "quadrature_errors": [
+        0.13076587926472555,
+        0.1307658792647351
+      ],
+      "quadrature_orders": [
+        640,
+        768
+      ],
+      "quadrature_stable": true,
+      "forcing_interpolation_relative_l2": 0.23957346262440946,
+      "audit_quadrature_order": 640,
+      "audit_preconditioned_defect": 3.0844414561522757e-13,
+      "analytic_rhs_preconditioned_defect": 0.091993860201003,
+      "source_result": "evidence/nonconformal_bspf_opt/hard_shell128/fine_sweep_v1/bspf/modal_n208_q416_nodal_rhs/result.json",
+      "reused": false
+    },
+    {
+      "n": 216,
+      "q": 432,
+      "kernel": "modal",
+      "guard": false,
+      "forcing_source": "nodal",
+      "same_nodes": false,
+      "hard": true,
+      "id": "modal_n216_q432_nodal_rhs",
+      "status": "validated",
+      "setup_seconds": 0.38489941699663177,
+      "quadrature_kind": "Gauss-Legendre",
+      "integration_solution_node_max_difference": null,
+      "forcing_sample_count": 46656,
+      "forcing_interpolation_inside_timer": true,
+      "sampling_seconds": 2.448491625007591,
+      "binary_sha256": "65237333c07f001542402d74eb626092deff2f0842c22f037327a247ac23ec9e",
+      "solve_calls": 1,
+      "warmups": 0,
+      "load_seconds": 0.00588,
+      "solve_seconds": 0.127708125,
+      "iterations": 47,
+      "relative_residual": 1.0903423012981989e-15,
+      "preconditioned_defect": 1.0088426134141414e-14,
+      "refinements": 1,
+      "peak_rss_bytes": 56115200,
+      "rhs_weighting_inside_timer": true,
+      "defect_history": [
+        2.6878210830632945e-13,
+        1.0088426134141414e-14
+      ],
+      "l2_relative": 0.21051907154067598,
+      "quadrature_errors": [
+        0.21051907154066085,
+        0.21051907154067598
+      ],
+      "quadrature_orders": [
+        640,
+        768
+      ],
+      "quadrature_stable": true,
+      "forcing_interpolation_relative_l2": 0.16214769297859222,
+      "audit_quadrature_order": 640,
+      "audit_preconditioned_defect": 8.175178113749125e-13,
+      "analytic_rhs_preconditioned_defect": 0.1528979950500247,
+      "source_result": "evidence/nonconformal_bspf_opt/hard_shell128/fine_sweep_v1/bspf/modal_n216_q432_nodal_rhs/result.json",
+      "reused": false
+    },
+    {
+      "n": 224,
+      "q": 448,
+      "kernel": "modal",
+      "guard": false,
+      "forcing_source": "nodal",
+      "same_nodes": false,
+      "hard": true,
+      "id": "modal_n224_q448_nodal_rhs",
+      "status": "validated",
+      "setup_seconds": 0.6138132080013747,
+      "quadrature_kind": "Gauss-Legendre",
+      "integration_solution_node_max_difference": null,
+      "forcing_sample_count": 50176,
+      "forcing_interpolation_inside_timer": true,
+      "sampling_seconds": 3.531391500000609,
+      "binary_sha256": "65237333c07f001542402d74eb626092deff2f0842c22f037327a247ac23ec9e",
+      "solve_calls": 1,
+      "warmups": 0,
+      "load_seconds": 0.008538875,
+      "solve_seconds": 0.2046545,
+      "iterations": 47,
+      "relative_residual": 1.0959886705438509e-15,
+      "preconditioned_defect": 8.599007325764494e-15,
+      "refinements": 1,
+      "peak_rss_bytes": 67829760,
+      "rhs_weighting_inside_timer": true,
+      "defect_history": [
+        2.8880817113531177e-13,
+        8.599007325764494e-15
+      ],
+      "l2_relative": 0.03813167251833301,
+      "quadrature_errors": [
+        0.0381316725183301,
+        0.03813167251833301
+      ],
+      "quadrature_orders": [
+        640,
+        768
+      ],
+      "quadrature_stable": true,
+      "forcing_interpolation_relative_l2": 0.08196818192409255,
+      "audit_quadrature_order": 640,
+      "audit_preconditioned_defect": 5.419446636708092e-13,
+      "analytic_rhs_preconditioned_defect": 0.02631974784181157,
+      "source_result": "evidence/nonconformal_bspf_opt/hard_shell128/modal_n224_q448_nodal_rhs/result.json",
+      "reused": true
+    },
+    {
+      "n": 232,
+      "q": 464,
+      "kernel": "modal",
+      "guard": false,
+      "forcing_source": "nodal",
+      "same_nodes": false,
+      "hard": true,
+      "id": "modal_n232_q464_nodal_rhs",
+      "status": "validated",
+      "setup_seconds": 0.4873525409930153,
+      "quadrature_kind": "Gauss-Legendre",
+      "integration_solution_node_max_difference": null,
+      "forcing_sample_count": 53824,
+      "forcing_interpolation_inside_timer": true,
+      "sampling_seconds": 2.8968737499963026,
+      "binary_sha256": "65237333c07f001542402d74eb626092deff2f0842c22f037327a247ac23ec9e",
+      "solve_calls": 1,
+      "warmups": 0,
+      "load_seconds": 0.007439125,
+      "solve_seconds": 0.261725917,
+      "iterations": 47,
+      "relative_residual": 1.208721913402192e-15,
+      "preconditioned_defect": 5.46630645908065e-15,
+      "refinements": 1,
+      "peak_rss_bytes": 78413824,
+      "rhs_weighting_inside_timer": true,
+      "defect_history": [
+        2.9739448217807117e-13,
+        5.46630645908065e-15
+      ],
+      "l2_relative": 0.014064625124322348,
+      "quadrature_errors": [
+        0.01406462512432136,
+        0.014064625124322348
+      ],
+      "quadrature_orders": [
+        640,
+        768
+      ],
+      "quadrature_stable": true,
+      "forcing_interpolation_relative_l2": 0.0265547402925097,
+      "audit_quadrature_order": 640,
+      "audit_preconditioned_defect": 3.925952955946177e-13,
+      "analytic_rhs_preconditioned_defect": 0.009643570234586818,
+      "source_result": "evidence/nonconformal_bspf_opt/hard_shell128/fine_sweep_v1/bspf/modal_n232_q464_nodal_rhs/result.json",
+      "reused": false
+    },
+    {
+      "n": 240,
+      "q": 480,
+      "kernel": "modal",
+      "guard": false,
+      "forcing_source": "nodal",
+      "same_nodes": false,
+      "hard": true,
+      "id": "modal_n240_q480_nodal_rhs",
+      "status": "validated",
+      "setup_seconds": 0.5182054999895627,
+      "quadrature_kind": "Gauss-Legendre",
+      "integration_solution_node_max_difference": null,
+      "forcing_sample_count": 57600,
+      "forcing_interpolation_inside_timer": true,
+      "sampling_seconds": 3.1735230420017615,
+      "binary_sha256": "65237333c07f001542402d74eb626092deff2f0842c22f037327a247ac23ec9e",
+      "solve_calls": 1,
+      "warmups": 0,
+      "load_seconds": 0.007734542,
+      "solve_seconds": 0.205188041,
+      "iterations": 47,
+      "relative_residual": 1.1529328180855883e-15,
+      "preconditioned_defect": 1.4531733348026527e-14,
+      "refinements": 1,
+      "peak_rss_bytes": 78725120,
+      "rhs_weighting_inside_timer": true,
+      "defect_history": [
+        3.146624160470109e-13,
+        1.4531733348026527e-14
+      ],
+      "l2_relative": 0.00825571545261956,
+      "quadrature_errors": [
+        0.008255715452619019,
+        0.00825571545261956
+      ],
+      "quadrature_orders": [
+        640,
+        768
+      ],
+      "quadrature_stable": true,
+      "forcing_interpolation_relative_l2": 0.00281539529994305,
+      "audit_quadrature_order": 640,
+      "audit_preconditioned_defect": 2.989702845278139e-13,
+      "analytic_rhs_preconditioned_defect": 0.005883501327481081,
+      "source_result": "evidence/nonconformal_bspf_opt/hard_shell128/fine_sweep_v1/bspf/modal_n240_q480_nodal_rhs/result.json",
+      "reused": false
+    },
+    {
+      "n": 248,
+      "q": 496,
+      "kernel": "modal",
+      "guard": false,
+      "forcing_source": "nodal",
+      "same_nodes": false,
+      "hard": true,
+      "id": "modal_n248_q496_nodal_rhs",
+      "status": "validated",
+      "setup_seconds": 0.5711092909914441,
+      "quadrature_kind": "Gauss-Legendre",
+      "integration_solution_node_max_difference": null,
+      "forcing_sample_count": 61504,
+      "forcing_interpolation_inside_timer": true,
+      "sampling_seconds": 3.2781740840000566,
+      "binary_sha256": "65237333c07f001542402d74eb626092deff2f0842c22f037327a247ac23ec9e",
+      "solve_calls": 1,
+      "warmups": 0,
+      "load_seconds": 0.007810584,
+      "solve_seconds": 0.212699292,
+      "iterations": 47,
+      "relative_residual": 1.2029689480441818e-15,
+      "preconditioned_defect": 5.584094263540601e-15,
+      "refinements": 1,
+      "peak_rss_bytes": 79642624,
+      "rhs_weighting_inside_timer": true,
+      "defect_history": [
+        3.1681178374328393e-13,
+        5.584094263540601e-15
+      ],
+      "l2_relative": 3.1095602475549734e-05,
+      "quadrature_errors": [
+        3.109560247551218e-05,
+        3.1095602475549734e-05
+      ],
+      "quadrature_orders": [
+        640,
+        768
+      ],
+      "quadrature_stable": true,
+      "forcing_interpolation_relative_l2": 4.7202557268374044e-05,
+      "audit_quadrature_order": 640,
+      "audit_preconditioned_defect": 8.032636594335111e-13,
+      "analytic_rhs_preconditioned_defect": 2.0842377685842502e-05,
+      "source_result": "evidence/nonconformal_bspf_opt/hard_shell128/fine_sweep_v1/bspf/modal_n248_q496_nodal_rhs/result.json",
+      "reused": false
+    },
+    {
+      "n": 256,
+      "q": 512,
+      "kernel": "modal",
+      "guard": false,
+      "forcing_source": "nodal",
+      "same_nodes": false,
+      "hard": true,
+      "id": "modal_n256_q512_nodal_rhs",
+      "status": "validated",
+      "setup_seconds": 0.8618058339998242,
+      "quadrature_kind": "Gauss-Legendre",
+      "integration_solution_node_max_difference": null,
+      "forcing_sample_count": 65536,
+      "forcing_interpolation_inside_timer": true,
+      "sampling_seconds": 4.65378708299977,
+      "binary_sha256": "65237333c07f001542402d74eb626092deff2f0842c22f037327a247ac23ec9e",
+      "solve_calls": 1,
+      "warmups": 0,
+      "load_seconds": 0.011013334,
+      "solve_seconds": 0.320291334,
+      "iterations": 47,
+      "relative_residual": 1.2028835680615588e-15,
+      "preconditioned_defect": 1.3140142171617286e-14,
+      "refinements": 1,
+      "peak_rss_bytes": 92487680,
+      "rhs_weighting_inside_timer": true,
+      "defect_history": [
+        3.318698046363169e-13,
+        1.3140142171617286e-14
+      ],
+      "l2_relative": 1.9243591105820224e-06,
+      "quadrature_errors": [
+        1.924359110523471e-06,
+        1.9243591105820224e-06
+      ],
+      "quadrature_orders": [
+        640,
+        768
+      ],
+      "quadrature_stable": true,
+      "forcing_interpolation_relative_l2": 7.624382367963028e-07,
+      "audit_quadrature_order": 640,
+      "audit_preconditioned_defect": 4.679232443042587e-13,
+      "analytic_rhs_preconditioned_defect": 1.363745095359656e-06,
+      "source_result": "evidence/nonconformal_bspf_opt/hard_shell128/modal_n256_q512_nodal_rhs/result.json",
+      "reused": true
+    },
+    {
+      "n": 264,
+      "q": 528,
+      "kernel": "modal",
+      "guard": false,
+      "forcing_source": "nodal",
+      "same_nodes": false,
+      "hard": true,
+      "id": "modal_n264_q528_nodal_rhs",
+      "status": "validated",
+      "setup_seconds": 0.7430623749969527,
+      "quadrature_kind": "Gauss-Legendre",
+      "integration_solution_node_max_difference": null,
+      "forcing_sample_count": 69696,
+      "forcing_interpolation_inside_timer": true,
+      "sampling_seconds": 3.827654499997152,
+      "binary_sha256": "65237333c07f001542402d74eb626092deff2f0842c22f037327a247ac23ec9e",
+      "solve_calls": 1,
+      "warmups": 0,
+      "load_seconds": 0.009050208,
+      "solve_seconds": 0.235032542,
+      "iterations": 47,
+      "relative_residual": 1.1836443296616477e-15,
+      "preconditioned_defect": 8.564766078751535e-15,
+      "refinements": 1,
+      "peak_rss_bytes": 91881472,
+      "rhs_weighting_inside_timer": true,
+      "defect_history": [
+        3.452449231431824e-13,
+        8.564766078751535e-15
+      ],
+      "l2_relative": 4.328402570151491e-09,
+      "quadrature_errors": [
+        4.328402560116934e-09,
+        4.328402570151491e-09
+      ],
+      "quadrature_orders": [
+        640,
+        768
+      ],
+      "quadrature_stable": true,
+      "forcing_interpolation_relative_l2": 4.2933317961496635e-09,
+      "audit_quadrature_order": 640,
+      "audit_preconditioned_defect": 8.632338734763371e-13,
+      "analytic_rhs_preconditioned_defect": 3.0837927907265524e-09,
+      "source_result": "evidence/nonconformal_bspf_opt/hard_shell128/fine_sweep_v1/bspf/modal_n264_q528_nodal_rhs/result.json",
+      "reused": false
+    },
+    {
+      "n": 272,
+      "q": 544,
+      "kernel": "modal",
+      "guard": false,
+      "forcing_source": "nodal",
+      "same_nodes": false,
+      "hard": true,
+      "id": "modal_n272_q544_nodal_rhs",
+      "status": "validated",
+      "setup_seconds": 0.6969326660037041,
+      "quadrature_kind": "Gauss-Legendre",
+      "integration_solution_node_max_difference": null,
+      "forcing_sample_count": 73984,
+      "forcing_interpolation_inside_timer": true,
+      "sampling_seconds": 3.8423229999898467,
+      "binary_sha256": "65237333c07f001542402d74eb626092deff2f0842c22f037327a247ac23ec9e",
+      "solve_calls": 1,
+      "warmups": 0,
+      "load_seconds": 0.009181084,
+      "solve_seconds": 0.285890209,
+      "iterations": 47,
+      "relative_residual": 1.2144773229893792e-15,
+      "preconditioned_defect": 7.491272197108326e-15,
+      "refinements": 1,
+      "peak_rss_bytes": 104480768,
+      "rhs_weighting_inside_timer": true,
+      "defect_history": [
+        3.5126275817209934e-13,
+        7.491272197108326e-15
+      ],
+      "l2_relative": 9.572101268377984e-12,
+      "quadrature_errors": [
+        9.572114134505889e-12,
+        9.572101268377984e-12
+      ],
+      "quadrature_orders": [
+        640,
+        768
+      ],
+      "quadrature_stable": true,
+      "forcing_interpolation_relative_l2": 6.203793069868438e-12,
+      "audit_quadrature_order": 640,
+      "audit_preconditioned_defect": 4.298251802245554e-13,
+      "analytic_rhs_preconditioned_defect": 6.825359793180638e-12,
+      "source_result": "evidence/nonconformal_bspf_opt/hard_shell128/fine_sweep_v1/bspf/modal_n272_q544_nodal_rhs/result.json",
+      "reused": false
+    },
+    {
+      "n": 280,
+      "q": 560,
+      "kernel": "modal",
+      "guard": false,
+      "forcing_source": "nodal",
+      "same_nodes": false,
+      "hard": true,
+      "id": "modal_n280_q560_nodal_rhs",
+      "status": "validated",
+      "setup_seconds": 0.7625210419937503,
+      "quadrature_kind": "Gauss-Legendre",
+      "integration_solution_node_max_difference": null,
+      "forcing_sample_count": 78400,
+      "forcing_interpolation_inside_timer": true,
+      "sampling_seconds": 4.002025042005698,
+      "binary_sha256": "65237333c07f001542402d74eb626092deff2f0842c22f037327a247ac23ec9e",
+      "solve_calls": 1,
+      "warmups": 0,
+      "load_seconds": 0.010133167,
+      "solve_seconds": 0.341860083,
+      "iterations": 47,
+      "relative_residual": 1.2310934692763195e-15,
+      "preconditioned_defect": 1.065856079359871e-14,
+      "refinements": 1,
+      "peak_rss_bytes": 111558656,
+      "rhs_weighting_inside_timer": true,
+      "defect_history": [
+        3.5611975925266195e-13,
+        1.065856079359871e-14
+      ],
+      "l2_relative": 4.895904844896217e-13,
+      "quadrature_errors": [
+        4.895469942720955e-13,
+        4.895904844896217e-13
+      ],
+      "quadrature_orders": [
+        640,
+        768
+      ],
+      "quadrature_stable": true,
+      "forcing_interpolation_relative_l2": 6.356462811578785e-14,
+      "audit_quadrature_order": 640,
+      "audit_preconditioned_defect": 3.2433935631790736e-13,
+      "analytic_rhs_preconditioned_defect": 6.542344302293944e-13,
+      "source_result": "evidence/nonconformal_bspf_opt/hard_shell128/fine_sweep_v1/bspf/modal_n280_q560_nodal_rhs/result.json",
+      "reused": false
+    },
+    {
+      "n": 288,
+      "q": 576,
+      "kernel": "modal",
+      "guard": false,
+      "forcing_source": "nodal",
+      "same_nodes": false,
+      "hard": true,
+      "id": "modal_n288_q576_nodal_rhs",
+      "status": "validated",
+      "setup_seconds": 1.1570535409991862,
+      "quadrature_kind": "Gauss-Legendre",
+      "integration_solution_node_max_difference": null,
+      "forcing_sample_count": 82944,
+      "forcing_interpolation_inside_timer": true,
+      "sampling_seconds": 5.987774041001103,
+      "binary_sha256": "65237333c07f001542402d74eb626092deff2f0842c22f037327a247ac23ec9e",
+      "solve_calls": 1,
+      "warmups": 0,
+      "load_seconds": 0.014868541,
+      "solve_seconds": 0.392782084,
+      "iterations": 47,
+      "relative_residual": 1.31751950714324e-15,
+      "preconditioned_defect": 5.988365563610302e-15,
+      "refinements": 1,
+      "peak_rss_bytes": 79511552,
+      "rhs_weighting_inside_timer": true,
+      "defect_history": [
+        3.6129406698290855e-13,
+        5.988365563610302e-15
+      ],
+      "l2_relative": 5.942969097534653e-13,
+      "quadrature_errors": [
+        5.943257342131124e-13,
+        5.942969097534653e-13
+      ],
+      "quadrature_orders": [
+        640,
+        768
+      ],
+      "quadrature_stable": true,
+      "forcing_interpolation_relative_l2": 6.360090540680116e-14,
+      "audit_quadrature_order": 640,
+      "audit_preconditioned_defect": 3.905967359019418e-13,
+      "analytic_rhs_preconditioned_defect": 7.704681157859345e-13,
+      "source_result": "evidence/nonconformal_bspf_opt/hard_shell128/modal_n288_q576_nodal_rhs/result.json",
+      "reused": true
+    }
+  ],
+  "nektar": [
+    {
+      "id": "nektar_e8_p12_mms",
+      "method": "nektar",
+      "elements_per_axis": 8,
+      "degree": 12,
+      "guard": false,
+      "quadrature": 40,
+      "status": "validated",
+      "preprocessing_seconds": 7.981382666999707,
+      "geometry_max_error": 3.552713678800501e-15,
+      "timing": {
+        "solve_calls": 1,
+        "setup_seconds": 2.033638458,
+        "first_solve_seconds": 0.002296875,
+        "native_l2": 0.24491866261422526,
+        "local_coefficients": 10816,
+        "batch": 1,
+        "samples_seconds": [
+          0.002296875
+        ],
+        "solve_seconds": 0.002296875
+      },
+      "l2_relative": 0.2268786018483088,
+      "error_quadrature_values": [
+        0.22687860210214747,
+        0.2268786018483088
+      ],
+      "error_quadrature_stable": true,
+      "reused": true,
+      "source_result": "evidence/nonconformal_bspf_opt/hard_shell128/nektar/results.json"
+    },
+    {
+      "id": "nektar_e8_p14_mms",
+      "method": "nektar",
+      "elements_per_axis": 8,
+      "degree": 14,
+      "guard": false,
+      "quadrature": 40,
+      "status": "validated",
+      "preprocessing_seconds": 5.800238665993675,
+      "geometry_max_error": 3.552713678800501e-15,
+      "timing": {
+        "solve_calls": 1,
+        "setup_seconds": 2.150041875,
+        "first_solve_seconds": 0.004596917,
+        "native_l2": 0.20663563784857564,
+        "local_coefficients": 14400,
+        "batch": 1,
+        "samples_seconds": [
+          0.004596917
+        ],
+        "solve_seconds": 0.004596917
+      },
+      "l2_relative": 0.1914153944881053,
+      "error_quadrature_values": [
+        0.1914153947936772,
+        0.1914153944881053
+      ],
+      "error_quadrature_stable": true,
+      "reused": false,
+      "source_result": "evidence/nonconformal_bspf_opt/hard_shell128/fine_sweep_v1/nektar/results.json"
+    },
+    {
+      "id": "nektar_e8_p16_mms",
+      "method": "nektar",
+      "elements_per_axis": 8,
+      "degree": 16,
+      "guard": false,
+      "quadrature": 40,
+      "status": "validated",
+      "preprocessing_seconds": 7.779538125003455,
+      "geometry_max_error": 3.552713678800501e-15,
+      "timing": {
+        "solve_calls": 1,
+        "setup_seconds": 4.217444791,
+        "first_solve_seconds": 0.005139667,
+        "native_l2": 0.17188824828318805,
+        "local_coefficients": 18496,
+        "batch": 1,
+        "samples_seconds": [
+          0.005139667
+        ],
+        "solve_seconds": 0.005139667
+      },
+      "l2_relative": 0.15922739575045464,
+      "error_quadrature_values": [
+        0.15922739612210157,
+        0.15922739575045464
+      ],
+      "error_quadrature_stable": true,
+      "reused": true,
+      "source_result": "evidence/nonconformal_bspf_opt/hard_shell128/nektar/results.json"
+    },
+    {
+      "id": "nektar_e8_p18_mms",
+      "method": "nektar",
+      "elements_per_axis": 8,
+      "degree": 18,
+      "guard": false,
+      "quadrature": 40,
+      "status": "validated",
+      "preprocessing_seconds": 5.663388082990423,
+      "geometry_max_error": 3.552713678800501e-15,
+      "timing": {
+        "solve_calls": 1,
+        "setup_seconds": 4.134273084,
+        "first_solve_seconds": 0.006087792,
+        "native_l2": 0.13989984405257508,
+        "local_coefficients": 23104,
+        "batch": 1,
+        "samples_seconds": [
+          0.006087792
+        ],
+        "solve_seconds": 0.006087792
+      },
+      "l2_relative": 0.129595160829244,
+      "error_quadrature_values": [
+        0.12959516128987822,
+        0.129595160829244
+      ],
+      "error_quadrature_stable": true,
+      "reused": false,
+      "source_result": "evidence/nonconformal_bspf_opt/hard_shell128/fine_sweep_v1/nektar/results.json"
+    },
+    {
+      "id": "nektar_e8_p20_mms",
+      "method": "nektar",
+      "elements_per_axis": 8,
+      "degree": 20,
+      "guard": false,
+      "quadrature": 40,
+      "status": "validated",
+      "preprocessing_seconds": 5.94285075001244,
+      "geometry_max_error": 3.552713678800501e-15,
+      "timing": {
+        "solve_calls": 1,
+        "setup_seconds": 11.011277,
+        "first_solve_seconds": 0.016099458,
+        "native_l2": 0.11157773433737428,
+        "local_coefficients": 28224,
+        "batch": 1,
+        "samples_seconds": [
+          0.016099458
+        ],
+        "solve_seconds": 0.016099458
+      },
+      "l2_relative": 0.10335916816201506,
+      "error_quadrature_values": [
+        0.10335916874316352,
+        0.10335916816201506
+      ],
+      "error_quadrature_stable": true,
+      "reused": false,
+      "source_result": "evidence/nonconformal_bspf_opt/hard_shell128/fine_sweep_v1/nektar/results.json"
+    },
+    {
+      "id": "nektar_e8_p22_mms",
+      "method": "nektar",
+      "elements_per_axis": 8,
+      "degree": 22,
+      "guard": false,
+      "quadrature": 40,
+      "status": "validated",
+      "preprocessing_seconds": 7.687356833004742,
+      "geometry_max_error": 3.552713678800501e-15,
+      "timing": {
+        "solve_calls": 1,
+        "setup_seconds": 10.228545333,
+        "first_solve_seconds": 0.01304125,
+        "native_l2": 0.08592031002743733,
+        "local_coefficients": 33856,
+        "batch": 1,
+        "samples_seconds": [
+          0.01304125
+        ],
+        "solve_seconds": 0.01304125
+      },
+      "l2_relative": 0.07959158199216748,
+      "error_quadrature_values": [
+        0.079591582750175,
+        0.07959158199216748
+      ],
+      "error_quadrature_stable": true,
+      "reused": false,
+      "source_result": "evidence/nonconformal_bspf_opt/hard_shell128/fine_sweep_v1/nektar/results.json"
+    },
+    {
+      "id": "nektar_e8_p24_mms",
+      "method": "nektar",
+      "elements_per_axis": 8,
+      "degree": 24,
+      "guard": false,
+      "quadrature": 40,
+      "status": "validated",
+      "preprocessing_seconds": 7.839033666001342,
+      "geometry_max_error": 3.552713678800501e-15,
+      "timing": {
+        "solve_calls": 1,
+        "setup_seconds": 13.482167625,
+        "first_solve_seconds": 0.016182667,
+        "native_l2": 0.06204256624020353,
+        "local_coefficients": 40000,
+        "batch": 1,
+        "samples_seconds": [
+          0.016182667
+        ],
+        "solve_seconds": 0.016182667
+      },
+      "l2_relative": 0.05747257844142013,
+      "error_quadrature_values": [
+        0.05747257949435762,
+        0.05747257844142013
+      ],
+      "error_quadrature_stable": true,
+      "reused": true,
+      "source_result": "evidence/nonconformal_bspf_opt/hard_shell128/nektar/results.json"
+    },
+    {
+      "id": "nektar_e8_p26_mms",
+      "method": "nektar",
+      "elements_per_axis": 8,
+      "degree": 26,
+      "guard": false,
+      "quadrature": 40,
+      "status": "validated",
+      "preprocessing_seconds": 8.808259249999537,
+      "geometry_max_error": 3.552713678800501e-15,
+      "timing": {
+        "solve_calls": 1,
+        "setup_seconds": 284.579835708,
+        "first_solve_seconds": 0.034342542,
+        "native_l2": 0.040969875335184085,
+        "local_coefficients": 46656,
+        "batch": 1,
+        "samples_seconds": [
+          0.034342542
+        ],
+        "solve_seconds": 0.034342542
+      },
+      "l2_relative": 0.03795199090799004,
+      "error_quadrature_values": [
+        0.03795199250548623,
+        0.03795199090799004
+      ],
+      "error_quadrature_stable": true,
+      "reused": false,
+      "source_result": "evidence/nonconformal_bspf_opt/hard_shell128/fine_sweep_v1/nektar/results.json"
+    },
+    {
+      "id": "nektar_e8_p28_mms",
+      "method": "nektar",
+      "elements_per_axis": 8,
+      "degree": 28,
+      "guard": false,
+      "quadrature": 40,
+      "status": "validated",
+      "preprocessing_seconds": 8.033397499995772,
+      "geometry_max_error": 3.552713678800501e-15,
+      "timing": {
+        "solve_calls": 1,
+        "setup_seconds": 336.033729792,
+        "first_solve_seconds": 0.072155166,
+        "native_l2": 0.023792192256171744,
+        "local_coefficients": 53824,
+        "batch": 1,
+        "samples_seconds": [
+          0.072155166
+        ],
+        "solve_seconds": 0.072155166
+      },
+      "l2_relative": 0.022039455697339304,
+      "error_quadrature_values": [
+        0.022039458451095208,
+        0.022039455697339304
+      ],
+      "error_quadrature_stable": true,
+      "reused": false,
+      "source_result": "evidence/nonconformal_bspf_opt/hard_shell128/fine_sweep_v1/nektar/results.json"
+    },
+    {
+      "id": "nektar_e8_p30_mms",
+      "method": "nektar",
+      "elements_per_axis": 8,
+      "degree": 30,
+      "guard": false,
+      "quadrature": 40,
+      "status": "validated",
+      "preprocessing_seconds": 7.932194458000595,
+      "geometry_max_error": 3.552713678800501e-15,
+      "timing": {
+        "solve_calls": 1,
+        "setup_seconds": 28.064297875,
+        "first_solve_seconds": 0.052879333,
+        "native_l2": 0.011712299487987143,
+        "local_coefficients": 61504,
+        "batch": 1,
+        "samples_seconds": [
+          0.052879333
+        ],
+        "solve_seconds": 0.052879333
+      },
+      "l2_relative": 0.010849054425651806,
+      "error_quadrature_values": [
+        0.010849060026076211,
+        0.010849054425651806
+      ],
+      "error_quadrature_stable": true,
+      "reused": false,
+      "source_result": "evidence/nonconformal_bspf_opt/hard_shell128/fine_sweep_v1/nektar/results.json"
+    },
+    {
+      "id": "nektar_e8_p32_mms",
+      "method": "nektar",
+      "elements_per_axis": 8,
+      "degree": 32,
+      "guard": false,
+      "quadrature": 40,
+      "status": "validated",
+      "preprocessing_seconds": 7.818918000004487,
+      "geometry_max_error": 3.552713678800501e-15,
+      "timing": {
+        "solve_calls": 1,
+        "setup_seconds": 34.397036458,
+        "first_solve_seconds": 0.085695708,
+        "native_l2": 0.004823799883179089,
+        "local_coefficients": 69696,
+        "batch": 1,
+        "samples_seconds": [
+          0.085695708
+        ],
+        "solve_seconds": 0.085695708
+      },
+      "l2_relative": 0.004467145593126974,
+      "error_quadrature_values": [
+        0.00446715923788691,
+        0.004467145593126974
+      ],
+      "error_quadrature_stable": true,
+      "reused": false,
+      "source_result": "evidence/nonconformal_bspf_opt/hard_shell128/fine_sweep_v1/nektar/results.json"
+    },
+    {
+      "id": "nektar_e8_p34_mms",
+      "method": "nektar",
+      "elements_per_axis": 8,
+      "degree": 34,
+      "guard": false,
+      "quadrature": 40,
+      "status": "validated",
+      "preprocessing_seconds": 7.823470999996061,
+      "geometry_max_error": 3.552713678800501e-15,
+      "timing": {
+        "solve_calls": 1,
+        "setup_seconds": 43.397264584,
+        "first_solve_seconds": 0.110774916,
+        "native_l2": 0.0016721383138174775,
+        "local_coefficients": 78400,
+        "batch": 1,
+        "samples_seconds": [
+          0.110774916
+        ],
+        "solve_seconds": 0.110774916
+      },
+      "l2_relative": 0.0015451152595904135,
+      "error_quadrature_values": [
+        0.0015451549273200666,
+        0.0015451152595904135
+      ],
+      "error_quadrature_stable": true,
+      "reused": false,
+      "source_result": "evidence/nonconformal_bspf_opt/hard_shell128/fine_sweep_v1/nektar/results.json"
+    },
+    {
+      "id": "nektar_e8_p36_mms",
+      "method": "nektar",
+      "elements_per_axis": 8,
+      "degree": 36,
+      "guard": false,
+      "quadrature": 40,
+      "status": "validated",
+      "preprocessing_seconds": 8.049824958012323,
+      "geometry_max_error": 3.552713678800501e-15,
+      "timing": {
+        "solve_calls": 1,
+        "setup_seconds": 54.115257625,
+        "first_solve_seconds": 0.155646583,
+        "native_l2": 0.0005026436391245332,
+        "local_coefficients": 87616,
+        "batch": 1,
+        "samples_seconds": [
+          0.155646583
+        ],
+        "solve_seconds": 0.155646583
+      },
+      "l2_relative": 0.0004539026673215437,
+      "error_quadrature_values": [
+        0.0004540367540881806,
+        0.0004539026673215437
+      ],
+      "error_quadrature_stable": true,
+      "reused": false,
+      "source_result": "evidence/nonconformal_bspf_opt/hard_shell128/fine_sweep_v1/nektar/results.json"
+    },
+    {
+      "id": "nektar_e8_p38_mms",
+      "method": "nektar",
+      "elements_per_axis": 8,
+      "degree": 38,
+      "guard": false,
+      "quadrature": 42,
+      "status": "validated",
+      "preprocessing_seconds": 8.667146957988734,
+      "geometry_max_error": 3.552713678800501e-15,
+      "timing": {
+        "solve_calls": 1,
+        "setup_seconds": 72.878198292,
+        "first_solve_seconds": 0.290793458,
+        "native_l2": 0.00012635502442260468,
+        "local_coefficients": 97344,
+        "batch": 1,
+        "samples_seconds": [
+          0.290793458
+        ],
+        "solve_seconds": 0.290793458
+      },
+      "l2_relative": 0.00011475907151672316,
+      "error_quadrature_values": [
+        0.00011477710052188548,
+        0.00011475907151672316
+      ],
+      "error_quadrature_stable": true,
+      "reused": false,
+      "source_result": "evidence/nonconformal_bspf_opt/hard_shell128/fine_sweep_v1/nektar/results.json"
+    },
+    {
+      "id": "nektar_e8_p40_mms",
+      "method": "nektar",
+      "elements_per_axis": 8,
+      "degree": 40,
+      "guard": false,
+      "quadrature": 44,
+      "status": "validated",
+      "preprocessing_seconds": 9.660971416989923,
+      "geometry_max_error": 3.774758283725532e-15,
+      "timing": {
+        "solve_calls": 1,
+        "setup_seconds": 94.425174625,
+        "first_solve_seconds": 0.4595975,
+        "native_l2": 2.769388165360237e-05,
+        "local_coefficients": 107584,
+        "batch": 1,
+        "samples_seconds": [
+          0.4595975
+        ],
+        "solve_seconds": 0.4595975
+      },
+      "l2_relative": 2.5260773261070835e-05,
+      "error_quadrature_values": [
+        2.5262971681042383e-05,
+        2.5260773261070835e-05
+      ],
+      "error_quadrature_stable": true,
+      "reused": false,
+      "source_result": "evidence/nonconformal_bspf_opt/hard_shell128/fine_sweep_v1/nektar/results.json"
+    },
+    {
+      "id": "nektar_e16_p6_mms",
+      "method": "nektar",
+      "elements_per_axis": 16,
+      "degree": 6,
+      "guard": false,
+      "quadrature": 24,
+      "status": "validated",
+      "preprocessing_seconds": 11.539022333003231,
+      "geometry_max_error": 3.3306690738754696e-15,
+      "timing": {
+        "solve_calls": 1,
+        "setup_seconds": 0.52785575,
+        "first_solve_seconds": 0.00211275,
+        "native_l2": 0.23828646795081398,
+        "local_coefficients": 12544,
+        "batch": 1,
+        "samples_seconds": [
+          0.00211275
+        ],
+        "solve_seconds": 0.00211275
+      },
+      "l2_relative": 0.22073493982722936,
+      "error_quadrature_values": [
+        0.22073493983210016,
+        0.22073493982722936
+      ],
+      "error_quadrature_stable": true,
+      "reused": false,
+      "source_result": "evidence/nonconformal_bspf_opt/hard_shell128/fine_sweep_v1/nektar/results.json"
+    },
+    {
+      "id": "nektar_e16_p8_mms",
+      "method": "nektar",
+      "elements_per_axis": 16,
+      "degree": 8,
+      "guard": false,
+      "quadrature": 24,
+      "status": "validated",
+      "preprocessing_seconds": 11.512436666991562,
+      "geometry_max_error": 3.3306690738754696e-15,
+      "timing": {
+        "solve_calls": 1,
+        "setup_seconds": 0.953254041,
+        "first_solve_seconds": 0.003458792,
+        "native_l2": 0.1661004037442648,
+        "local_coefficients": 20736,
+        "batch": 1,
+        "samples_seconds": [
+          0.003458792
+        ],
+        "solve_seconds": 0.003458792
+      },
+      "l2_relative": 0.15386590127861385,
+      "error_quadrature_values": [
+        0.1538659012857852,
+        0.15386590127861385
+      ],
+      "error_quadrature_stable": true,
+      "reused": false,
+      "source_result": "evidence/nonconformal_bspf_opt/hard_shell128/fine_sweep_v1/nektar/results.json"
+    },
+    {
+      "id": "nektar_e16_p10_mms",
+      "method": "nektar",
+      "elements_per_axis": 16,
+      "degree": 10,
+      "guard": false,
+      "quadrature": 24,
+      "status": "validated",
+      "preprocessing_seconds": 11.966343916006736,
+      "geometry_max_error": 3.3306690738754696e-15,
+      "timing": {
+        "solve_calls": 1,
+        "setup_seconds": 1.666639917,
+        "first_solve_seconds": 0.005128834,
+        "native_l2": 0.10571896442266586,
+        "local_coefficients": 30976,
+        "batch": 1,
+        "samples_seconds": [
+          0.005128834
+        ],
+        "solve_seconds": 0.005128834
+      },
+      "l2_relative": 0.09793199040024919,
+      "error_quadrature_values": [
+        0.09793199041167919,
+        0.09793199040024919
+      ],
+      "error_quadrature_stable": true,
+      "reused": false,
+      "source_result": "evidence/nonconformal_bspf_opt/hard_shell128/fine_sweep_v1/nektar/results.json"
+    },
+    {
+      "id": "nektar_e16_p12_mms",
+      "method": "nektar",
+      "elements_per_axis": 16,
+      "degree": 12,
+      "guard": false,
+      "quadrature": 24,
+      "status": "validated",
+      "preprocessing_seconds": 11.487277291998907,
+      "geometry_max_error": 3.3306690738754696e-15,
+      "timing": {
+        "solve_calls": 1,
+        "setup_seconds": 2.67650375,
+        "first_solve_seconds": 0.010631834,
+        "native_l2": 0.05635027164892697,
+        "local_coefficients": 43264,
+        "batch": 1,
+        "samples_seconds": [
+          0.010631834
+        ],
+        "solve_seconds": 0.010631834
+      },
+      "l2_relative": 0.052199654362344576,
+      "error_quadrature_values": [
+        0.05219965438393747,
+        0.052199654362344576
+      ],
+      "error_quadrature_stable": true,
+      "reused": true,
+      "source_result": "evidence/nonconformal_bspf_opt/hard_shell128/nektar/results.json"
+    },
+    {
+      "id": "nektar_e16_p14_mms",
+      "method": "nektar",
+      "elements_per_axis": 16,
+      "degree": 14,
+      "guard": false,
+      "quadrature": 24,
+      "status": "validated",
+      "preprocessing_seconds": 12.177981041997555,
+      "geometry_max_error": 3.3306690738754696e-15,
+      "timing": {
+        "solve_calls": 1,
+        "setup_seconds": 4.337870667,
+        "first_solve_seconds": 0.012686792,
+        "native_l2": 0.023165106588264366,
+        "local_coefficients": 57600,
+        "batch": 1,
+        "samples_seconds": [
+          0.012686792
+        ],
+        "solve_seconds": 0.012686792
+      },
+      "l2_relative": 0.02145880084050086,
+      "error_quadrature_values": [
+        0.021458800893161253,
+        0.02145880084050086
+      ],
+      "error_quadrature_stable": true,
+      "reused": false,
+      "source_result": "evidence/nonconformal_bspf_opt/hard_shell128/fine_sweep_v1/nektar/results.json"
+    },
+    {
+      "id": "nektar_e16_p16_mms",
+      "method": "nektar",
+      "elements_per_axis": 16,
+      "degree": 16,
+      "guard": false,
+      "quadrature": 24,
+      "status": "validated",
+      "preprocessing_seconds": 11.143697874998907,
+      "geometry_max_error": 3.3306690738754696e-15,
+      "timing": {
+        "solve_calls": 1,
+        "setup_seconds": 6.319647833,
+        "first_solve_seconds": 0.024948375,
+        "native_l2": 0.007188145838742576,
+        "local_coefficients": 73984,
+        "batch": 1,
+        "samples_seconds": [
+          0.024948375
+        ],
+        "solve_seconds": 0.024948375
+      },
+      "l2_relative": 0.006658595017165645,
+      "error_quadrature_values": [
+        0.0066585951874702665,
+        0.006658595017165645
+      ],
+      "error_quadrature_stable": true,
+      "reused": true,
+      "source_result": "evidence/nonconformal_bspf_opt/hard_shell128/nektar/results.json"
+    },
+    {
+      "id": "nektar_e16_p18_mms",
+      "method": "nektar",
+      "elements_per_axis": 16,
+      "degree": 18,
+      "guard": false,
+      "quadrature": 24,
+      "status": "validated",
+      "preprocessing_seconds": 11.478507667008671,
+      "geometry_max_error": 3.3306690738754696e-15,
+      "timing": {
+        "solve_calls": 1,
+        "setup_seconds": 9.037676459,
+        "first_solve_seconds": 0.026026209,
+        "native_l2": 0.0017116631211203483,
+        "local_coefficients": 92416,
+        "batch": 1,
+        "samples_seconds": [
+          0.026026209
+        ],
+        "solve_seconds": 0.026026209
+      },
+      "l2_relative": 0.0015851760663316435,
+      "error_quadrature_values": [
+        0.0015851767925051928,
+        0.0015851760663316435
+      ],
+      "error_quadrature_stable": true,
+      "reused": false,
+      "source_result": "evidence/nonconformal_bspf_opt/hard_shell128/fine_sweep_v1/nektar/results.json"
+    },
+    {
+      "id": "nektar_e16_p20_mms",
+      "method": "nektar",
+      "elements_per_axis": 16,
+      "degree": 20,
+      "guard": false,
+      "quadrature": 24,
+      "status": "validated",
+      "preprocessing_seconds": 11.349679749997449,
+      "geometry_max_error": 3.3306690738754696e-15,
+      "timing": {
+        "solve_calls": 1,
+        "setup_seconds": 12.843011208,
+        "first_solve_seconds": 0.034223541,
+        "native_l2": 0.00032297428530305127,
+        "local_coefficients": 112896,
+        "batch": 1,
+        "samples_seconds": [
+          0.034223541
+        ],
+        "solve_seconds": 0.034223541
+      },
+      "l2_relative": 0.0002969376129322711,
+      "error_quadrature_values": [
+        0.0002969416250244517,
+        0.0002969376129322711
+      ],
+      "error_quadrature_stable": true,
+      "reused": false,
+      "source_result": "evidence/nonconformal_bspf_opt/hard_shell128/fine_sweep_v1/nektar/results.json"
+    },
+    {
+      "id": "nektar_e16_p21_mms",
+      "method": "nektar",
+      "elements_per_axis": 16,
+      "degree": 21,
+      "guard": false,
+      "quadrature": 25,
+      "status": "validated",
+      "preprocessing_seconds": 12.311410042006173,
+      "geometry_max_error": 3.4416913763379853e-15,
+      "timing": {
+        "solve_calls": 1,
+        "setup_seconds": 15.689451708,
+        "first_solve_seconds": 0.045823417,
+        "native_l2": 0.00011215792171104725,
+        "local_coefficients": 123904,
+        "batch": 1,
+        "samples_seconds": [
+          0.045823417
+        ],
+        "solve_seconds": 0.045823417
+      },
+      "l2_relative": 0.00010401497549841048,
+      "error_quadrature_values": [
+        0.0001040141103432304,
+        0.00010401497549841048
+      ],
+      "error_quadrature_stable": true,
+      "reused": false,
+      "source_result": "evidence/nonconformal_bspf_opt/hard_shell128/fine_sweep_v1/nektar/results.json"
+    },
+    {
+      "id": "nektar_e16_p22_mms",
+      "method": "nektar",
+      "elements_per_axis": 16,
+      "degree": 22,
+      "guard": false,
+      "quadrature": 26,
+      "status": "validated",
+      "preprocessing_seconds": 13.227839083992876,
+      "geometry_max_error": 3.552713678800501e-15,
+      "timing": {
+        "solve_calls": 1,
+        "setup_seconds": 19.998788166,
+        "first_solve_seconds": 0.077545334,
+        "native_l2": 4.867385956854029e-05,
+        "local_coefficients": 135424,
+        "batch": 1,
+        "samples_seconds": [
+          0.077545334
+        ],
+        "solve_seconds": 0.077545334
+      },
+      "l2_relative": 4.4846336164981415e-05,
+      "error_quadrature_values": [
+        4.484659606912539e-05,
+        4.4846336164981415e-05
+      ],
+      "error_quadrature_stable": true,
+      "reused": false,
+      "source_result": "evidence/nonconformal_bspf_opt/hard_shell128/fine_sweep_v1/nektar/results.json"
+    },
+    {
+      "id": "nektar_e16_p23_mms",
+      "method": "nektar",
+      "elements_per_axis": 16,
+      "degree": 23,
+      "guard": false,
+      "quadrature": 27,
+      "status": "validated",
+      "preprocessing_seconds": 14.317543790995842,
+      "geometry_max_error": 3.4416913763379853e-15,
+      "timing": {
+        "solve_calls": 1,
+        "setup_seconds": 25.439432958,
+        "first_solve_seconds": 0.117207125,
+        "native_l2": 1.504904938150219e-05,
+        "local_coefficients": 147456,
+        "batch": 1,
+        "samples_seconds": [
+          0.117207125
+        ],
+        "solve_seconds": 0.117207125
+      },
+      "l2_relative": 1.3952193629323251e-05,
+      "error_quadrature_values": [
+        1.3952142468309009e-05,
+        1.3952193629323251e-05
+      ],
+      "error_quadrature_stable": true,
+      "reused": false,
+      "source_result": "evidence/nonconformal_bspf_opt/hard_shell128/fine_sweep_v1/nektar/results.json"
+    },
+    {
+      "id": "nektar_e16_p24_mms",
+      "method": "nektar",
+      "elements_per_axis": 16,
+      "degree": 24,
+      "guard": false,
+      "quadrature": 28,
+      "status": "validated",
+      "preprocessing_seconds": 15.359806792002928,
+      "geometry_max_error": 3.552713678800501e-15,
+      "timing": {
+        "solve_calls": 1,
+        "setup_seconds": 30.283754292,
+        "first_solve_seconds": 0.151255833,
+        "native_l2": 6.044171785868435e-06,
+        "local_coefficients": 160000,
+        "batch": 1,
+        "samples_seconds": [
+          0.151255833
+        ],
+        "solve_seconds": 0.151255833
+      },
+      "l2_relative": 5.577143440440708e-06,
+      "error_quadrature_values": [
+        5.577158108926341e-06,
+        5.577143440440708e-06
+      ],
+      "error_quadrature_stable": true,
+      "reused": true,
+      "source_result": "evidence/nonconformal_bspf_opt/hard_shell128/nektar/results.json"
+    },
+    {
+      "id": "nektar_e16_p25_mms",
+      "method": "nektar",
+      "elements_per_axis": 16,
+      "degree": 25,
+      "guard": false,
+      "quadrature": 29,
+      "status": "validated",
+      "preprocessing_seconds": 17.108773708998342,
+      "geometry_max_error": 3.3306690738754696e-15,
+      "timing": {
+        "solve_calls": 1,
+        "setup_seconds": 37.339418125,
+        "first_solve_seconds": 0.138517292,
+        "native_l2": 1.6877176194913249e-06,
+        "local_coefficients": 173056,
+        "batch": 1,
+        "samples_seconds": [
+          0.138517292
+        ],
+        "solve_seconds": 0.138517292
+      },
+      "l2_relative": 1.5643056942500987e-06,
+      "error_quadrature_values": [
+        1.5643030641805215e-06,
+        1.5643056942500987e-06
+      ],
+      "error_quadrature_stable": true,
+      "reused": false,
+      "source_result": "evidence/nonconformal_bspf_opt/hard_shell128/fine_sweep_v1/nektar/results.json"
+    },
+    {
+      "id": "nektar_e16_p26_mms",
+      "method": "nektar",
+      "elements_per_axis": 16,
+      "degree": 26,
+      "guard": false,
+      "quadrature": 30,
+      "status": "validated",
+      "preprocessing_seconds": 18.65067104199261,
+      "geometry_max_error": 3.3306690738754696e-15,
+      "timing": {
+        "solve_calls": 1,
+        "setup_seconds": 45.989826291,
+        "first_solve_seconds": 0.212228917,
+        "native_l2": 6.294555710203002e-07,
+        "local_coefficients": 186624,
+        "batch": 1,
+        "samples_seconds": [
+          0.212228917
+        ],
+        "solve_seconds": 0.212228917
+      },
+      "l2_relative": 5.814172001801391e-07,
+      "error_quadrature_values": [
+        5.814179298142623e-07,
+        5.814172001801391e-07
+      ],
+      "error_quadrature_stable": true,
+      "reused": false,
+      "source_result": "evidence/nonconformal_bspf_opt/hard_shell128/fine_sweep_v1/nektar/results.json"
+    },
+    {
+      "id": "nektar_e16_p27_mms",
+      "method": "nektar",
+      "elements_per_axis": 16,
+      "degree": 27,
+      "guard": false,
+      "quadrature": 31,
+      "status": "validated",
+      "preprocessing_seconds": 18.875666000007186,
+      "geometry_max_error": 3.3306690738754696e-15,
+      "timing": {
+        "solve_calls": 1,
+        "setup_seconds": 55.10155625,
+        "first_solve_seconds": 0.422012917,
+        "native_l2": 1.60760462715411e-07,
+        "local_coefficients": 200704,
+        "batch": 1,
+        "samples_seconds": [
+          0.422012917
+        ],
+        "solve_seconds": 0.422012917
+      },
+      "l2_relative": 1.4897499828960677e-07,
+      "error_quadrature_values": [
+        1.4897487961272477e-07,
+        1.4897499828960677e-07
+      ],
+      "error_quadrature_stable": true,
+      "reused": false,
+      "source_result": "evidence/nonconformal_bspf_opt/hard_shell128/fine_sweep_v1/nektar/results.json"
+    },
+    {
+      "id": "nektar_e16_p28_mms",
+      "method": "nektar",
+      "elements_per_axis": 16,
+      "degree": 28,
+      "guard": false,
+      "quadrature": 32,
+      "status": "validated",
+      "preprocessing_seconds": 19.986375959008,
+      "geometry_max_error": 3.3306690738754696e-15,
+      "timing": {
+        "solve_calls": 1,
+        "setup_seconds": 62.119705916,
+        "first_solve_seconds": 0.305852333,
+        "native_l2": 5.5806875224675127e-08,
+        "local_coefficients": 215296,
+        "batch": 1,
+        "samples_seconds": [
+          0.305852333
+        ],
+        "solve_seconds": 0.305852333
+      },
+      "l2_relative": 5.1585330672871354e-08,
+      "error_quadrature_values": [
+        5.1585362876237146e-08,
+        5.1585330672871354e-08
+      ],
+      "error_quadrature_stable": true,
+      "reused": false,
+      "source_result": "evidence/nonconformal_bspf_opt/hard_shell128/fine_sweep_v1/nektar/results.json"
+    },
+    {
+      "id": "nektar_e16_p29_mms",
+      "method": "nektar",
+      "elements_per_axis": 16,
+      "degree": 29,
+      "guard": false,
+      "quadrature": 33,
+      "status": "validated",
+      "preprocessing_seconds": 21.61229520800407,
+      "geometry_max_error": 3.3306690738754696e-15,
+      "timing": {
+        "solve_calls": 1,
+        "setup_seconds": 73.786071875,
+        "first_solve_seconds": 0.302365125,
+        "native_l2": 1.3180171093489044e-08,
+        "local_coefficients": 230400,
+        "batch": 1,
+        "samples_seconds": [
+          0.302365125
+        ],
+        "solve_seconds": 0.302365125
+      },
+      "l2_relative": 1.2212072366440975e-08,
+      "error_quadrature_values": [
+        1.221206762642068e-08,
+        1.2212072366440975e-08
+      ],
+      "error_quadrature_stable": true,
+      "reused": false,
+      "source_result": "evidence/nonconformal_bspf_opt/hard_shell128/fine_sweep_v1/nektar/results.json"
+    },
+    {
+      "id": "nektar_e16_p30_mms",
+      "method": "nektar",
+      "elements_per_axis": 16,
+      "degree": 30,
+      "guard": false,
+      "quadrature": 34,
+      "status": "validated",
+      "preprocessing_seconds": 22.349484374994063,
+      "geometry_max_error": 3.552713678800501e-15,
+      "timing": {
+        "solve_calls": 1,
+        "setup_seconds": 86.569236791,
+        "first_solve_seconds": 0.401606041,
+        "native_l2": 4.266315348558701e-09,
+        "local_coefficients": 246016,
+        "batch": 1,
+        "samples_seconds": [
+          0.401606041
+        ],
+        "solve_seconds": 0.401606041
+      },
+      "l2_relative": 3.9456401192114555e-09,
+      "error_quadrature_values": [
+        3.9456414475625205e-09,
+        3.9456401192114555e-09
+      ],
+      "error_quadrature_stable": true,
+      "reused": false,
+      "source_result": "evidence/nonconformal_bspf_opt/hard_shell128/fine_sweep_v1/nektar/results.json"
+    },
+    {
+      "id": "nektar_e16_p31_mms",
+      "method": "nektar",
+      "elements_per_axis": 16,
+      "degree": 31,
+      "guard": false,
+      "quadrature": 35,
+      "status": "validated",
+      "preprocessing_seconds": 22.422985624987632,
+      "geometry_max_error": 3.4416913763379853e-15,
+      "timing": {
+        "solve_calls": 1,
+        "setup_seconds": 104.770588208,
+        "first_solve_seconds": 0.450378333,
+        "native_l2": 9.405278852920473e-10,
+        "local_coefficients": 262144,
+        "batch": 1,
+        "samples_seconds": [
+          0.450378333
+        ],
+        "solve_seconds": 0.450378333
+      },
+      "l2_relative": 8.713494331439679e-10,
+      "error_quadrature_values": [
+        8.713493011538877e-10,
+        8.713494331439679e-10
+      ],
+      "error_quadrature_stable": true,
+      "reused": false,
+      "source_result": "evidence/nonconformal_bspf_opt/hard_shell128/fine_sweep_v1/nektar/results.json"
+    },
+    {
+      "id": "nektar_e16_p32_mms",
+      "method": "nektar",
+      "elements_per_axis": 16,
+      "degree": 32,
+      "guard": false,
+      "quadrature": 36,
+      "status": "validated",
+      "preprocessing_seconds": 25.810459999993327,
+      "geometry_max_error": 3.4416913763379853e-15,
+      "timing": {
+        "solve_calls": 1,
+        "setup_seconds": 122.165692417,
+        "first_solve_seconds": 0.685890291,
+        "native_l2": 2.8433394438890485e-10,
+        "local_coefficients": 278784,
+        "batch": 1,
+        "samples_seconds": [
+          0.685890291
+        ],
+        "solve_seconds": 0.685890291
+      },
+      "l2_relative": 2.63061466845345e-10,
+      "error_quadrature_values": [
+        2.6306150090621796e-10,
+        2.63061466845345e-10
+      ],
+      "error_quadrature_stable": true,
+      "reused": true,
+      "source_result": "evidence/nonconformal_bspf_opt/hard_shell128/nektar/results.json"
+    }
+  ]
+}

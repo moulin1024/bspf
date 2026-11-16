@@ -1,0 +1,154 @@
+[
+  {
+    "target": 0.01,
+    "direct": {
+      "id": "modal_n232_q464",
+      "seconds": 0.170736875,
+      "error": 0.0027486910726793523
+    },
+    "nodal": {
+      "id": "modal_n240_q480_nodal_rhs",
+      "seconds": 0.205188041,
+      "error": 0.00825571545261956
+    },
+    "nektar": {
+      "id": "nektar_e16_p16_mms",
+      "seconds": 0.024948375,
+      "error": 0.006658595017165645
+    }
+  },
+  {
+    "target": 0.001,
+    "direct": {
+      "id": "modal_n240_q480",
+      "seconds": 0.220478625,
+      "error": 0.00029212970007882094
+    },
+    "nodal": {
+      "id": "modal_n248_q496_nodal_rhs",
+      "seconds": 0.212699292,
+      "error": 3.1095602475549734e-05
+    },
+    "nektar": {
+      "id": "nektar_e16_p20_mms",
+      "seconds": 0.034223541,
+      "error": 0.0002969376129322711
+    }
+  },
+  {
+    "target": 0.0001,
+    "direct": {
+      "id": "modal_n248_q496",
+      "seconds": 0.236263958,
+      "error": 7.541351456146748e-06
+    },
+    "nodal": {
+      "id": "modal_n248_q496_nodal_rhs",
+      "seconds": 0.212699292,
+      "error": 3.1095602475549734e-05
+    },
+    "nektar": {
+      "id": "nektar_e16_p22_mms",
+      "seconds": 0.077545334,
+      "error": 4.4846336164981415e-05
+    }
+  },
+  {
+    "target": 1e-05,
+    "direct": {
+      "id": "modal_n248_q496",
+      "seconds": 0.236263958,
+      "error": 7.541351456146748e-06
+    },
+    "nodal": {
+      "id": "modal_n264_q528_nodal_rhs",
+      "seconds": 0.235032542,
+      "error": 4.328402570151491e-09
+    },
+    "nektar": {
+      "id": "nektar_e16_p25_mms",
+      "seconds": 0.138517292,
+      "error": 1.5643056942500987e-06
+    }
+  },
+  {
+    "target": 1e-06,
+    "direct": {
+      "id": "modal_n264_q528",
+      "seconds": 0.286763042,
+      "error": 4.3993230082501605e-10
+    },
+    "nodal": {
+      "id": "modal_n264_q528_nodal_rhs",
+      "seconds": 0.235032542,
+      "error": 4.328402570151491e-09
+    },
+    "nektar": {
+      "id": "nektar_e16_p26_mms",
+      "seconds": 0.212228917,
+      "error": 5.814172001801391e-07
+    }
+  },
+  {
+    "target": 1e-07,
+    "direct": {
+      "id": "modal_n264_q528",
+      "seconds": 0.286763042,
+      "error": 4.3993230082501605e-10
+    },
+    "nodal": {
+      "id": "modal_n264_q528_nodal_rhs",
+      "seconds": 0.235032542,
+      "error": 4.328402570151491e-09
+    },
+    "nektar": {
+      "id": "nektar_e16_p29_mms",
+      "seconds": 0.302365125,
+      "error": 1.2212072366440975e-08
+    }
+  },
+  {
+    "target": 1e-08,
+    "direct": {
+      "id": "modal_n264_q528",
+      "seconds": 0.286763042,
+      "error": 4.3993230082501605e-10
+    },
+    "nodal": {
+      "id": "modal_n264_q528_nodal_rhs",
+      "seconds": 0.235032542,
+      "error": 4.328402570151491e-09
+    },
+    "nektar": {
+      "id": "nektar_e16_p30_mms",
+      "seconds": 0.401606041,
+      "error": 3.9456401192114555e-09
+    }
+  },
+  {
+    "target": 1e-10,
+    "direct": {
+      "id": "modal_n272_q544",
+      "seconds": 0.30916225,
+      "error": 6.82454000328891e-13
+    },
+    "nodal": {
+      "id": "modal_n272_q544_nodal_rhs",
+      "seconds": 0.285890209,
+      "error": 9.572101268377984e-12
+    }
+  },
+  {
+    "target": 1e-12,
+    "direct": {
+      "id": "modal_n272_q544",
+      "seconds": 0.30916225,
+      "error": 6.82454000328891e-13
+    },
+    "nodal": {
+      "id": "modal_n280_q560_nodal_rhs",
+      "seconds": 0.341860083,
+      "error": 4.895904844896217e-13
+    }
+  }
+]

@@ -1,0 +1,38 @@
+{
+  "n": 128,
+  "q": 256,
+  "kernel": "modal",
+  "guard": false,
+  "hard": true,
+  "id": "modal_n128_q256",
+  "status": "validated",
+  "setup_seconds": 0.15939099999377504,
+  "sampling_seconds": 4.6246767090051435,
+  "binary_sha256": "fa3bd0a9cfec12f5596b5743a71784dcbe84accc7a533d2e86ca414dadb5dc43",
+  "solve_calls": 1,
+  "warmups": 0,
+  "load_seconds": 0.003057042,
+  "solve_seconds": 0.0392855,
+  "iterations": 46,
+  "relative_residual": 9.994343636781393e-16,
+  "preconditioned_defect": 6.1801182599296126e-15,
+  "refinements": 1,
+  "peak_rss_bytes": 10207232,
+  "rhs_weighting_inside_timer": true,
+  "defect_history": [
+    2.3776497347474113e-13,
+    6.1801182599296126e-15
+  ],
+  "l2_relative": 0.15643665619714622,
+  "quadrature_errors": [
+    0.15643665619714275,
+    0.15643665619714622
+  ],
+  "quadrature_orders": [
+    640,
+    768
+  ],
+  "quadrature_stable": true,
+  "audit_quadrature_order": 640,
+  "audit_preconditioned_defect": 8.934627732986381e-13
+}

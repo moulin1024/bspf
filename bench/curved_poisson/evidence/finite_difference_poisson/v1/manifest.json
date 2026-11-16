@@ -1,0 +1,17 @@
+{
+  "benchmarks/finite_difference_poisson/run.py": "c874f6fc9120c3343c1874e15496df3f0f2bd2785f69293efa155f2644744aac",
+  "benchmarks/finite_difference_poisson/fd4": "336be0e1eee34a7929cf723f740ab960102d6f2cd91eedf4000302a0f112c681",
+  "benchmarks/finite_difference_poisson/solver.cpp": "8a98fbe594b8c1874b2a7edf7e9ee96cd6964160e09d55217118ebb8d9e5ef17",
+  "benchmarks/finite_difference_poisson/report.py": "39d0545d79a2bdae77de3118189265455735f617fee52af8566fde6f687b1df6",
+  "evidence/finite_difference_poisson/v1/guard_n33/result.json": "bdb8fad22c829763d307fd6f7bf59c98fd34371d3fa1a47fa41a7db7fbde8d94",
+  "evidence/finite_difference_poisson/v1/hard_n257/result.json": "a6293f5cb097e110216585a5d783cc6652aaa9a9e08a0ff3448419dd08c757e4",
+  "evidence/finite_difference_poisson/v1/hard_n129/result.json": "3b2c828f7729b6d37821c722af215506eaae3991727f375ce8c6381395265633",
+  "evidence/finite_difference_poisson/v1/hard_n65/result.json": "e1a7f48dd047227ad1bb4d873bfd4b97206677b80eefc9b667155baf0d528ae6",
+  "evidence/finite_difference_poisson/v1/smooth_n65/result.json": "010df8aecb9f4c005a201139c9bf6dc9517c2354e547be8c23d62c1f69d69f6e",
+  "evidence/finite_difference_poisson/v1/smooth_n17/result.json": "200e9afc71b3bb478cb263f97804e097e84d18cb8d704f5328dcf088251f7fd5",
+  "evidence/finite_difference_poisson/v1/hard_n513/result.json": "c86e70850ef9f7c499e9f982c1783509633d8b4a15b924cf2577472d0c6eac64",
+  "evidence/finite_difference_poisson/v1/smooth_n129/result.json": "0c3eba8a723ff36339b374d07182fd513e199ef8971bff668743692f98117e3f",
+  "evidence/finite_difference_poisson/v1/smooth_n33/result.json": "50cd7716fe252cee503c487e072677de4a9fb3c1468e5b71a3b66c7ca8587691",
+  "evidence/finite_difference_poisson/v1/hard_n1025/result.json": "63ae103953111662158647c894bf04c8cb3c0fb1c136b4ede8952ea5f130fe58",
+  "evidence/nonconformal_bspf_opt/hard_shell128/explicit_input_comparison/results.json": "51148cd8c58a3df9c2c7a8d0c5cc9c84e03e5a415b5e6ab9bb44afc897e47e51"
+}

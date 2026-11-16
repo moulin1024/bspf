@@ -1,0 +1,30 @@
+{
+  "n": 129,
+  "kind": "smooth",
+  "id": "smooth_n129",
+  "status": "validated",
+  "method": "native_fd4",
+  "geometry_setup_seconds": 0.020250040994142182,
+  "sampling_seconds": 0.0006907919887453318,
+  "forcing_samples": 16129,
+  "binary_sha256": "336be0e1eee34a7929cf723f740ab960102d6f2cd91eedf4000302a0f112c681",
+  "source_sha256": "8a98fbe594b8c1874b2a7edf7e9ee96cd6964160e09d55217118ebb8d9e5ef17",
+  "solve_seconds": 0.025408083,
+  "setup_seconds": 0.001251417,
+  "iterations": 22,
+  "relative_residual": 3.7182587726701634e-13,
+  "converged": true,
+  "solve_calls": 1,
+  "warmups": 0,
+  "nodal_max_error": 2.624604245049511e-08,
+  "l2_relative": 1.8707867287751467e-08,
+  "quadrature_errors": [
+    1.870787000801197e-08,
+    1.8707867287751467e-08
+  ],
+  "quadrature_orders": [
+    100,
+    140
+  ],
+  "quadrature_stable": true
+}
