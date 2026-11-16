@@ -1,0 +1,86 @@
+{
+  "gpu": "NVIDIA A100-SXM-64GB",
+  "n": 225,
+  "q": 338,
+  "dofs": 11390625,
+  "free_dofs": 11089567,
+  "operator_precision": "float64",
+  "cg_precision": "float64",
+  "preconditioner_precision": "float32",
+  "tf32": false,
+  "device_bytes": 6629892464,
+  "cublas_version": 130100,
+  "fp64_emulation": "performant",
+  "parity_optimized": true,
+  "shared_contractions": true,
+  "fused_tensor_layout": true,
+  "device_setup_s": 1.077708793,
+  "runs": [
+    {
+      "iterations": 18,
+      "residual_replacements": 1,
+      "relative_residual": 4.1488004217140155e-13,
+      "cg_s": 0.414049527,
+      "wall_s": 0.455444614
+    },
+    {
+      "iterations": 18,
+      "residual_replacements": 1,
+      "relative_residual": 4.1488004217140155e-13,
+      "cg_s": 0.365946164,
+      "wall_s": 0.386769115
+    },
+    {
+      "iterations": 18,
+      "residual_replacements": 1,
+      "relative_residual": 4.1488004217140155e-13,
+      "cg_s": 0.366058401,
+      "wall_s": 0.386906053
+    },
+    {
+      "iterations": 18,
+      "residual_replacements": 1,
+      "relative_residual": 4.1488004217140155e-13,
+      "cg_s": 0.366039611,
+      "wall_s": 0.386883471
+    }
+  ],
+  "preassembled_load": false,
+  "octant_optimized": true,
+  "boundary_error": 0.0,
+  "audits": [
+    {
+      "q": 346,
+      "relative_l2": 2.8660629430173695e-12,
+      "volume": 0.9199999999999986
+    },
+    {
+      "q": 354,
+      "relative_l2": 2.8660785176602566e-12,
+      "volume": 0.9200000000000008
+    }
+  ],
+  "relative_l2": 2.8660785176602566e-12,
+  "axis": {
+    "discretization": "global_chebyshev_galerkin",
+    "degree": 224,
+    "n": 225,
+    "nodes": "chebyshev_lobatto",
+    "cardinal_defect": 5.186961971048731e-13,
+    "node_symmetry_defect": 1.1102230246251565e-16,
+    "integration_measure": "ordinary physical volume (not Chebyshev-weighted)"
+  },
+  "eigenpair_relative_defect": 1.8908339842956573e-15,
+  "preparation_s": 14.513759225606918,
+  "modes_sha256": "c9119da1d12d3bbca43497bcddc5f5b92baf6611cdd047c49866e025812c9949",
+  "forcing_mode": "quadrature",
+  "forcing_spline_degree": null,
+  "volume_forcing_samples": 38614472,
+  "rhs_assembly": "quadrature",
+  "rhs_mass_setup_s": 0.0,
+  "rhs_mass_apply_s": 0.0,
+  "rhs_mass_bytes": 0,
+  "warm_cg_s": 0.366039611,
+  "warm_wall_s": 0.386883471,
+  "binary_sha256": "2cca3c32a24e1a58162a45f94b7753630cd9c3b7eec9541b1a5bc5cd18708351"
+}

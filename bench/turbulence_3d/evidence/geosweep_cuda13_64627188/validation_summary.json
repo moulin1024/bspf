@@ -1,0 +1,18 @@
+{
+  "bspf": {
+    "cases": 41,
+    "max_residual": 9.935414527542694e-13,
+    "n257_wall_s": 0.628017393,
+    "n257_l2": 3.054280369857333e-12,
+    "octant_cases": 29,
+    "first_n_below_1e_minus_11": 67
+  },
+  "chebyshev": {
+    "cases": 41,
+    "max_residual": 9.441459377926812e-13,
+    "n257_wall_s": 0.634979477,
+    "n257_l2": 3.068111913442287e-12,
+    "octant_cases": 29,
+    "first_n_below_1e_minus_11": 87
+  }
+}

@@ -1,5 +1,28 @@
 Saved Leonardo Poisson comparison, capped at 257^3.
 
+Dense CUDA 13 sweep: job 64627188 supersedes the seven-point BSPF and
+Chebyshev curves below. Each has 41 distinct odd resolutions, obtained from
+17*(257/17)^(i/40), i=0..40, rounded to the nearest odd integer and advancing
+collisions to the next odd integer. Small sizes are therefore constrained by
+the odd-node lattice rather than exactly geometrically spaced.
+BSPF retains nodal forcing and mass RHS; Chebyshev retains direct Gauss forcing.
+The quadrature rule remains q=max(96,ceil(1.5*n)). Odd q uses the general
+operator instead of eight reflection sectors, so timings need not be smooth.
+FC-Gram, MFEM and NekRS retain their seven saved resolutions.
+All 82 dense cases passed: zero nodal boundary error, true residual <1e-12,
+and two independent physical error integrals agreeing within 1e-4 relatively.
+At 257^3: BSPF 0.628017 s, Chebyshev 0.634979 s (median warm full solve).
+There are 29 reflection-sector cases and 12 general-operator cases per solver.
+The first sampled n with L2 error <1e-11 is 67 for BSPF and 87 for Chebyshev.
+
+Reproduce the dense run:
+  sbatch bench/turbulence_3d/leonardo/geosweep_cuda13.slurm
+Import its results (bash):
+  read -r -a nodes < bench/turbulence_3d/evidence/geosweep_cuda13_64627188/nodes.txt
+  python bench/turbulence_3d/plot_leonardo_comparison.py --nodes "${nodes[@]}" --bspf-dir bench/turbulence_3d/evidence/geosweep_cuda13_64627188/bspf --chebyshev-dir bench/turbulence_3d/evidence/geosweep_cuda13_64627188/chebyshev
+
+Previous seven-point updates (retained as provenance):
+
 BSPF update: CUDA 13.0.2 / cuBLAS 13.1.0.3, sweep job 64625526.
 Seven BSPF resolutions are rerun with the optimized reflection-sector operator,
 full BSPF nodal forcing and the preassembled nodal-mass RHS. Emulation strategy

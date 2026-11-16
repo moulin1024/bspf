@@ -1,0 +1,92 @@
+{
+  "gpu": "NVIDIA A100-SXM-64GB",
+  "n": 121,
+  "q": 182,
+  "dofs": 1771561,
+  "free_dofs": 1685159,
+  "operator_precision": "float64",
+  "cg_precision": "float64",
+  "preconditioner_precision": "float32",
+  "tf32": false,
+  "device_bytes": 1487060848,
+  "cublas_version": 130100,
+  "fp64_emulation": "performant",
+  "parity_optimized": true,
+  "shared_contractions": true,
+  "fused_tensor_layout": true,
+  "device_setup_s": 0.239574993,
+  "runs": [
+    {
+      "iterations": 18,
+      "residual_replacements": 1,
+      "relative_residual": 8.263841692724153e-13,
+      "cg_s": 0.11588333,
+      "wall_s": 0.139854687
+    },
+    {
+      "iterations": 18,
+      "residual_replacements": 1,
+      "relative_residual": 8.263841692724153e-13,
+      "cg_s": 0.068230019,
+      "wall_s": 0.071554013
+    },
+    {
+      "iterations": 18,
+      "residual_replacements": 1,
+      "relative_residual": 8.263841692724153e-13,
+      "cg_s": 0.063752574,
+      "wall_s": 0.066757816
+    },
+    {
+      "iterations": 18,
+      "residual_replacements": 1,
+      "relative_residual": 8.263841692724153e-13,
+      "cg_s": 0.063794207,
+      "wall_s": 0.066802526
+    }
+  ],
+  "preassembled_load": true,
+  "octant_optimized": true,
+  "boundary_error": 0.0,
+  "audits": [
+    {
+      "q": 190,
+      "relative_l2": 2.3715977991721195e-12,
+      "volume": 0.9199999999999993
+    },
+    {
+      "q": 198,
+      "relative_l2": 2.371560279219809e-12,
+      "volume": 0.9199999999999979
+    }
+  ],
+  "relative_l2": 2.371560279219809e-12,
+  "axis": {
+    "modes": 56,
+    "period": 1.5,
+    "degree": 8,
+    "n": 121,
+    "nodes": "symmetric_qr",
+    "parity_preserved": true,
+    "node_symmetry_defect": 0.0,
+    "tail_condition": 2.7490863641976156e+16,
+    "nodal_condition": 12.37588708450226,
+    "orthogonalization_passes": 4,
+    "orthogonality_defect": 6.8833827526759706e-15,
+    "orthogonality_tolerance": 2.842170943040401e-14,
+    "cardinal_defect": 2.1316282072803006e-14
+  },
+  "eigenpair_relative_defect": 1.6226631595290507e-15,
+  "preparation_s": 3.478543173521757,
+  "modes_sha256": "c9119da1d12d3bbca43497bcddc5f5b92baf6611cdd047c49866e025812c9949",
+  "forcing_mode": "nodal-bspf",
+  "forcing_spline_degree": null,
+  "volume_forcing_samples": 1771561,
+  "rhs_assembly": "nodal-mass",
+  "rhs_mass_setup_s": 0.002414017915725708,
+  "rhs_mass_apply_s": 0.0009109191596508026,
+  "rhs_mass_bytes": 1756920,
+  "warm_cg_s": 0.063794207,
+  "warm_wall_s": 0.066802526,
+  "binary_sha256": "2cca3c32a24e1a58162a45f94b7753630cd9c3b7eec9541b1a5bc5cd18708351"
+}
