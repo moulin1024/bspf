@@ -1,0 +1,93 @@
+[
+  {
+    "case": "001",
+    "params": "/leonardo/home/userexternal/mlin0000/genex/runs/iter-weak-q10-20261117/cases/001/run/params_in.txt",
+    "settings": {
+      "spacing_RZ": "0.00036000000000000002",
+      "flip_Z": ".true.",
+      "rhomin": "0.9",
+      "district_definition": "default",
+      "set_rhomax": "default",
+      "set_exclusion_polygon": "default"
+    },
+    "equilibrium_sha256": "667ec3db4ae8ac5901bc568f6a550e2b42eb173bba33f6a2ef8566efc45e9e4f"
+  },
+  {
+    "case": "002",
+    "params": "/leonardo/home/userexternal/mlin0000/genex/runs/iter-weak-q10-20261117/cases/002/run/params_in.txt",
+    "settings": {
+      "spacing_RZ": "0.00036000000000000002",
+      "flip_Z": ".true.",
+      "rhomin": "0.9",
+      "district_definition": "default",
+      "set_rhomax": "default",
+      "set_exclusion_polygon": "default"
+    },
+    "equilibrium_sha256": "667ec3db4ae8ac5901bc568f6a550e2b42eb173bba33f6a2ef8566efc45e9e4f"
+  },
+  {
+    "case": "004",
+    "params": "/leonardo/home/userexternal/mlin0000/genex/runs/iter-weak-q10-20261117/cases/004/run/params_in.txt",
+    "settings": {
+      "spacing_RZ": "0.00036000000000000002",
+      "flip_Z": ".true.",
+      "rhomin": "0.9",
+      "district_definition": "default",
+      "set_rhomax": "default",
+      "set_exclusion_polygon": "default"
+    },
+    "equilibrium_sha256": "667ec3db4ae8ac5901bc568f6a550e2b42eb173bba33f6a2ef8566efc45e9e4f"
+  },
+  {
+    "case": "008",
+    "params": "/leonardo/home/userexternal/mlin0000/genex/runs/iter-weak-q10-20261117/cases/008/run/params_in.txt",
+    "settings": {
+      "spacing_RZ": "0.00025455844122715713",
+      "flip_Z": ".true.",
+      "rhomin": "0.9",
+      "district_definition": "default",
+      "set_rhomax": "default",
+      "set_exclusion_polygon": "default"
+    },
+    "equilibrium_sha256": "667ec3db4ae8ac5901bc568f6a550e2b42eb173bba33f6a2ef8566efc45e9e4f"
+  },
+  {
+    "case": "016",
+    "params": "/leonardo/home/userexternal/mlin0000/genex/runs/iter-weak-q10-20261117/cases/016/run/params_in.txt",
+    "settings": {
+      "spacing_RZ": "0.00018000000000000001",
+      "flip_Z": ".true.",
+      "rhomin": "0.9",
+      "district_definition": "default",
+      "set_rhomax": "default",
+      "set_exclusion_polygon": "default"
+    },
+    "equilibrium_sha256": "667ec3db4ae8ac5901bc568f6a550e2b42eb173bba33f6a2ef8566efc45e9e4f"
+  },
+  {
+    "case": "032",
+    "params": "/leonardo/home/userexternal/mlin0000/genex/runs/iter-weak-q10-20261117/cases/032/run/params_in.txt",
+    "settings": {
+      "spacing_RZ": "0.00012727922061357857",
+      "flip_Z": ".true.",
+      "rhomin": "0.9",
+      "district_definition": "default",
+      "set_rhomax": "default",
+      "set_exclusion_polygon": "default"
+    },
+    "equilibrium_sha256": "667ec3db4ae8ac5901bc568f6a550e2b42eb173bba33f6a2ef8566efc45e9e4f"
+  },
+  {
+    "case": "064",
+    "params": "/leonardo/home/userexternal/mlin0000/genex/runs/iter-weak-q10-20261117/cases/064/run/params_in.txt",
+    "settings": {
+      "spacing_RZ": "9.0000000000000006e-05",
+      "flip_Z": ".true.",
+      "rhomin": "0.9",
+      "district_definition": "default",
+      "set_rhomax": "default",
+      "set_exclusion_polygon": "default"
+    },
+    "equilibrium_sha256": "667ec3db4ae8ac5901bc568f6a550e2b42eb173bba33f6a2ef8566efc45e9e4f"
+  }
+]

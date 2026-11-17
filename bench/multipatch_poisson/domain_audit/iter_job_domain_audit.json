@@ -1,0 +1,21 @@
+{
+  "job": "/leonardo/home/userexternal/mlin0000/genex/runs/iter-q10-anchor",
+  "mesh": "/leonardo/home/userexternal/mlin0000/genex/runs/iter-q10-anchor/mesh.nc",
+  "plane": 0,
+  "equilibrium_sha256": "667ec3db4ae8ac5901bc568f6a550e2b42eb173bba33f6a2ef8566efc45e9e4f",
+  "params_sha256": "4add6b111deb33cfa372d8909209a2ae91ca2a68fbf45ad3a0ad100ad2d8d6a2",
+  "total_rows": 138270,
+  "interior_rows": 121854,
+  "active_field_interior_rows": 116500,
+  "active_points_outside_partition_domain": 0,
+  "additional_points_inside_smooth_domain": 1063,
+  "additional_points_are_all_boundary_rows": true,
+  "additional_point_district_counts": {
+    "813": 439,
+    "817": 572,
+    "818": 52
+  },
+  "maximum_additional_point_distance_to_boundary": 0.0007174502451855921,
+  "spacing_RZ": 0.0014399999999999968,
+  "interpretation": "Compare continuum domain with snapped Cartesian boundary rows, not identical discrete row sets."
+}
