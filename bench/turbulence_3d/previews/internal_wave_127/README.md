@@ -37,3 +37,17 @@ continuity and scalar residuals stayed below 1e-10. Independent q=199 and q=207
 final quadrature audits agreed. Visualization snapshots alone use float32.
 This completed trajectory does not establish spatial convergence or resolved
 wave breaking/mixing.
+
+
+## Central y=2 cross-section movie
+
+[Download the 100-frame y=2 cross-section MP4](internal_wave_y2_t30.mp4)
+
+This movie extracts the exact central nodal plane from the same 100 saved
+three-dimensional fields, covering t=0 through t=30. The upper panel shows
+total buoyancy and isopycnals in the x–z plane; the lower panel compares the
+pycnocline displacement with its initial profile. Color and axis scales stay
+fixed throughout, with no temporal interpolation or simulation rerun.
+
+Format: 1280×720 H.264, 10 fps, 10 seconds; decoded frame count verified.
+Simulation job: 64691260. Cross-section rendering job: 64692756.
