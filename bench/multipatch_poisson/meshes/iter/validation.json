@@ -1,0 +1,10 @@
+{
+  "passed": true,
+  "patches": 335,
+  "max_interface_gap": 0.0,
+  "euler_characteristic": 0,
+  "min_jacobian": 3.7618358919423314e-05,
+  "min_scaled_jacobian": 0.44775761155692106,
+  "max_map_condition": 4.4939457085089325,
+  "note": "Geometry/topology validation; not a Poisson MMS solve or direct Fortran classifier comparison."
+}

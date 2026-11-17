@@ -1,0 +1,638 @@
+[
+  {
+    "patch": 0,
+    "face": 0,
+    "kind": "target",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 3,
+    "face": 0,
+    "kind": "target",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 5,
+    "face": 1,
+    "kind": "outer_flux",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 6,
+    "face": 1,
+    "kind": "outer_flux",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 6,
+    "face": 3,
+    "kind": "target",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 7,
+    "face": 3,
+    "kind": "target",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 8,
+    "face": 0,
+    "kind": "core",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 9,
+    "face": 1,
+    "kind": "outer_flux",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 10,
+    "face": 1,
+    "kind": "outer_flux",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 11,
+    "face": 0,
+    "kind": "core",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 12,
+    "face": 3,
+    "kind": "outer_flux",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 16,
+    "face": 3,
+    "kind": "outer_flux",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 17,
+    "face": 3,
+    "kind": "core",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 19,
+    "face": 1,
+    "kind": "core",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 21,
+    "face": 1,
+    "kind": "outer_flux",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 22,
+    "face": 1,
+    "kind": "outer_flux",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 24,
+    "face": 2,
+    "kind": "outer_flux",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 25,
+    "face": 2,
+    "kind": "outer_flux",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 28,
+    "face": 3,
+    "kind": "outer_flux",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 30,
+    "face": 3,
+    "kind": "outer_flux",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 32,
+    "face": 0,
+    "kind": "private_flux",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 34,
+    "face": 3,
+    "kind": "target",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 35,
+    "face": 0,
+    "kind": "private_flux",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 35,
+    "face": 3,
+    "kind": "target",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 37,
+    "face": 3,
+    "kind": "outer_flux",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 41,
+    "face": 1,
+    "kind": "core",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 42,
+    "face": 1,
+    "kind": "outer_flux",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 43,
+    "face": 1,
+    "kind": "outer_flux",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 45,
+    "face": 1,
+    "kind": "outer_flux",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 47,
+    "face": 1,
+    "kind": "core",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 52,
+    "face": 1,
+    "kind": "outer_flux",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 55,
+    "face": 2,
+    "kind": "outer_flux",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 56,
+    "face": 2,
+    "kind": "outer_flux",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 57,
+    "face": 3,
+    "kind": "core",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 58,
+    "face": 3,
+    "kind": "core",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 60,
+    "face": 1,
+    "kind": "core",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 65,
+    "face": 3,
+    "kind": "private_flux",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 66,
+    "face": 3,
+    "kind": "private_flux",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 70,
+    "face": 0,
+    "kind": "core",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 71,
+    "face": 1,
+    "kind": "outer_flux",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 72,
+    "face": 1,
+    "kind": "outer_flux",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 73,
+    "face": 0,
+    "kind": "core",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 74,
+    "face": 1,
+    "kind": "outer_flux",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 75,
+    "face": 3,
+    "kind": "outer_flux",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 76,
+    "face": 3,
+    "kind": "outer_flux",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 79,
+    "face": 3,
+    "kind": "target",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 85,
+    "face": 2,
+    "kind": "outer_flux",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 86,
+    "face": 2,
+    "kind": "outer_flux",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 90,
+    "face": 1,
+    "kind": "private_flux",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 91,
+    "face": 1,
+    "kind": "private_flux",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 93,
+    "face": 3,
+    "kind": "outer_flux",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 94,
+    "face": 2,
+    "kind": "outer_flux",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 96,
+    "face": 3,
+    "kind": "outer_flux",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 97,
+    "face": 0,
+    "kind": "private_flux",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 100,
+    "face": 0,
+    "kind": "private_flux",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 101,
+    "face": 1,
+    "kind": "core",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 102,
+    "face": 3,
+    "kind": "outer_flux",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 104,
+    "face": 3,
+    "kind": "outer_flux",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 106,
+    "face": 3,
+    "kind": "core",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 113,
+    "face": 2,
+    "kind": "outer_flux",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 116,
+    "face": 2,
+    "kind": "outer_flux",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 117,
+    "face": 2,
+    "kind": "outer_flux",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 118,
+    "face": 3,
+    "kind": "core",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 119,
+    "face": 3,
+    "kind": "core",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 121,
+    "face": 3,
+    "kind": "outer_flux",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 125,
+    "face": 3,
+    "kind": "outer_flux",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 127,
+    "face": 1,
+    "kind": "outer_flux",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 129,
+    "face": 1,
+    "kind": "core",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 133,
+    "face": 1,
+    "kind": "outer_flux",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 136,
+    "face": 0,
+    "kind": "core",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 137,
+    "face": 1,
+    "kind": "outer_flux",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 138,
+    "face": 1,
+    "kind": "outer_flux",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 139,
+    "face": 0,
+    "kind": "core",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 140,
+    "face": 1,
+    "kind": "core",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 142,
+    "face": 1,
+    "kind": "outer_flux",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 143,
+    "face": 3,
+    "kind": "outer_flux",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 146,
+    "face": 1,
+    "kind": "core",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 148,
+    "face": 1,
+    "kind": "core",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 149,
+    "face": 1,
+    "kind": "core",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 152,
+    "face": 1,
+    "kind": "core",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 153,
+    "face": 3,
+    "kind": "outer_flux",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 155,
+    "face": 3,
+    "kind": "core",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 158,
+    "face": 3,
+    "kind": "outer_flux",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 160,
+    "face": 3,
+    "kind": "outer_flux",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 164,
+    "face": 1,
+    "kind": "outer_flux",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 165,
+    "face": 1,
+    "kind": "outer_flux",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 168,
+    "face": 1,
+    "kind": "outer_flux",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 176,
+    "face": 3,
+    "kind": "outer_flux",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 177,
+    "face": 3,
+    "kind": "target",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 182,
+    "face": 3,
+    "kind": "outer_flux",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 185,
+    "face": 3,
+    "kind": "outer_flux",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 186,
+    "face": 1,
+    "kind": "core",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 195,
+    "face": 1,
+    "kind": "core",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 198,
+    "face": 1,
+    "kind": "outer_flux",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 202,
+    "face": 3,
+    "kind": "outer_flux",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 205,
+    "face": 2,
+    "kind": "target",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 206,
+    "face": 2,
+    "kind": "target",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 209,
+    "face": 1,
+    "kind": "core",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 210,
+    "face": 3,
+    "kind": "core",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 212,
+    "face": 3,
+    "kind": "core",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 213,
+    "face": 1,
+    "kind": "outer_flux",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 214,
+    "face": 3,
+    "kind": "core",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 217,
+    "face": 1,
+    "kind": "core",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 220,
+    "face": 3,
+    "kind": "outer_flux",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 221,
+    "face": 3,
+    "kind": "outer_flux",
+    "bc": "dirichlet_zero"
+  },
+  {
+    "patch": 229,
+    "face": 1,
+    "kind": "core",
+    "bc": "dirichlet_zero"
+  }
+]

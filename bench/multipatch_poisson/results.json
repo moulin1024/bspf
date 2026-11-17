@@ -1,0 +1,62 @@
+[
+  {
+    "n": 11,
+    "q": 30,
+    "dofs": 231,
+    "max_error": 6.080567254151958e-07,
+    "relative_residual": 3.589693614102247e-15,
+    "symmetry_error": 6.328857322619695e-17,
+    "smallest_eigenvalue": 0.18144202243496488,
+    "min_patch_jacobian": 0.4861827594715426
+  },
+  {
+    "n": 11,
+    "q": 41,
+    "dofs": 231,
+    "max_error": 6.080567319655117e-07,
+    "relative_residual": 3.756421119683316e-15,
+    "symmetry_error": 6.457286195787632e-17,
+    "smallest_eigenvalue": 0.18144202243495985,
+    "min_patch_jacobian": 0.4861826138650951
+  },
+  {
+    "n": 17,
+    "q": 42,
+    "dofs": 561,
+    "max_error": 7.159939308110097e-12,
+    "relative_residual": 7.933823551448745e-15,
+    "symmetry_error": 5.912445696404326e-17,
+    "smallest_eigenvalue": 0.07065926364414002,
+    "min_patch_jacobian": 0.48618260841348976
+  },
+  {
+    "n": 17,
+    "q": 59,
+    "dofs": 561,
+    "max_error": 7.1453953864875075e-12,
+    "relative_residual": 5.041489010790349e-15,
+    "symmetry_error": 5.744484909047595e-17,
+    "smallest_eigenvalue": 0.07065926364414377,
+    "min_patch_jacobian": 0.4861825680491662
+  },
+  {
+    "n": 25,
+    "q": 58,
+    "dofs": 1225,
+    "max_error": 1.0547118733938987e-13,
+    "relative_residual": 8.24701885619103e-15,
+    "symmetry_error": 6.346372036360709e-17,
+    "smallest_eigenvalue": 0.030954064825434363,
+    "min_patch_jacobian": 0.48618256904586943
+  },
+  {
+    "n": 25,
+    "q": 83,
+    "dofs": 1225,
+    "max_error": 3.774758283725532e-14,
+    "relative_residual": 7.584495462556011e-15,
+    "symmetry_error": 6.176495518579031e-17,
+    "smallest_eigenvalue": 0.030954064825435224,
+    "min_patch_jacobian": 0.48618255750289724
+  }
+]
