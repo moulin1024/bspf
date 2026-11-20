@@ -1,0 +1,22 @@
+{
+  "case": "grid_with_patches_mastu_303",
+  "recorded_at": "2026-11-20T13:38:13.993645+00:00",
+  "status": "fixed_current_replay_complete",
+  "completed": [
+    "analytic_restart_selfcheck",
+    "reference_archive_validation",
+    "fixed_current_replay"
+  ],
+  "selfcheck": {
+    "flux_relative_L2": 1.8690223258703843e-15,
+    "Bp_relative_L2": 2.0067270339961922e-14
+  },
+  "native_reference": "reference/end.h5",
+  "archive": "https://jorek.eu/dav_nrt/grid_with_patches_mastu_303_3f86adfbe97bce34ea359cddd9a83226.tgz",
+  "completed_mastu_resolutions": [
+    5,
+    7,
+    9
+  ],
+  "results": "replay.json"
+}

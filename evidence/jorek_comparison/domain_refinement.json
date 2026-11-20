@@ -1,0 +1,113 @@
+{
+  "assembly_order": 8,
+  "points_per_span": 6,
+  "score_order": 36,
+  "pilot_s": 0.5810865419916809,
+  "domain": true,
+  "padding_m": null,
+  "remark": false,
+  "marked": [
+    [
+      5,
+      15
+    ],
+    [
+      5,
+      14
+    ],
+    [
+      6,
+      15
+    ],
+    [
+      6,
+      14
+    ],
+    [
+      4,
+      15
+    ],
+    [
+      5,
+      13
+    ],
+    [
+      4,
+      16
+    ],
+    [
+      4,
+      14
+    ],
+    [
+      6,
+      13
+    ],
+    [
+      7,
+      15
+    ]
+  ],
+  "rows": [
+    {
+      "divisor": 16,
+      "marked_bins": 10,
+      "spacing_m": 0.09198781602827133,
+      "dofs": 1044,
+      "refine_s": 0.9600850419956259,
+      "assembly_points": 192576,
+      "flux_pct": 0.018913967347437263,
+      "field_pct": 0.1580903006795577,
+      "local_field_pct": 0.5575106997074243,
+      "normal_equation_residual": 9.962618856166926e-13
+    },
+    {
+      "divisor": 32,
+      "marked_bins": 10,
+      "spacing_m": 0.045993908014135665,
+      "dofs": 3593,
+      "refine_s": 1.7025698340148665,
+      "assembly_points": 298552,
+      "flux_pct": 6.986589875639259e-05,
+      "field_pct": 0.0014223564833169523,
+      "local_field_pct": 0.005828181204184775,
+      "normal_equation_residual": 6.12180050040526e-13
+    },
+    {
+      "divisor": 64,
+      "marked_bins": 10,
+      "spacing_m": 0.022996954007067832,
+      "dofs": 12875,
+      "refine_s": 6.233254749968182,
+      "assembly_points": 808528,
+      "flux_pct": 5.651540974313274e-07,
+      "field_pct": 2.3530609134024234e-05,
+      "local_field_pct": 9.419664083590202e-05,
+      "normal_equation_residual": 4.9687968222212954e-14
+    },
+    {
+      "divisor": 128,
+      "marked_bins": 10,
+      "spacing_m": 0.011498477003533916,
+      "dofs": 48540,
+      "refine_s": 26.24639012501575,
+      "assembly_points": 2782128,
+      "flux_pct": 9.153156985948631e-09,
+      "field_pct": 6.498617885886071e-07,
+      "local_field_pct": 2.4846904060926386e-06,
+      "normal_equation_residual": 5.434160931366667e-15
+    },
+    {
+      "divisor": 256,
+      "marked_bins": 10,
+      "spacing_m": 0.005749238501766958,
+      "dofs": 188570,
+      "refine_s": 159.47371816600207,
+      "assembly_points": 10637376,
+      "flux_pct": 1.4843184002257958e-10,
+      "field_pct": 2.1002689440238866e-08,
+      "local_field_pct": 7.52444646772866e-08,
+      "normal_equation_residual": 5.614648454702119e-15
+    }
+  ]
+}

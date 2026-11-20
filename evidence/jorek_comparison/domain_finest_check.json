@@ -1,0 +1,81 @@
+{
+  "assembly_order": 8,
+  "points_per_span": 7,
+  "score_order": 48,
+  "pilot_s": 0.5735923750326037,
+  "domain": true,
+  "padding_m": null,
+  "remark": false,
+  "marked": [
+    [
+      5,
+      15
+    ],
+    [
+      5,
+      14
+    ],
+    [
+      6,
+      15
+    ],
+    [
+      6,
+      14
+    ],
+    [
+      4,
+      15
+    ],
+    [
+      5,
+      13
+    ],
+    [
+      4,
+      16
+    ],
+    [
+      4,
+      14
+    ],
+    [
+      6,
+      13
+    ],
+    [
+      7,
+      15
+    ]
+  ],
+  "rows": [
+    {
+      "divisor": 128,
+      "marked_bins": 10,
+      "spacing_m": 0.011498477003533916,
+      "dofs": 32209,
+      "refine_s": 34.25190675002523,
+      "assembly_points": 3777228,
+      "flux_pct": 1.478309440205897e-08,
+      "field_pct": 6.480347127338912e-07,
+      "local_field_pct": 2.476542435063455e-06,
+      "normal_equation_residual": 1.872302762641743e-12,
+      "pilot_coefficients": 128,
+      "correction_unknowns": 32081
+    },
+    {
+      "divisor": 256,
+      "marked_bins": 10,
+      "spacing_m": 0.005749238501766958,
+      "dofs": 132775,
+      "refine_s": 186.74161691701738,
+      "assembly_points": 14459536,
+      "flux_pct": 1.4705174422025806e-10,
+      "field_pct": 2.091626704924569e-08,
+      "local_field_pct": 7.48151348991809e-08,
+      "normal_equation_residual": 5.8650814567688896e-15,
+      "pilot_coefficients": 128,
+      "correction_unknowns": 121217
+    }
+  ]
+}

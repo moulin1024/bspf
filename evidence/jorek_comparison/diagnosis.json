@@ -1,0 +1,46 @@
+{
+  "tests": [
+    {
+      "assembly_order": 16,
+      "field_error_relative": 0.008682864362937283,
+      "native_flux_interpolation_max_abs": 1.740838531383293e-07,
+      "native_field_interpolation_relative": 2.6455827554929945e-05,
+      "bubble_fraction_energy_squared": 0.25797082942078403,
+      "fixed_native_edges_field_effect_relative": 0.004479265282571139,
+      "harmonic_trace_field_effect_relative": 0.0074348466399883715,
+      "fraction_squared_field_error_in_vacuum_cells": 0.947116166689628,
+      "native_free_load_defect_relative": 0.20848891989373683,
+      "top_one_percent_cells_fraction_squared_error": 0.9288148930545683,
+      "worst_element_mean_RZ": [
+        1.348129719804856,
+        0.7596859253369145
+      ]
+    },
+    {
+      "assembly_order": 24,
+      "field_error_relative": 0.008682864363252475,
+      "native_flux_interpolation_max_abs": 1.740838531383293e-07,
+      "native_field_interpolation_relative": 2.6455827554929945e-05,
+      "bubble_fraction_energy_squared": 0.2579708329226125,
+      "fixed_native_edges_field_effect_relative": 0.004479265278964133,
+      "harmonic_trace_field_effect_relative": 0.007434846640664371,
+      "fraction_squared_field_error_in_vacuum_cells": 0.9471161666671796,
+      "native_free_load_defect_relative": 0.20849504539656918,
+      "top_one_percent_cells_fraction_squared_error": 0.928814893018005,
+      "worst_element_mean_RZ": [
+        1.348129719804856,
+        0.7596859253369145
+      ]
+    }
+  ],
+  "harmonic_Z_control": {
+    "nodes_per_axis": 7,
+    "free_dofs": 96804,
+    "elements": 2715,
+    "setup_s": 1.5141685419948772,
+    "factor_and_solve_s": 3.1263687079772353,
+    "relative_linear_residual": 2.2860794988213503e-15,
+    "flux_relative_L2": 2.5925631196164627e-13,
+    "Bp_relative_L2": 4.90746307015332e-12
+  }
+}

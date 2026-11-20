@@ -1,0 +1,80 @@
+{
+  "spacing_m": 0.045993908014135665,
+  "divisor": 32,
+  "pilot_coefficients": 128,
+  "pilot_s": 0.8077307500061579,
+  "points_per_span": 8,
+  "score_order": 36,
+  "rows": [
+    {
+      "degree": 3,
+      "dofs": 2540,
+      "correction_unknowns": 2412,
+      "assembly_points": 511360,
+      "refine_s": 1.2767522500362247,
+      "flux_pct": 0.0021481855393260594,
+      "field_pct": 0.03334428678011418,
+      "local_field_pct": 0.10997055913935856
+    },
+    {
+      "degree": 4,
+      "dofs": 2699,
+      "correction_unknowns": 2571,
+      "assembly_points": 511360,
+      "refine_s": 1.9004666249966249,
+      "flux_pct": 0.0002644703943095695,
+      "field_pct": 0.0060177327765395935,
+      "local_field_pct": 0.023125316484638978
+    },
+    {
+      "degree": 5,
+      "dofs": 2829,
+      "correction_unknowns": 2701,
+      "assembly_points": 511360,
+      "refine_s": 2.6171276249806397,
+      "flux_pct": 6.990134522038503e-05,
+      "field_pct": 0.0014221853542959444,
+      "local_field_pct": 0.005829267569348111
+    },
+    {
+      "degree": 6,
+      "dofs": 2952,
+      "correction_unknowns": 2824,
+      "assembly_points": 511360,
+      "refine_s": 4.010921750043053,
+      "flux_pct": 2.078393021173968e-05,
+      "field_pct": 0.00042925254540987414,
+      "local_field_pct": 0.0017727013589253794
+    },
+    {
+      "degree": 7,
+      "dofs": 3082,
+      "correction_unknowns": 2954,
+      "assembly_points": 511360,
+      "refine_s": 5.698206416971516,
+      "flux_pct": 5.906054577563499e-06,
+      "field_pct": 0.00012627721878064876,
+      "local_field_pct": 0.0005143158369670595
+    },
+    {
+      "degree": 8,
+      "dofs": 3162,
+      "correction_unknowns": 3034,
+      "assembly_points": 511360,
+      "refine_s": 7.913317291997373,
+      "flux_pct": 2.1388678179981026e-06,
+      "field_pct": 4.2352521408303364e-05,
+      "local_field_pct": 0.00017328654276881696
+    },
+    {
+      "degree": 9,
+      "dofs": 3287,
+      "correction_unknowns": 3159,
+      "assembly_points": 511360,
+      "refine_s": 10.488910209038295,
+      "flux_pct": 7.394989701627341e-07,
+      "field_pct": 1.4638905899900915e-05,
+      "local_field_pct": 6.0537907328119924e-05
+    }
+  ]
+}

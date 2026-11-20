@@ -1,0 +1,20 @@
+{
+  "spacing_m": 0.045993908014135665,
+  "divisor": 32,
+  "pilot_coefficients": 128,
+  "pilot_s": 0.4864515839726664,
+  "points_per_span": 12,
+  "score_order": 48,
+  "rows": [
+    {
+      "degree": 9,
+      "dofs": 3287,
+      "correction_unknowns": 3159,
+      "assembly_points": 1138272,
+      "refine_s": 23.486793541989755,
+      "flux_pct": 7.394976138575505e-07,
+      "field_pct": 1.463888483921563e-05,
+      "local_field_pct": 6.0539186982007444e-05
+    }
+  ]
+}

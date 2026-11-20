@@ -1,0 +1,69 @@
+{
+  "score_order": 36,
+  "extra_padding_bins": 1,
+  "wall_weight": 1284.7217482258727,
+  "marked": [
+    [
+      5,
+      15
+    ],
+    [
+      5,
+      14
+    ],
+    [
+      6,
+      15
+    ],
+    [
+      6,
+      14
+    ],
+    [
+      4,
+      15
+    ],
+    [
+      5,
+      13
+    ],
+    [
+      4,
+      16
+    ],
+    [
+      4,
+      14
+    ],
+    [
+      6,
+      13
+    ],
+    [
+      7,
+      15
+    ]
+  ],
+  "rows": [
+    {
+      "degree_R": 5,
+      "degree_Z": 13,
+      "divisor": 96,
+      "dofs": 10829,
+      "flux_pct": 3.664924141912186e-05,
+      "field_pct": 7.07969008510972e-05,
+      "squared_error_outside_ellipse_fraction": 0.9979711061061322,
+      "squared_error_outside_enrichment_bounding_box_fraction": 0.8770336079122922
+    },
+    {
+      "degree_R": 5,
+      "degree_Z": 18,
+      "divisor": 96,
+      "dofs": 10867,
+      "flux_pct": 1.1891133487749952e-06,
+      "field_pct": 8.819388627167663e-06,
+      "squared_error_outside_ellipse_fraction": 0.9220326302374213,
+      "squared_error_outside_enrichment_bounding_box_fraction": 0.8002737523156216
+    }
+  ]
+}

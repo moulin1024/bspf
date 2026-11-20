@@ -1,0 +1,105 @@
+{
+  "assembly_order": 16,
+  "score_order": 24,
+  "wave": 3.0,
+  "mastu": {
+    "JOREK bicubic": {
+      "free_dofs": 10909,
+      "relative_linear_residual": 1.3332042737606e-14,
+      "flux_relative_L2": 0.00014084359717556958,
+      "Bp_relative_L2": 0.0035512261870668787
+    },
+    "BSPF 4 nodes/axis": {
+      "free_dofs": 23971,
+      "relative_linear_residual": 3.398976178248773e-15,
+      "flux_relative_L2": 0.000955410404684768,
+      "Bp_relative_L2": 0.022876340157759904
+    },
+    "BSPF 5 nodes/axis": {
+      "free_dofs": 42821,
+      "relative_linear_residual": 4.193344891710788e-15,
+      "flux_relative_L2": 8.673668873936906e-05,
+      "Bp_relative_L2": 0.0032437805283787166
+    },
+    "BSPF 7 nodes/axis": {
+      "free_dofs": 96804,
+      "relative_linear_residual": 1.692377775815367e-14,
+      "flux_relative_L2": 1.3923581967244098e-07,
+      "Bp_relative_L2": 5.404189513863927e-06
+    }
+  },
+  "rectangle": [
+    {
+      "method": "JOREK bicubic",
+      "cells_per_axis": 6,
+      "free_dofs": 144,
+      "relative_linear_residual": 7.381395825707111e-16,
+      "flux_relative_L2": 0.001026667560945626,
+      "Bp_relative_L2": 0.004322997829183736
+    },
+    {
+      "method": "BSPF 4 nodes/axis",
+      "cells_per_axis": 4,
+      "free_dofs": 121,
+      "flux_relative_L2": 0.012636304196678268,
+      "Bp_relative_L2": 0.07799172037084148,
+      "relative_linear_residual": 6.708818793965269e-16
+    },
+    {
+      "method": "BSPF 7 nodes/axis",
+      "cells_per_axis": 2,
+      "free_dofs": 121,
+      "flux_relative_L2": 6.693374342970323e-05,
+      "Bp_relative_L2": 0.0003751353035558987,
+      "relative_linear_residual": 6.979631735281558e-16
+    },
+    {
+      "method": "JOREK bicubic",
+      "cells_per_axis": 12,
+      "free_dofs": 576,
+      "relative_linear_residual": 1.0131043703304269e-15,
+      "flux_relative_L2": 6.941497648947651e-05,
+      "Bp_relative_L2": 0.0005941089020484131
+    },
+    {
+      "method": "BSPF 4 nodes/axis",
+      "cells_per_axis": 8,
+      "free_dofs": 529,
+      "flux_relative_L2": 0.003512227372957938,
+      "Bp_relative_L2": 0.044427504482882,
+      "relative_linear_residual": 9.966704136841723e-16
+    },
+    {
+      "method": "BSPF 7 nodes/axis",
+      "cells_per_axis": 4,
+      "free_dofs": 529,
+      "flux_relative_L2": 2.8875661936410216e-06,
+      "Bp_relative_L2": 3.25550698627336e-05,
+      "relative_linear_residual": 9.801726059670066e-16
+    },
+    {
+      "method": "JOREK bicubic",
+      "cells_per_axis": 24,
+      "free_dofs": 2304,
+      "relative_linear_residual": 1.8910166447133156e-15,
+      "flux_relative_L2": 4.5462435548068785e-06,
+      "Bp_relative_L2": 7.847620675929817e-05
+    },
+    {
+      "method": "BSPF 4 nodes/axis",
+      "cells_per_axis": 16,
+      "free_dofs": 2209,
+      "flux_relative_L2": 0.0008931835991624666,
+      "Bp_relative_L2": 0.022890252199908933,
+      "relative_linear_residual": 1.607110307658693e-15
+    },
+    {
+      "method": "BSPF 7 nodes/axis",
+      "cells_per_axis": 8,
+      "free_dofs": 2209,
+      "flux_relative_L2": 1.003892893102806e-07,
+      "Bp_relative_L2": 2.267999112179828e-06,
+      "relative_linear_residual": 1.3720476778215755e-15
+    }
+  ]
+}

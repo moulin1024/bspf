@@ -1,0 +1,273 @@
+{
+  "score_order": 24,
+  "degrees": [
+    5,
+    13
+  ],
+  "results": {
+    "3.0": {
+      "JOREK-16": [
+        {
+          "setup_s": 0.49655399995390326,
+          "factor_and_solve_s": 0.2017678749980405,
+          "free_dofs": 10909,
+          "relative_linear_residual": 1.3332042737606e-14,
+          "flux_relative_L2": 0.00014084359717556958,
+          "Bp_relative_L2": 0.0035512261870668787
+        },
+        {
+          "setup_s": 0.48617170797660947,
+          "factor_and_solve_s": 0.20154045801609755,
+          "free_dofs": 10909,
+          "relative_linear_residual": 1.3332042737606e-14,
+          "flux_relative_L2": 0.00014084359717556958,
+          "Bp_relative_L2": 0.0035512261870668787
+        },
+        {
+          "setup_s": 0.48489129199879244,
+          "factor_and_solve_s": 0.20013950002612546,
+          "free_dofs": 10909,
+          "relative_linear_residual": 1.3332042737606e-14,
+          "flux_relative_L2": 0.00014084359717556958,
+          "Bp_relative_L2": 0.0035512261870668787
+        }
+      ],
+      "BSPF-16": [
+        {
+          "free_dofs": 128,
+          "relative_linear_residual": 2.0919500363302104e-15,
+          "flux_relative_L2": 7.699059037820272e-06,
+          "Bp_relative_L2": 1.3414139231151923e-05,
+          "setup_s": 1.2253399990149774,
+          "factor_and_solve_s": 0.0013430420076474547
+        },
+        {
+          "free_dofs": 128,
+          "relative_linear_residual": 2.0919500363302104e-15,
+          "flux_relative_L2": 7.699059037820272e-06,
+          "Bp_relative_L2": 1.3414139231151923e-05,
+          "setup_s": 1.1709221670171246,
+          "factor_and_solve_s": 0.001203457999508828
+        },
+        {
+          "free_dofs": 128,
+          "relative_linear_residual": 2.0919500363302104e-15,
+          "flux_relative_L2": 7.699059037820272e-06,
+          "Bp_relative_L2": 1.3414139231151923e-05,
+          "setup_s": 1.322882250067778,
+          "factor_and_solve_s": 0.0008871249738149345
+        }
+      ],
+      "JOREK-4": [
+        {
+          "setup_s": 0.0919722500257194,
+          "factor_and_solve_s": 0.20592099998611957,
+          "free_dofs": 10909,
+          "relative_linear_residual": 1.0432205496912747e-14,
+          "flux_relative_L2": 0.00014070867729687285,
+          "Bp_relative_L2": 0.003556125248222887
+        },
+        {
+          "setup_s": 0.11856691597495228,
+          "factor_and_solve_s": 0.20192162500461563,
+          "free_dofs": 10909,
+          "relative_linear_residual": 1.0432205496912747e-14,
+          "flux_relative_L2": 0.00014070867729687285,
+          "Bp_relative_L2": 0.003556125248222887
+        },
+        {
+          "setup_s": 0.10986141604371369,
+          "factor_and_solve_s": 0.20233458396978676,
+          "free_dofs": 10909,
+          "relative_linear_residual": 1.0432205496912747e-14,
+          "flux_relative_L2": 0.00014070867729687285,
+          "Bp_relative_L2": 0.003556125248222887
+        }
+      ],
+      "BSPF-4": [
+        {
+          "free_dofs": 128,
+          "relative_linear_residual": 3.1087803980621465e-15,
+          "flux_relative_L2": 7.699069973073155e-06,
+          "Bp_relative_L2": 1.341413552932893e-05,
+          "setup_s": 0.12017362401820719,
+          "factor_and_solve_s": 0.0011887919972650707
+        },
+        {
+          "free_dofs": 128,
+          "relative_linear_residual": 3.1087803980621465e-15,
+          "flux_relative_L2": 7.699069973073155e-06,
+          "Bp_relative_L2": 1.341413552932893e-05,
+          "setup_s": 0.11968533403705806,
+          "factor_and_solve_s": 0.0011479579843580723
+        },
+        {
+          "free_dofs": 128,
+          "relative_linear_residual": 3.1087803980621465e-15,
+          "flux_relative_L2": 7.699069973073155e-06,
+          "Bp_relative_L2": 1.341413552932893e-05,
+          "setup_s": 0.1238540830090642,
+          "factor_and_solve_s": 0.0011494170175865293
+        }
+      ],
+      "BSPF-2": [
+        {
+          "free_dofs": 128,
+          "relative_linear_residual": 3.028182788970296e-15,
+          "flux_relative_L2": 7.709487647980399e-06,
+          "Bp_relative_L2": 1.3416112978189966e-05,
+          "setup_s": 0.06819162494502962,
+          "factor_and_solve_s": 0.0011102920398116112
+        },
+        {
+          "free_dofs": 128,
+          "relative_linear_residual": 3.028182788970296e-15,
+          "flux_relative_L2": 7.709487647980399e-06,
+          "Bp_relative_L2": 1.3416112978189966e-05,
+          "setup_s": 0.06773808400612324,
+          "factor_and_solve_s": 0.0012472079833969474
+        },
+        {
+          "free_dofs": 128,
+          "relative_linear_residual": 3.028182788970296e-15,
+          "flux_relative_L2": 7.709487647980399e-06,
+          "Bp_relative_L2": 1.3416112978189966e-05,
+          "setup_s": 0.06295395793858916,
+          "factor_and_solve_s": 0.0010158750228583813
+        }
+      ]
+    },
+    "4.0": {
+      "JOREK-16": [
+        {
+          "setup_s": 0.4933311250060797,
+          "factor_and_solve_s": 0.20202804100699723,
+          "free_dofs": 10909,
+          "relative_linear_residual": 1.4508600179920422e-14,
+          "flux_relative_L2": 0.00044979506761370295,
+          "Bp_relative_L2": 0.0053442931355975505
+        },
+        {
+          "setup_s": 0.4872969999560155,
+          "factor_and_solve_s": 0.203190625004936,
+          "free_dofs": 10909,
+          "relative_linear_residual": 1.4508600179920422e-14,
+          "flux_relative_L2": 0.00044979506761370295,
+          "Bp_relative_L2": 0.0053442931355975505
+        },
+        {
+          "setup_s": 0.490024084050674,
+          "factor_and_solve_s": 0.2056339579867199,
+          "free_dofs": 10909,
+          "relative_linear_residual": 1.4508600179920422e-14,
+          "flux_relative_L2": 0.00044979506761370295,
+          "Bp_relative_L2": 0.0053442931355975505
+        }
+      ],
+      "BSPF-16": [
+        {
+          "free_dofs": 128,
+          "relative_linear_residual": 9.935473671099081e-16,
+          "flux_relative_L2": 0.00047048870341488875,
+          "Bp_relative_L2": 0.000679179481108777,
+          "setup_s": 1.273383999010548,
+          "factor_and_solve_s": 0.0010667089954949915
+        },
+        {
+          "free_dofs": 128,
+          "relative_linear_residual": 9.935473671099081e-16,
+          "flux_relative_L2": 0.00047048870341488875,
+          "Bp_relative_L2": 0.000679179481108777,
+          "setup_s": 1.3448673339444213,
+          "factor_and_solve_s": 0.0010441660415381193
+        },
+        {
+          "free_dofs": 128,
+          "relative_linear_residual": 9.935473671099081e-16,
+          "flux_relative_L2": 0.00047048870341488875,
+          "Bp_relative_L2": 0.000679179481108777,
+          "setup_s": 1.3671439160243608,
+          "factor_and_solve_s": 0.0010982920066453516
+        }
+      ],
+      "JOREK-4": [
+        {
+          "setup_s": 0.09202633303357288,
+          "factor_and_solve_s": 0.20423962495988235,
+          "free_dofs": 10909,
+          "relative_linear_residual": 8.256852883449134e-15,
+          "flux_relative_L2": 0.00044950769770648187,
+          "Bp_relative_L2": 0.005351137564525812
+        },
+        {
+          "setup_s": 0.09311445796629414,
+          "factor_and_solve_s": 0.20352966705104336,
+          "free_dofs": 10909,
+          "relative_linear_residual": 8.256852883449134e-15,
+          "flux_relative_L2": 0.00044950769770648187,
+          "Bp_relative_L2": 0.005351137564525812
+        },
+        {
+          "setup_s": 0.0893893750035204,
+          "factor_and_solve_s": 0.20408737496472895,
+          "free_dofs": 10909,
+          "relative_linear_residual": 8.256852883449134e-15,
+          "flux_relative_L2": 0.00044950769770648187,
+          "Bp_relative_L2": 0.005351137564525812
+        }
+      ],
+      "BSPF-4": [
+        {
+          "free_dofs": 128,
+          "relative_linear_residual": 1.2428978305338468e-15,
+          "flux_relative_L2": 0.00047048950444715217,
+          "Bp_relative_L2": 0.0006791793357176163,
+          "setup_s": 0.13817254203604534,
+          "factor_and_solve_s": 0.001325832970906049
+        },
+        {
+          "free_dofs": 128,
+          "relative_linear_residual": 1.2428978305338468e-15,
+          "flux_relative_L2": 0.00047048950444715217,
+          "Bp_relative_L2": 0.0006791793357176163,
+          "setup_s": 0.14406987495021895,
+          "factor_and_solve_s": 0.0010777920251712203
+        },
+        {
+          "free_dofs": 128,
+          "relative_linear_residual": 1.2428978305338468e-15,
+          "flux_relative_L2": 0.00047048950444715217,
+          "Bp_relative_L2": 0.0006791793357176163,
+          "setup_s": 0.1577939169947058,
+          "factor_and_solve_s": 0.0012733329785987735
+        }
+      ],
+      "BSPF-2": [
+        {
+          "free_dofs": 128,
+          "relative_linear_residual": 1.082772862294278e-15,
+          "flux_relative_L2": 0.0004711072108956953,
+          "Bp_relative_L2": 0.0006791031195767905,
+          "setup_s": 0.0787332080071792,
+          "factor_and_solve_s": 0.0015056250267662108
+        },
+        {
+          "free_dofs": 128,
+          "relative_linear_residual": 1.082772862294278e-15,
+          "flux_relative_L2": 0.0004711072108956953,
+          "Bp_relative_L2": 0.0006791031195767905,
+          "setup_s": 0.07579691603314131,
+          "factor_and_solve_s": 0.001128916977904737
+        },
+        {
+          "free_dofs": 128,
+          "relative_linear_residual": 1.082772862294278e-15,
+          "flux_relative_L2": 0.0004711072108956953,
+          "Bp_relative_L2": 0.0006791031195767905,
+          "setup_s": 0.0736289580236189,
+          "factor_and_solve_s": 0.0011692919651977718
+        }
+      ]
+    }
+  }
+}

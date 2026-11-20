@@ -1,0 +1,59 @@
+{
+  "score_order": 36,
+  "extra_padding_bins": 1,
+  "wall_weight": 1284.7217482258727,
+  "marked": [
+    [
+      5,
+      15
+    ],
+    [
+      5,
+      14
+    ],
+    [
+      6,
+      15
+    ],
+    [
+      6,
+      14
+    ],
+    [
+      4,
+      15
+    ],
+    [
+      5,
+      13
+    ],
+    [
+      4,
+      16
+    ],
+    [
+      4,
+      14
+    ],
+    [
+      6,
+      13
+    ],
+    [
+      7,
+      15
+    ]
+  ],
+  "rows": [
+    {
+      "degree_R": 5,
+      "degree_Z": 18,
+      "divisor": 128,
+      "dofs": 18979,
+      "flux_pct": 1.0550720997203123e-06,
+      "field_pct": 4.964400270412538e-06,
+      "squared_error_outside_ellipse_fraction": 0.9857915481302696,
+      "squared_error_outside_enrichment_bounding_box_fraction": 0.7391777009127649
+    }
+  ]
+}

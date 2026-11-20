@@ -1,0 +1,10 @@
+{
+  "nodes_per_axis": 4,
+  "free_dofs": 23971,
+  "elements": 2715,
+  "setup_s": 0.4207757499534637,
+  "factor_and_solve_s": 0.21266595798078924,
+  "relative_linear_residual": 8.117825230294811e-15,
+  "flux_relative_L2": 0.0020373900240082347,
+  "Bp_relative_L2": 0.008475691755493805
+}

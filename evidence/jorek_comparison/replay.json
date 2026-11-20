@@ -1,0 +1,38 @@
+{
+  "protocol": "fixed-current model-303 replay",
+  "reference": "evidence/jorek_comparison/reference/end.h5",
+  "sha256": "30a3f81b44358720b02ec995dc6049e393d3321bfb173e3a075d1aedf6cf413e",
+  "quadrature_check_order": 18,
+  "runs": [
+    {
+      "nodes_per_axis": 5,
+      "free_dofs": 42821,
+      "elements": 2715,
+      "setup_s": 0.43934179202187806,
+      "factor_and_solve_s": 0.5668669590377249,
+      "relative_linear_residual": 9.359692928252574e-15,
+      "flux_relative_L2": 0.0020702436924932696,
+      "Bp_relative_L2": 0.008946129021733288
+    },
+    {
+      "nodes_per_axis": 7,
+      "free_dofs": 96804,
+      "elements": 2715,
+      "setup_s": 1.3125351250055246,
+      "factor_and_solve_s": 3.153616542054806,
+      "relative_linear_residual": 6.114518630102587e-14,
+      "flux_relative_L2": 0.0020868737374640472,
+      "Bp_relative_L2": 0.008682860172022501
+    },
+    {
+      "nodes_per_axis": 9,
+      "free_dofs": 172521,
+      "elements": 2715,
+      "setup_s": 3.037087042001076,
+      "factor_and_solve_s": 14.038913083029911,
+      "relative_linear_residual": 1.0275540938236336e-13,
+      "flux_relative_L2": 0.002092607827742033,
+      "Bp_relative_L2": 0.008695979519915954
+    }
+  ]
+}

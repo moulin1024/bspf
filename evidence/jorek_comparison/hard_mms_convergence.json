@@ -1,0 +1,90 @@
+{
+  "assembly_order": 8,
+  "score_order": 24,
+  "rows": [
+    {
+      "method": "BSPF",
+      "spacing_divisor": 0,
+      "free_dofs": 128,
+      "flux_relative_L2": 0.04132433229106486,
+      "Bp_relative_L2": 0.08396326578790385,
+      "local_Bp_relative_L2": 0.24129449637526773
+    },
+    {
+      "method": "BSPF",
+      "spacing_divisor": 12,
+      "free_dofs": 293,
+      "flux_relative_L2": 0.0008987826001612102,
+      "Bp_relative_L2": 0.007084111455564846,
+      "local_Bp_relative_L2": 0.021481031480523598
+    },
+    {
+      "method": "BSPF",
+      "spacing_divisor": 16,
+      "free_dofs": 348,
+      "flux_relative_L2": 0.00018908987723201376,
+      "Bp_relative_L2": 0.001581920258182084,
+      "local_Bp_relative_L2": 0.005577276579258015
+    },
+    {
+      "method": "BSPF",
+      "spacing_divisor": 20,
+      "free_dofs": 416,
+      "flux_relative_L2": 2.95190753329008e-05,
+      "Bp_relative_L2": 0.0003536334288873887,
+      "local_Bp_relative_L2": 0.001414337286596219
+    },
+    {
+      "method": "BSPF",
+      "spacing_divisor": 24,
+      "free_dofs": 486,
+      "flux_relative_L2": 1.1263855817494607e-05,
+      "Bp_relative_L2": 0.0001056330865927969,
+      "local_Bp_relative_L2": 0.00035726788562786237
+    },
+    {
+      "method": "BSPF",
+      "spacing_divisor": 32,
+      "free_dofs": 670,
+      "flux_relative_L2": 3.071956733117226e-05,
+      "Bp_relative_L2": 0.00015549824478597546,
+      "local_Bp_relative_L2": 7.221301115496158e-05
+    },
+    {
+      "method": "JOREK",
+      "subdivision": 1,
+      "elements": 2715,
+      "domain_area_m2": 3.770671582136225,
+      "maximum_edge_difference_m": 0.0,
+      "local_Bp_relative_L2": 0.004671009809069401,
+      "free_dofs": 10909,
+      "relative_linear_residual": 1.323704731331835e-14,
+      "flux_relative_L2": 0.00024363235838496838,
+      "Bp_relative_L2": 0.0037030813365250973
+    },
+    {
+      "method": "JOREK",
+      "subdivision": 2,
+      "elements": 10860,
+      "domain_area_m2": 3.770671582136228,
+      "maximum_edge_difference_m": 8.881784197001252e-16,
+      "local_Bp_relative_L2": 0.0009443667437952692,
+      "free_dofs": 43489,
+      "relative_linear_residual": 3.714128027092602e-14,
+      "flux_relative_L2": 2.335983195753348e-05,
+      "Bp_relative_L2": 0.0025104115048573596
+    },
+    {
+      "method": "JOREK",
+      "subdivision": 3,
+      "elements": 24435,
+      "domain_area_m2": 3.7706715821362318,
+      "maximum_edge_difference_m": 1.3322676295501878e-15,
+      "local_Bp_relative_L2": 0.00036861450203921653,
+      "free_dofs": 97789,
+      "relative_linear_residual": 5.705780123218444e-14,
+      "flux_relative_L2": 5.87374461465695e-06,
+      "Bp_relative_L2": 0.00116803424471731
+    }
+  ]
+}

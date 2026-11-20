@@ -1,0 +1,17 @@
+[
+  {
+    "assembly_order": 4,
+    "flux_relative_change": 0.0002335653255502789,
+    "field_relative_change": 0.0002468401987103326
+  },
+  {
+    "assembly_order": 8,
+    "flux_relative_change": 0.0002333733697042023,
+    "field_relative_change": 0.00024921105584350213
+  },
+  {
+    "assembly_order": 16,
+    "flux_relative_change": 0.00023337343859038844,
+    "field_relative_change": 0.0002496830930507569
+  }
+]

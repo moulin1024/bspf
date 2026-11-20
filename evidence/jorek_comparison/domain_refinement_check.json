@@ -1,0 +1,89 @@
+{
+  "assembly_order": 8,
+  "points_per_span": 8,
+  "score_order": 48,
+  "pilot_s": 0.5661372499889694,
+  "domain": true,
+  "padding_m": null,
+  "remark": false,
+  "marked": [
+    [
+      5,
+      15
+    ],
+    [
+      5,
+      14
+    ],
+    [
+      6,
+      15
+    ],
+    [
+      6,
+      14
+    ],
+    [
+      4,
+      15
+    ],
+    [
+      5,
+      13
+    ],
+    [
+      4,
+      16
+    ],
+    [
+      4,
+      14
+    ],
+    [
+      6,
+      13
+    ],
+    [
+      7,
+      15
+    ]
+  ],
+  "rows": [
+    {
+      "divisor": 32,
+      "marked_bins": 10,
+      "spacing_m": 0.045993908014135665,
+      "dofs": 2829,
+      "refine_s": 2.7231915420270525,
+      "assembly_points": 511360,
+      "flux_pct": 6.99013449843706e-05,
+      "field_pct": 0.0014221857239900798,
+      "local_field_pct": 0.005829353290129382,
+      "normal_equation_residual": 4.175454330132208e-12
+    },
+    {
+      "divisor": 64,
+      "marked_bins": 10,
+      "spacing_m": 0.022996954007067832,
+      "dofs": 11500,
+      "refine_s": 9.662193625001237,
+      "assembly_points": 1425664,
+      "flux_pct": 5.617313177940149e-07,
+      "field_pct": 2.3523984799623324e-05,
+      "local_field_pct": 9.419614782737757e-05,
+      "normal_equation_residual": 4.965258187037634e-14
+    },
+    {
+      "divisor": 128,
+      "marked_bins": 10,
+      "spacing_m": 0.011498477003533916,
+      "dofs": 45275,
+      "refine_s": 37.55200374999549,
+      "assembly_points": 4924160,
+      "flux_pct": 9.08650500822795e-09,
+      "field_pct": 6.489500798932692e-07,
+      "local_field_pct": 2.4809886762346527e-06,
+      "normal_equation_residual": 5.452708045808846e-15
+    }
+  ]
+}

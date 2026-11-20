@@ -1,0 +1,82 @@
+{
+  "score_order": 36,
+  "extra_padding_bins": 0,
+  "wall_weight": 1284.7217482258727,
+  "marked": [
+    [
+      5,
+      15
+    ],
+    [
+      5,
+      14
+    ],
+    [
+      6,
+      15
+    ],
+    [
+      6,
+      14
+    ],
+    [
+      4,
+      15
+    ],
+    [
+      5,
+      13
+    ],
+    [
+      4,
+      16
+    ],
+    [
+      4,
+      14
+    ],
+    [
+      6,
+      13
+    ],
+    [
+      7,
+      15
+    ]
+  ],
+  "rows": [
+    {
+      "degree_R": 5,
+      "degree_Z": 13,
+      "divisor": 64,
+      "dofs": 6358,
+      "marked_bins": 27,
+      "flux_pct": 2.478851308484535e-06,
+      "field_pct": 5.3322815555308476e-05,
+      "squared_error_outside_ellipse_fraction": 0.8270534558511483,
+      "squared_error_outside_enrichment_bounding_box_fraction": 0.0
+    },
+    {
+      "degree_R": 5,
+      "degree_Z": 13,
+      "divisor": 96,
+      "dofs": 17590,
+      "marked_bins": 43,
+      "flux_pct": 6.019379755918437e-07,
+      "field_pct": 1.5475073281689622e-05,
+      "squared_error_outside_ellipse_fraction": 0.9747339096166013,
+      "squared_error_outside_enrichment_bounding_box_fraction": 0.0
+    },
+    {
+      "degree_R": 5,
+      "degree_Z": 13,
+      "divisor": 128,
+      "dofs": 30254,
+      "marked_bins": 42,
+      "flux_pct": 5.467905943685611e-07,
+      "field_pct": 1.3838539346774738e-05,
+      "squared_error_outside_ellipse_fraction": 0.9982334929388484,
+      "squared_error_outside_enrichment_bounding_box_fraction": 0.0
+    }
+  ]
+}
